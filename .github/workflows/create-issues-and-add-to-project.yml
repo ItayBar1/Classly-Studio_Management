@@ -17,15 +17,18 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            const core = require('@actions/core');
 
-            // project number של ה־User Project (https://github.com/users/ItayBar1/projects/3)
+            // GitHub נותן לנו כבר את המשתנים האלה:
+            // - core
+            // - github
+            // - context
+
             const projectNumber = 3;
-            const login = context.repo.owner; // אצלך זה ItayBar1
+            const login = context.repo.owner;
 
             core.info(`Resolving projectV2 id for user ${login}, project number ${projectNumber}...`);
 
-            // 1. להביא את ה־Project ID דרך GraphQL
+            // 1. מביאים את ה־Project ID
             const projectQuery = `
               query($login: String!, $number: Int!) {
                 user(login: $login) {
@@ -48,11 +51,11 @@ jobs:
             }
 
             const projectId = projRes.user.projectV2.id;
-            core.info(\`Resolved project id: \${projectId} (title: \${projRes.user.projectV2.title})\`);
+            core.info(`Resolved project id: ${projectId} (title: ${projRes.user.projectV2.title})`);
 
-            // 2. קריאת קובץ ה־issues.json
+            // 2. קריאת ה־issues.json
             const filePath = path.join(process.cwd(), '.github', 'issues.json');
-            core.info(\`Reading issues from: \${filePath}\`);
+            core.info(`Reading issues from: ${filePath}`);
             const raw = fs.readFileSync(filePath, 'utf8');
             const data = JSON.parse(raw);
 
@@ -60,13 +63,12 @@ jobs:
               core.setFailed('issues.json must contain an "issues" array');
             }
 
-            core.info(\`Found \${data.issues.length} issues in JSON\`);
+            core.info(`Found ${data.issues.length} issues in JSON`);
 
-            // 3. יצירת issues והוספתם לפרויקט
+            // 3. יצירת issues
             for (const issue of data.issues) {
-              core.info(\`Creating issue: \${issue.title}\`);
+              core.info(`Creating issue: ${issue.title}`);
 
-              // יצירת issue
               const created = await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -76,10 +78,10 @@ jobs:
               });
 
               const issueNumber = created.data.number;
-              const contentId = created.data.node_id; // node_id עבור Projects v2
-              core.info(\`Created issue #\${issueNumber} with node_id \${contentId}\`);
+              const contentId = created.data.node_id;
+              core.info(`Created issue #${issueNumber} with node_id ${contentId}`);
 
-              // הוספת ה־issue לפרויקט (Projects v2)
+              // הוספת ה־Issue לפרויקט
               const mutation = `
                 mutation($projectId: ID!, $contentId: ID!) {
                   addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
@@ -93,7 +95,7 @@ jobs:
                 contentId
               });
 
-              core.info(\`Added issue #\${issueNumber} to project \${projectId}\`);
+              core.info(`Added issue #${issueNumber} to project ${projectId}`);
             }
 
             core.info('All issues created and added to project successfully.');
