@@ -18,17 +18,11 @@ jobs:
             const fs = require('fs');
             const path = require('path');
 
-            // GitHub נותן לנו כבר את המשתנים האלה:
-            // - core
-            // - github
-            // - context
-
             const projectNumber = 3;
             const login = context.repo.owner;
 
             core.info(`Resolving projectV2 id for user ${login}, project number ${projectNumber}...`);
 
-            // 1. מביאים את ה־Project ID
             const projectQuery = `
               query($login: String!, $number: Int!) {
                 user(login: $login) {
@@ -43,7 +37,7 @@ jobs:
 
             const projRes = await github.graphql(projectQuery, {
               login,
-              number: projectNumber
+              number: projectNumber,
             });
 
             if (!projRes.user || !projRes.user.projectV2) {
@@ -53,7 +47,6 @@ jobs:
             const projectId = projRes.user.projectV2.id;
             core.info(`Resolved project id: ${projectId} (title: ${projRes.user.projectV2.title})`);
 
-            // 2. קריאת ה־issues.json
             const filePath = path.join(process.cwd(), '.github', 'issues.json');
             core.info(`Reading issues from: ${filePath}`);
             const raw = fs.readFileSync(filePath, 'utf8');
@@ -65,7 +58,6 @@ jobs:
 
             core.info(`Found ${data.issues.length} issues in JSON`);
 
-            // 3. יצירת issues
             for (const issue of data.issues) {
               core.info(`Creating issue: ${issue.title}`);
 
@@ -74,14 +66,13 @@ jobs:
                 repo: context.repo.repo,
                 title: issue.title,
                 body: issue.body || '',
-                labels: issue.labels || []
+                labels: issue.labels || [],
               });
 
               const issueNumber = created.data.number;
               const contentId = created.data.node_id;
               core.info(`Created issue #${issueNumber} with node_id ${contentId}`);
 
-              // הוספת ה־Issue לפרויקט
               const mutation = `
                 mutation($projectId: ID!, $contentId: ID!) {
                   addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
@@ -92,7 +83,7 @@ jobs:
 
               await github.graphql(mutation, {
                 projectId,
-                contentId
+                contentId,
               });
 
               core.info(`Added issue #${issueNumber} to project ${projectId}`);
