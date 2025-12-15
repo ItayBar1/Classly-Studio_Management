@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { ImageGenerationConfig } from "../types";
+import { ImageGenerationConfig } from "../types/types";
 
 export const ensureApiKey = async (): Promise<boolean> => {
   const win = window as any;
@@ -14,7 +14,9 @@ export const ensureApiKey = async (): Promise<boolean> => {
   return false;
 };
 
-export const generateMarketingImage = async (config: ImageGenerationConfig): Promise<string> => {
+export const generateMarketingImage = async (
+  config: ImageGenerationConfig
+): Promise<string> => {
   // Ensure we have an API key selected for the high-end model
   await ensureApiKey();
 
@@ -23,7 +25,7 @@ export const generateMarketingImage = async (config: ImageGenerationConfig): Pro
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-image-preview',
+      model: "gemini-3-pro-image-preview",
       contents: {
         parts: [
           {
@@ -34,7 +36,7 @@ export const generateMarketingImage = async (config: ImageGenerationConfig): Pro
       config: {
         imageConfig: {
           aspectRatio: config.aspectRatio,
-          imageSize: config.size, 
+          imageSize: config.size,
         },
       },
     });
@@ -47,9 +49,8 @@ export const generateMarketingImage = async (config: ImageGenerationConfig): Pro
         }
       }
     }
-    
-    throw new Error("No image data found in response");
 
+    throw new Error("No image data found in response");
   } catch (error) {
     console.error("Gemini Image Generation Error:", error);
     throw error;
