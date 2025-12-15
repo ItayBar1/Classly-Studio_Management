@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, MoreVertical, Mail, Phone, Plus, ArrowUpDown } from 'lucide-react';
+import { Search, Filter, MoreVertical, Mail, Phone, Plus, ArrowUpDown, Download } from 'lucide-react';
 import { Student } from '../types';
 
 // Mock data
@@ -49,6 +49,35 @@ export const StudentManagement: React.FC = () => {
     }));
   };
 
+  const handleExportCSV = () => {
+    const headers = ['ID', 'Name', 'Class', 'Status', 'Email', 'Phone', 'Join Date'];
+    
+    const rows = processedStudents.map(student => [
+      student.id,
+      student.name,
+      student.enrolledClass,
+      student.status,
+      student.email,
+      student.phone,
+      student.joinDate
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `students_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6">
        {/* Header */}
@@ -57,10 +86,19 @@ export const StudentManagement: React.FC = () => {
           <h2 className="text-2xl font-bold text-slate-800">Student Management</h2>
           <p className="text-slate-500">Manage enrollments and student details</p>
         </div>
-        <button className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg">
-          <Plus size={16} />
-          Add Student
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button 
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 bg-white text-slate-600 border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 hover:text-indigo-600 transition-all shadow-sm"
+          >
+            <Download size={16} />
+            Export CSV
+          </button>
+          <button className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg">
+            <Plus size={16} />
+            Add Student
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
