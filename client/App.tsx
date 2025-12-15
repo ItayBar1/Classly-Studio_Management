@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { ImageGenerator } from './components/ImageGenerator';
+import { StudentManagement } from './components/StudentManagement';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -10,6 +11,8 @@ function App() {
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard />;
+      case 'students':
+        return <StudentManagement />;
       case 'marketing':
         return <ImageGenerator />;
       default:

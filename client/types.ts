@@ -7,6 +7,16 @@ export interface User {
   avatar: string;
 }
 
+export type EnrollmentStatus = 'Active' | 'Pending' | 'Suspended';
+
+export interface Student extends User {
+  email: string;
+  phone: string;
+  enrolledClass: string;
+  status: EnrollmentStatus;
+  joinDate: string;
+}
+
 export type ImageSize = '1K' | '2K' | '4K';
 export type AspectRatio = '1:1' | '3:4' | '4:3' | '9:16' | '16:9';
 
