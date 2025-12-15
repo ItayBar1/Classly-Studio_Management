@@ -1,12 +1,19 @@
-import React, { useState } from 'react';
-import { Sparkles, Download, RefreshCw, AlertCircle, ImageIcon, Maximize2 } from 'lucide-react';
-import { generateMarketingImage } from '../services/geminiService';
-import { AspectRatio, ImageSize } from '../types';
+import React, { useState } from "react";
+import {
+  Sparkles,
+  Download,
+  RefreshCw,
+  AlertCircle,
+  ImageIcon,
+  Maximize2,
+} from "lucide-react";
+import { generateMarketingImage } from "../services/geminiService";
+import { AspectRatio, ImageSize } from "../types/types";
 
 export const ImageGenerator: React.FC = () => {
-  const [prompt, setPrompt] = useState('');
-  const [size, setSize] = useState<ImageSize>('1K');
-  const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1');
+  const [prompt, setPrompt] = useState("");
+  const [size, setSize] = useState<ImageSize>("1K");
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>("1:1");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -22,11 +29,11 @@ export const ImageGenerator: React.FC = () => {
       const imageUrl = await generateMarketingImage({
         prompt,
         size,
-        aspectRatio
+        aspectRatio,
       });
       setGeneratedImage(imageUrl);
     } catch (err: any) {
-      setError(err.message || 'Failed to generate image. Please try again.');
+      setError(err.message || "Failed to generate image. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -34,7 +41,7 @@ export const ImageGenerator: React.FC = () => {
 
   const downloadImage = () => {
     if (!generatedImage) return;
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = generatedImage;
     link.download = `classly-marketing-${Date.now()}.png`;
     document.body.appendChild(link);
@@ -50,7 +57,10 @@ export const ImageGenerator: React.FC = () => {
             <Sparkles className="text-indigo-600" />
             Marketing AI
           </h2>
-          <p className="text-slate-500">Generate professional high-resolution posters and social media assets for your studio.</p>
+          <p className="text-slate-500">
+            Generate professional high-resolution posters and social media
+            assets for your studio.
+          </p>
         </div>
         <div className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-semibold border border-indigo-100">
           Powered by Gemini 3 Pro
@@ -88,7 +98,10 @@ export const ImageGenerator: React.FC = () => {
                     <option value="2K">2K (High Res)</option>
                     <option value="4K">4K (Ultra HD)</option>
                   </select>
-                  <Maximize2 className="absolute right-3 top-3 text-slate-400 pointer-events-none" size={16} />
+                  <Maximize2
+                    className="absolute right-3 top-3 text-slate-400 pointer-events-none"
+                    size={16}
+                  />
                 </div>
               </div>
 
@@ -98,7 +111,9 @@ export const ImageGenerator: React.FC = () => {
                 </label>
                 <select
                   value={aspectRatio}
-                  onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
+                  onChange={(e) =>
+                    setAspectRatio(e.target.value as AspectRatio)
+                  }
                   className="w-full px-3 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white"
                 >
                   <option value="1:1">1:1 (Square)</option>
@@ -115,8 +130,8 @@ export const ImageGenerator: React.FC = () => {
               disabled={isGenerating || !prompt.trim()}
               className={`w-full py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-all ${
                 isGenerating || !prompt.trim()
-                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:shadow-lg'
+                  ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:shadow-lg"
               }`}
             >
               {isGenerating ? (
@@ -131,37 +146,47 @@ export const ImageGenerator: React.FC = () => {
                 </>
               )}
             </button>
-            
+
             {/* Disclaimer */}
             <p className="text-xs text-slate-400 text-center">
-               Using 2K or 4K resolution may take slightly longer to generate.
+              Using 2K or 4K resolution may take slightly longer to generate.
             </p>
           </div>
 
           <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-             <h4 className="text-sm font-semibold text-blue-800 mb-1 flex items-center gap-2">
-                <AlertCircle size={14} />
-                Pro Tip
-             </h4>
-             <p className="text-xs text-blue-700">
-               Be specific about lighting (e.g., "cinematic lighting", "golden hour") and style (e.g., "photorealistic", "illustration") for best results.
-             </p>
+            <h4 className="text-sm font-semibold text-blue-800 mb-1 flex items-center gap-2">
+              <AlertCircle size={14} />
+              Pro Tip
+            </h4>
+            <p className="text-xs text-blue-700">
+              Be specific about lighting (e.g., "cinematic lighting", "golden
+              hour") and style (e.g., "photorealistic", "illustration") for best
+              results.
+            </p>
           </div>
         </div>
 
         {/* Preview Area */}
         <div className="lg:col-span-2">
-          <div className={`w-full aspect-square md:aspect-[4/3] rounded-xl border-2 border-dashed flex items-center justify-center relative overflow-hidden bg-slate-50 transition-all ${
-            generatedImage ? 'border-transparent shadow-xl' : 'border-slate-300'
-          }`}>
+          <div
+            className={`w-full aspect-square md:aspect-[4/3] rounded-xl border-2 border-dashed flex items-center justify-center relative overflow-hidden bg-slate-50 transition-all ${
+              generatedImage
+                ? "border-transparent shadow-xl"
+                : "border-slate-300"
+            }`}
+          >
             {error ? (
               <div className="text-center p-8">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-500 mb-4">
                   <AlertCircle size={32} />
                 </div>
-                <h3 className="text-lg font-medium text-slate-800 mb-1">Generation Failed</h3>
-                <p className="text-sm text-slate-500 max-w-sm mx-auto">{error}</p>
-                <button 
+                <h3 className="text-lg font-medium text-slate-800 mb-1">
+                  Generation Failed
+                </h3>
+                <p className="text-sm text-slate-500 max-w-sm mx-auto">
+                  {error}
+                </p>
+                <button
                   onClick={() => setError(null)}
                   className="mt-4 text-indigo-600 font-medium text-sm hover:underline"
                 >
@@ -170,13 +195,13 @@ export const ImageGenerator: React.FC = () => {
               </div>
             ) : generatedImage ? (
               <div className="relative w-full h-full group">
-                <img 
-                  src={generatedImage} 
-                  alt="Generated marketing asset" 
+                <img
+                  src={generatedImage}
+                  alt="Generated marketing asset"
                   className="w-full h-full object-contain bg-black/5"
                 />
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
-                  <button 
+                  <button
                     onClick={downloadImage}
                     className="flex items-center gap-2 bg-white text-slate-900 px-6 py-3 rounded-full font-medium hover:bg-slate-100 transition-colors shadow-lg"
                   >
@@ -189,29 +214,33 @@ export const ImageGenerator: React.FC = () => {
               <div className="text-center p-8 text-slate-400">
                 {isGenerating ? (
                   <div className="space-y-4">
-                     <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto"></div>
-                     <p className="text-slate-500 font-medium">Creating masterpiece...</p>
+                    <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto"></div>
+                    <p className="text-slate-500 font-medium">
+                      Creating masterpiece...
+                    </p>
                   </div>
                 ) : (
                   <>
                     <ImageIcon size={48} className="mx-auto mb-4 opacity-50" />
                     <p className="font-medium">No image generated yet</p>
-                    <p className="text-sm mt-1">Configure options and click generate</p>
+                    <p className="text-sm mt-1">
+                      Configure options and click generate
+                    </p>
                   </>
                 )}
               </div>
             )}
           </div>
-          
+
           {generatedImage && (
-             <div className="mt-4 flex items-center justify-between text-sm text-slate-500 px-2">
-                <span className="flex items-center gap-1">
-                   Generated with <strong>Gemini 3 Pro</strong>
-                </span>
-                <span>
-                   {size} • {aspectRatio}
-                </span>
-             </div>
+            <div className="mt-4 flex items-center justify-between text-sm text-slate-500 px-2">
+              <span className="flex items-center gap-1">
+                Generated with <strong>Gemini 3 Pro</strong>
+              </span>
+              <span>
+                {size} • {aspectRatio}
+              </span>
+            </div>
           )}
         </div>
       </div>
