@@ -3,6 +3,7 @@ import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { ImageGenerator } from './components/ImageGenerator';
 import { StudentManagement } from './components/StudentManagement';
+import { ClassSchedule } from './components/ClassSchedule';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -13,6 +14,8 @@ function App() {
         return <Dashboard />;
       case 'students':
         return <StudentManagement />;
+      case 'schedule':
+        return <ClassSchedule />;
       case 'marketing':
         return <ImageGenerator />;
       default:

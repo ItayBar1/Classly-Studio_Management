@@ -37,7 +37,14 @@ export interface ClassSession {
   id: string;
   name: string;
   instructor: string;
-  time: string;
+  instructorAvatar: string;
+  startTime: string; // e.g., "09:00"
+  duration: number; // in minutes
+  dayOfWeek: string;
   students: number;
   capacity: number;
+  level: 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels';
+  room: string;
+  category: string;
+  color: string; // Tailwind color class (e.g., 'indigo')
 }
