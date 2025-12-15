@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Search,
   Filter,
@@ -9,8 +9,12 @@ import {
   ArrowUpDown,
   Download,
 } from "lucide-react";
-import { Student } from "../types/types";
+import { Student, UserRole } from "../types/types";
 import { supabase } from '../services/supabaseClient';
+import { Database } from '../types/database'; // ייבוא הטיפוסים של ה-DB
+
+// טיפוס עזר לשורה בטבלת המשתמשים
+type UserRow = Database['public']['Tables']['users']['Row'];
 
 export const StudentManagement: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
@@ -30,29 +34,31 @@ export const StudentManagement: React.FC = () => {
   const fetchStudents = async () => {
     try {
       setLoading(true);
-      // שליפה מטבלת users (לפי ה-PRD שלך, סטודנטים הם users עם role='STUDENT')
+      
+      // הוספת .returns<UserRow[]>() פותרת את שגיאת ה-never
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('role', 'STUDENT');
+        .eq('role', 'STUDENT')
+        .returns<UserRow[]>(); 
 
       if (error) throw error;
 
       if (data) {
-        // המרה למבנה של ה-Student Interface שלך במידת הצורך
-        // שים לב: ב-PRD שמות העמודות הם ב-snake_case (למשל full_name) ובקוד שלך ב-camelCase
-        const formattedStudents = data.map(user => ({
+        const formattedStudents: Student[] = data.map((user) => ({
             id: user.id,
-            name: user.full_name,
-            role: user.role,
+            name: user.full_name || 'Unknown Name', // טיפול בערכי null
+            role: user.role as UserRole, // המרה לטיפוס המתאים בקלאיינט
             avatar: user.full_name ? user.full_name[0].toUpperCase() : '?',
             email: user.email,
-            phone: user.phone_number,
-            enrolledClass: 'Unknown', // זה ידרוש שליפה מורכבת יותר מטבלת enrollments
-            status: user.status,
+            phone: user.phone_number || '',
+            enrolledClass: 'Unknown', // לוגיקה זמנית עד לחיבור טבלת הרשמות
+            status: (user.status === 'ACTIVE' || user.status === 'INACTIVE' || user.status === 'SUSPENDED') 
+              ? (user.status === 'ACTIVE' ? 'Active' : user.status === 'SUSPENDED' ? 'Suspended' : 'Pending')
+              : 'Pending', // המרה מטיפוסי DB לטיפוסי UI
             joinDate: user.created_at
         }));
-        setStudents(formattedStudents as any); // Type assertion זמני
+        setStudents(formattedStudents);
       }
     } catch (error) {
       console.error('Error fetching students:', error);
@@ -61,15 +67,15 @@ export const StudentManagement: React.FC = () => {
     }
   };
 
-  // Extract unique classes for filter and sort them alphabetically
+  // שאר הקוד נשאר ללא שינוי...
+  
   const classes = useMemo(() => {
     const uniqueClasses = Array.from(
       new Set(students.map((s) => s.enrolledClass))
     );
     return ["All", ...uniqueClasses.sort()];
-  }, []);
+  }, [students]);
 
-  // Filter and Sort
   const processedStudents = useMemo(() => {
     let filtered = students.filter((student) => {
       const matchesSearch =
@@ -91,7 +97,7 @@ export const StudentManagement: React.FC = () => {
     }
 
     return filtered;
-  }, [searchTerm, selectedClass, sortConfig]);
+  }, [students, searchTerm, selectedClass, sortConfig]);
 
   const handleSort = (key: keyof Student) => {
     setSortConfig((current) => ({
@@ -282,7 +288,7 @@ export const StudentManagement: React.FC = () => {
                             {student.name}
                           </div>
                           <div className="text-sm text-slate-500">
-                            ID: #{student.id}
+                            ID: #{student.id.substring(0, 8)}
                           </div>
                         </div>
                       </div>

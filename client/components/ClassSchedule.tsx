@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Calendar,
   Clock,
@@ -7,136 +7,112 @@ import {
   Plus,
   MoreHorizontal,
   ChevronRight,
+  Loader2
 } from "lucide-react";
+import { supabase } from '../services/supabaseClient';
 import { ClassSession } from "../types/types";
 
-// Mock Data
-const MOCK_CLASSES: ClassSession[] = [
-  {
-    id: "1",
-    name: "Morning Flow Yoga",
-    instructor: "Sarah Jenkins",
-    instructorAvatar: "SJ",
-    startTime: "08:00",
-    duration: 60,
-    dayOfWeek: "Monday",
-    students: 12,
-    capacity: 20,
-    level: "All Levels",
-    room: "Studio A",
-    category: "Yoga",
-    color: "emerald",
-  },
-  {
-    id: "2",
-    name: "HIIT Blast",
-    instructor: "Mike Ross",
-    instructorAvatar: "MR",
-    startTime: "09:30",
-    duration: 45,
-    dayOfWeek: "Monday",
-    students: 18,
-    capacity: 20,
-    level: "Advanced",
-    room: "Studio B",
-    category: "Fitness",
-    color: "orange",
-  },
-  {
-    id: "3",
-    name: "Contemporary Dance",
-    instructor: "Elena Rodriguez",
-    instructorAvatar: "ER",
-    startTime: "16:00",
-    duration: 90,
-    dayOfWeek: "Monday",
-    students: 15,
-    capacity: 25,
-    level: "Intermediate",
-    room: "Main Hall",
-    category: "Dance",
-    color: "purple",
-  },
-  {
-    id: "4",
-    name: "Ballet Fundamentals",
-    instructor: "Elena Rodriguez",
-    instructorAvatar: "ER",
-    startTime: "10:00",
-    duration: 60,
-    dayOfWeek: "Tuesday",
-    students: 8,
-    capacity: 15,
-    level: "Beginner",
-    room: "Studio A",
-    category: "Dance",
-    color: "pink",
-  },
-  {
-    id: "5",
-    name: "Power Pilates",
-    instructor: "Jessica Chen",
-    instructorAvatar: "JC",
-    startTime: "17:30",
-    duration: 50,
-    dayOfWeek: "Tuesday",
-    students: 22,
-    capacity: 25,
-    level: "Intermediate",
-    room: "Studio B",
-    category: "Pilates",
-    color: "blue",
-  },
-  {
-    id: "6",
-    name: "Advanced Jazz",
-    instructor: "Marcus Green",
-    instructorAvatar: "MG",
-    startTime: "19:00",
-    duration: 90,
-    dayOfWeek: "Wednesday",
-    students: 14,
-    capacity: 20,
-    level: "Advanced",
-    room: "Main Hall",
-    category: "Dance",
-    color: "indigo",
-  },
-];
+// מיפוי ימים ממספרים (DB) למחרוזות (UI)
+// הערה: יש לוודא האם 0 ב-DB שלך הוא ראשון או שני. כאן הנחנו 0=Sunday
+const DAY_MAP: Record<number, string> = {
+  0: "Sunday",
+  1: "Monday",
+  2: "Tuesday",
+  3: "Wednesday",
+  4: "Thursday",
+  5: "Friday",
+  6: "Saturday"
+};
 
-const DAYS = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
-];
+const DAYS = Object.values(DAY_MAP);
 
 export const ClassSchedule: React.FC = () => {
-  const [selectedDay, setSelectedDay] = useState("Monday");
+  const [selectedDay, setSelectedDay] = useState("Sunday");
+  const [classes, setClasses] = useState<ClassSession[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredClasses = MOCK_CLASSES.filter(
-    (c) => c.dayOfWeek === selectedDay
-  ).sort((a, b) => a.startTime.localeCompare(b.startTime));
+  // פונקציית שליפת נתונים
+  const fetchClasses = async () => {
+    try {
+      setLoading(true);
+      
+      // שליפה של השיעורים + פרטי המדריך (Join)
+      // אנו מניחים ש-instructor_id בטבלת classes מקושר לטבלת users
+      const { data, error } = await supabase
+        .from('classes')
+        .select(`
+          *,
+          instructor:users!instructor_id (
+            full_name,
+            profile_image_url
+          )
+        `)
+        .eq('is_active', true);
 
-  // Helper to calculate end time
+      if (error) throw error;
+
+      if (data) {
+        // המרת הנתונים מהמבנה של ה-DB למבנה של האפליקציה
+        const formattedClasses: ClassSession[] = data.map((cls: any) => {
+          // חישוב משך זמן בדקות
+          const start = new Date(`1970-01-01T${cls.start_time}`);
+          const end = new Date(`1970-01-01T${cls.end_time}`);
+          const duration = (end.getTime() - start.getTime()) / 60000; // המרה לדקות
+
+          return {
+            id: cls.id,
+            name: cls.name,
+            // בדיקה שה-join הצליח ושיש נתונים
+            instructor: cls.instructor?.full_name || 'Unknown Instructor',
+            instructorAvatar: cls.instructor?.full_name 
+              ? cls.instructor.full_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() 
+              : 'NB',
+            startTime: cls.start_time.substring(0, 5), // הסרת השניות (09:00:00 -> 09:00)
+            duration: duration,
+            dayOfWeek: DAY_MAP[cls.day_of_week] || "Sunday",
+            students: cls.current_enrollment || 0,
+            capacity: cls.max_capacity,
+            level: cls.level, // שים לב: ה-DB שומר ב-UPPERCASE, ה-UI מצפה ל-Capitalized. ייתכן וצריך המרה.
+            room: cls.location_room || 'Main Hall',
+            category: 'General', // חסר category ב-join, אפשר להוסיף אם צריך
+            color: 'indigo' // ניתן להוסיף עמודת צבע לטבלת classes או categories
+          };
+        });
+        setClasses(formattedClasses);
+      }
+    } catch (error) {
+      console.error('Error fetching classes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchClasses();
+  }, []);
+
+  // סינון ומיון לוקאלי (לאחר השליפה)
+  const filteredClasses = classes
+    .filter((c) => c.dayOfWeek === selectedDay)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
   const getEndTime = (startTime: string, duration: number) => {
     const [hours, minutes] = startTime.split(":").map(Number);
     const date = new Date();
     date.setHours(hours, minutes);
     date.setMinutes(date.getMinutes() + duration);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
   };
 
   const getLevelBadgeColor = (level: string) => {
-    switch (level) {
-      case "Beginner":
+    // התאמה לערכים ב-DB שיכולים להיות ב-UPPERCASE
+    const normalizedLevel = level.toUpperCase();
+    switch (normalizedLevel) {
+      case "BEGINNER":
         return "bg-green-100 text-green-700";
-      case "Intermediate":
+      case "INTERMEDIATE":
         return "bg-blue-100 text-blue-700";
-      case "Advanced":
+      case "ADVANCED":
         return "bg-red-100 text-red-700";
       default:
         return "bg-slate-100 text-slate-700";
@@ -152,8 +128,16 @@ export const ClassSchedule: React.FC = () => {
       blue: "bg-blue-500",
       indigo: "bg-indigo-500",
     };
-    return map[color] || "bg-slate-500";
+    return map[color] || "bg-indigo-500";
   };
+
+  if (loading && classes.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 text-slate-400">
+        <Loader2 className="animate-spin mr-2" /> Loading schedule...
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
