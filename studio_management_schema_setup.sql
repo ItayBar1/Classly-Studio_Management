@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS public.studios (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- הוספת הקישור החסר (Circular Dependency) בין users ל-studios
+-- הוספת הקישור החסר (Circular Dependency)
 ALTER TABLE public.users
 DROP CONSTRAINT IF EXISTS fk_users_studio;
 
@@ -100,6 +100,10 @@ CREATE TABLE IF NOT EXISTS public.classes (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- תיקון: ודא ש-category_id אינו NOT NULL (למקרה שהרצנו את זה קודם)
+ALTER TABLE public.classes ALTER COLUMN category_id DROP NOT NULL;
+
 
 -- ENROLLMENTS
 CREATE TABLE IF NOT EXISTS public.enrollments (
@@ -226,47 +230,67 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
 ----------------------------------------------------------------
 -- 3. יצירת אינדקסים
 ----------------------------------------------------------------
--- Users
 CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
 CREATE INDEX IF NOT EXISTS idx_users_studio_id ON public.users(studio_id);
 CREATE INDEX IF NOT EXISTS idx_users_role ON public.users(role);
 
--- Studios
 CREATE INDEX IF NOT EXISTS idx_studios_admin_id ON public.studios(admin_id);
 
--- Categories
 CREATE INDEX IF NOT EXISTS idx_categories_studio_id ON public.categories(studio_id);
 
--- Classes
 CREATE INDEX IF NOT EXISTS idx_classes_studio_id ON public.classes(studio_id);
 CREATE INDEX IF NOT EXISTS idx_classes_instructor_id ON public.classes(instructor_id);
 
--- Enrollments
 CREATE INDEX IF NOT EXISTS idx_enrollments_student_id ON public.enrollments(student_id);
 CREATE INDEX IF NOT EXISTS idx_enrollments_class_id ON public.enrollments(class_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_enrollments_unique ON public.enrollments(student_id, class_id, start_date);
 
--- Attendance
 CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON public.attendance(student_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_class_id ON public.attendance(class_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_attendance_unique ON public.attendance(enrollment_id, session_date);
 
 ----------------------------------------------------------------
--- 4. פונקציות וטריגרים (חשוב מאוד!)
+-- 4. פונקציות וטריגרים
 ----------------------------------------------------------------
 
--- פונקציה לטיפול בנרשמים חדשים (מעתיקה מ-Auth ל-Public)
+-- פונקציית עזר למניעת לולאה אינסופית ב-RLS
+CREATE OR REPLACE FUNCTION public.get_my_studio_id()
+RETURNS UUID 
+AS $$
+  SELECT studio_id FROM public.users WHERE id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- פונקציה לטיפול בנרשמים חדשים (הוספה לסטודיו דיפולטי)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  default_studio_id UUID;
 BEGIN
-  INSERT INTO public.users (id, email, full_name, role, status)
+  -- שליפת הסטודיו הדיפולטי (הראשון שנוצר)
+  SELECT id INTO default_studio_id 
+  FROM public.studios 
+  ORDER BY created_at ASC 
+  LIMIT 1;
+
+  INSERT INTO public.users (
+    id, 
+    email, 
+    full_name, 
+    role, 
+    phone_number, 
+    status,
+    studio_id
+  )
   VALUES (
     NEW.id,
     NEW.email,
     NEW.raw_user_meta_data->>'full_name',
-    'STUDENT', -- ברירת מחדל
-    'ACTIVE'
+    COALESCE(UPPER(NEW.raw_user_meta_data->>'role'), 'STUDENT'),
+    COALESCE(NEW.raw_user_meta_data->>'phone_number', NEW.raw_user_meta_data->>'phone', NEW.phone),
+    'ACTIVE',
+    COALESCE((NEW.raw_user_meta_data->>'studio_id')::UUID, default_studio_id)
   );
+  
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -277,7 +301,7 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
--- פונקציה לעדכון מונה נרשמים בטבלת השיעורים
+-- פונקציה לעדכון מונה נרשמים
 CREATE OR REPLACE FUNCTION increment_enrollment(class_id_input UUID)
 RETURNS VOID AS $$
 BEGIN
@@ -288,7 +312,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 ----------------------------------------------------------------
--- 5. הגדרת ROW LEVEL SECURITY (RLS) - מתוקן
+-- 5. הגדרת ROW LEVEL SECURITY (RLS) - גרסה מתוקנת ובטוחה
 ----------------------------------------------------------------
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
@@ -298,21 +322,48 @@ ALTER TABLE public.enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
 
+-- ניקוי מדיניות ישנה למניעת כפילויות ושגיאות
+DROP POLICY IF EXISTS "Users can view own profile" ON public.users;
+DROP POLICY IF EXISTS "Users can view members of their own studio" ON public.users;
+DROP POLICY IF EXISTS "Admins can view studio users" ON public.users;
+DROP POLICY IF EXISTS "Users can view active classes in their studio" ON public.classes;
+DROP POLICY IF EXISTS "Students can view active classes" ON public.classes;
+DROP POLICY IF EXISTS "Instructors can view own classes" ON public.classes;
+DROP POLICY IF EXISTS "Users can view relevant enrollments" ON public.enrollments;
+DROP POLICY IF EXISTS "Students can view own enrollments" ON public.enrollments;
+DROP POLICY IF EXISTS "View attendance based on role" ON public.attendance;
+DROP POLICY IF EXISTS "Instructors can view class attendance" ON public.attendance;
+
 -- Users Policies
 CREATE POLICY "Users can view own profile" ON public.users
 FOR SELECT USING (auth.uid() = id);
 
--- התיקון הקריטי: מאפשר לראות משתמשים אחרים באותו סטודיו
+-- שימוש בפונקציה get_my_studio_id למניעת לולאה אינסופית
 CREATE POLICY "Users can view members of their own studio" ON public.users
 FOR SELECT USING (
-  studio_id = (SELECT studio_id FROM public.users WHERE id = auth.uid())
+  studio_id = public.get_my_studio_id()
+  OR id = auth.uid()
 );
 
--- Classes Policies
+-- Classes Policies (קריאה)
 CREATE POLICY "Users can view active classes in their studio" ON public.classes
 FOR SELECT USING (
-  studio_id = (SELECT studio_id FROM public.users WHERE id = auth.uid())
+  studio_id = public.get_my_studio_id()
 );
+
+-- Classes Policies (יצירה/עריכה - תיקון לשגיאת INSERT)
+CREATE POLICY "Admins and Instructors can insert classes" ON public.classes
+FOR INSERT WITH CHECK (
+  (SELECT role FROM public.users WHERE id = auth.uid()) IN ('ADMIN', 'INSTRUCTOR')
+  AND studio_id = public.get_my_studio_id()
+);
+
+CREATE POLICY "Admins and Instructors can update their classes" ON public.classes
+FOR UPDATE USING (
+  (SELECT role FROM public.users WHERE id = auth.uid()) IN ('ADMIN', 'INSTRUCTOR')
+  AND studio_id = public.get_my_studio_id()
+);
+
 
 -- Enrollments Policies
 CREATE POLICY "Users can view relevant enrollments" ON public.enrollments
@@ -323,10 +374,20 @@ FOR SELECT USING (
 );
 
 -- Attendance Policies
-CREATE POLICY "Instructors can view class attendance" ON public.attendance
+CREATE POLICY "View attendance based on role" ON public.attendance
 FOR SELECT USING (
-  class_id IN (SELECT id FROM public.classes WHERE instructor_id = auth.uid())
-  OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'ADMIN'
+  -- תלמיד רואה נוכחות של עצמו
+  student_id = auth.uid()
+  
+  -- מדריך רואה נוכחות של השיעורים שלו
+  OR class_id IN (SELECT id FROM public.classes WHERE instructor_id = auth.uid())
+  
+  -- אדמין רואה הכל בסטודיו שלו (באמצעות הפונקציה הבטוחה)
+  OR (
+      public.get_my_studio_id() IS NOT NULL 
+      AND studio_id = public.get_my_studio_id() 
+      AND (SELECT role FROM public.users WHERE id = auth.uid()) = 'ADMIN'
+  )
 );
 
 COMMIT;
