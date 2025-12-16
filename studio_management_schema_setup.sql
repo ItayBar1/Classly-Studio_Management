@@ -8,14 +8,14 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- 1. יצירת טבלאות בסיס (USERS & STUDIOS)
 ----------------------------------------------------------------
 
--- יצירת טבלת USERS (ללא הקישור ל-Studios זמנית)
+-- יצירת טבלת USERS
 CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email VARCHAR(255) NOT NULL UNIQUE,
   full_name VARCHAR(255),
   phone_number VARCHAR(20),
   profile_image_url TEXT,
-  role VARCHAR(20) CHECK (role IN ('ADMIN', 'INSTRUCTOR', 'STUDENT', 'PARENT')),
+  role VARCHAR(20) CHECK (role IN ('ADMIN', 'INSTRUCTOR', 'STUDENT', 'PARENT')) DEFAULT 'STUDENT',
   studio_id UUID, 
   status VARCHAR(20) CHECK (status IN ('ACTIVE', 'INACTIVE', 'SUSPENDED')) DEFAULT 'ACTIVE',
   last_login_at TIMESTAMP WITH TIME ZONE,
@@ -48,13 +48,13 @@ CREATE TABLE IF NOT EXISTS public.studios (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- הוספת הקישור החסר (Circular Dependency)
+-- הוספת הקישור החסר (Circular Dependency) בין users ל-studios
 ALTER TABLE public.users
 DROP CONSTRAINT IF EXISTS fk_users_studio;
 
 ALTER TABLE public.users
 ADD CONSTRAINT fk_users_studio
-FOREIGN KEY (studio_id) REFERENCES public.studios(id) ON DELETE CASCADE;
+FOREIGN KEY (studio_id) REFERENCES public.studios(id) ON DELETE SET NULL;
 
 ----------------------------------------------------------------
 -- 2. יצירת שאר הטבלאות
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS public.categories (
 CREATE TABLE IF NOT EXISTS public.classes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   studio_id UUID NOT NULL REFERENCES public.studios(id) ON DELETE CASCADE,
-  category_id UUID NOT NULL REFERENCES public.categories(id) ON DELETE SET NULL,
+  category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
   name VARCHAR(255) NOT NULL,
   description TEXT,
   instructor_id UUID NOT NULL REFERENCES public.users(id),
@@ -233,64 +233,62 @@ CREATE INDEX IF NOT EXISTS idx_users_role ON public.users(role);
 
 -- Studios
 CREATE INDEX IF NOT EXISTS idx_studios_admin_id ON public.studios(admin_id);
-CREATE INDEX IF NOT EXISTS idx_studios_city ON public.studios(city);
-CREATE INDEX IF NOT EXISTS idx_studios_location ON public.studios USING GIST (coordinates);
 
 -- Categories
 CREATE INDEX IF NOT EXISTS idx_categories_studio_id ON public.categories(studio_id);
-CREATE INDEX IF NOT EXISTS idx_categories_type ON public.categories(type);
 
 -- Classes
 CREATE INDEX IF NOT EXISTS idx_classes_studio_id ON public.classes(studio_id);
-CREATE INDEX IF NOT EXISTS idx_classes_category_id ON public.classes(category_id);
 CREATE INDEX IF NOT EXISTS idx_classes_instructor_id ON public.classes(instructor_id);
-CREATE INDEX IF NOT EXISTS idx_classes_day_time ON public.classes(day_of_week, start_time);
-CREATE INDEX IF NOT EXISTS idx_classes_studio_category ON public.classes(studio_id, category_id, is_active);
-CREATE INDEX IF NOT EXISTS idx_classes_fts ON public.classes USING GIN (to_tsvector('english', name || ' ' || description));
 
 -- Enrollments
 CREATE INDEX IF NOT EXISTS idx_enrollments_student_id ON public.enrollments(student_id);
 CREATE INDEX IF NOT EXISTS idx_enrollments_class_id ON public.enrollments(class_id);
-CREATE INDEX IF NOT EXISTS idx_enrollments_status ON public.enrollments(status);
-CREATE INDEX IF NOT EXISTS idx_enrollments_payment_status ON public.enrollments(payment_status);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_enrollments_unique ON public.enrollments(student_id, class_id, start_date);
-CREATE INDEX IF NOT EXISTS idx_enrollments_student_status ON public.enrollments(student_id, status);
 
 -- Attendance
 CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON public.attendance(student_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_class_id ON public.attendance(class_id);
-CREATE INDEX IF NOT EXISTS idx_attendance_session_date ON public.attendance(session_date);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_attendance_unique ON public.attendance(enrollment_id, session_date);
-CREATE INDEX IF NOT EXISTS idx_attendance_student_date ON public.attendance(student_id, session_date DESC);
-
--- Payments
-CREATE INDEX IF NOT EXISTS idx_payments_student_id ON public.payments(student_id);
-CREATE INDEX IF NOT EXISTS idx_payments_enrollment_id ON public.payments(enrollment_id);
-CREATE INDEX IF NOT EXISTS idx_payments_status ON public.payments(status);
-CREATE INDEX IF NOT EXISTS idx_payments_paid_date ON public.payments(paid_date);
-CREATE INDEX IF NOT EXISTS idx_payments_student_status ON public.payments(student_id, status);
-
--- Instructor Commissions
-CREATE INDEX IF NOT EXISTS idx_instructor_commissions_instructor_id ON public.instructor_commissions(instructor_id);
-CREATE INDEX IF NOT EXISTS idx_instructor_commissions_class_id ON public.instructor_commissions(class_id);
-
--- Schedule
-CREATE INDEX IF NOT EXISTS idx_schedule_class_id ON public.schedule_sessions(class_id);
-CREATE INDEX IF NOT EXISTS idx_schedule_session_date ON public.schedule_sessions(session_date);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_schedule_unique ON public.schedule_sessions(class_id, session_date);
-
--- Notifications
-CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
-CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON public.notifications(is_read);
-CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON public.notifications(created_at);
-
--- Audit Logs
-CREATE INDEX IF NOT EXISTS idx_audit_logs_studio_id ON public.audit_logs(studio_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON public.audit_logs(user_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.audit_logs(created_at);
 
 ----------------------------------------------------------------
--- 4. הגדרת ROW LEVEL SECURITY (RLS) - מתוקן
+-- 4. פונקציות וטריגרים (חשוב מאוד!)
+----------------------------------------------------------------
+
+-- פונקציה לטיפול בנרשמים חדשים (מעתיקה מ-Auth ל-Public)
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, email, full_name, role, status)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    NEW.raw_user_meta_data->>'full_name',
+    'STUDENT', -- ברירת מחדל
+    'ACTIVE'
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- יצירת הטריגר
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- פונקציה לעדכון מונה נרשמים בטבלת השיעורים
+CREATE OR REPLACE FUNCTION increment_enrollment(class_id_input UUID)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE public.classes
+  SET current_enrollment = COALESCE(current_enrollment, 0) + 1
+  WHERE id = class_id_input;
+END;
+$$ LANGUAGE plpgsql;
+
+----------------------------------------------------------------
+-- 5. הגדרת ROW LEVEL SECURITY (RLS) - מתוקן
 ----------------------------------------------------------------
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
@@ -300,38 +298,31 @@ ALTER TABLE public.enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
 
--- Users
+-- Users Policies
 CREATE POLICY "Users can view own profile" ON public.users
 FOR SELECT USING (auth.uid() = id);
 
+-- התיקון הקריטי: מאפשר לראות משתמשים אחרים באותו סטודיו
 CREATE POLICY "Users can view members of their own studio" ON public.users
 FOR SELECT USING (
   studio_id = (SELECT studio_id FROM public.users WHERE id = auth.uid())
 );
 
--- Classes
-CREATE POLICY "Students can view active classes" ON public.classes
+-- Classes Policies
+CREATE POLICY "Users can view active classes in their studio" ON public.classes
 FOR SELECT USING (
-  is_active = true
-  AND studio_id = (SELECT studio_id FROM public.users WHERE id = auth.uid())
+  studio_id = (SELECT studio_id FROM public.users WHERE id = auth.uid())
 );
 
-CREATE POLICY "Instructors can view own classes" ON public.classes
-FOR SELECT USING (
-  instructor_id = auth.uid()
-  OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'ADMIN'
-);
-
--- Enrollments (החלק שתוקן)
--- במקום לבדוק instructor_id ישירות (שלא קיים), בודקים אם המשתמש הוא המדריך של השיעור המקושר
-CREATE POLICY "Students can view own enrollments" ON public.enrollments
+-- Enrollments Policies
+CREATE POLICY "Users can view relevant enrollments" ON public.enrollments
 FOR SELECT USING (
   student_id = auth.uid()
   OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'ADMIN'
   OR class_id IN (SELECT id FROM public.classes WHERE instructor_id = auth.uid())
 );
 
--- Attendance
+-- Attendance Policies
 CREATE POLICY "Instructors can view class attendance" ON public.attendance
 FOR SELECT USING (
   class_id IN (SELECT id FROM public.classes WHERE instructor_id = auth.uid())
