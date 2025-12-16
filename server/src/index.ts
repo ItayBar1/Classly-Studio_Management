@@ -1,9 +1,9 @@
-// server/src/index.ts
+import dotenv from 'dotenv';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import dotenv from 'dotenv';
+import paymentRoutes from './routes/payments';
 
 // טעינת משתני סביבה
 dotenv.config();
@@ -22,8 +22,8 @@ app.get('/api/health', (req: Request, res: Response) => {
   res.json({ status: 'OK', message: 'Classly Server is running 🚀' });
 });
 
-// כאן נטען את הראוטים בהמשך
-// app.use('/api/payment', paymentRoutes);
+// Routes
+app.use('/api/payment', paymentRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
