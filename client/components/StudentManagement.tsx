@@ -48,43 +48,58 @@ export const StudentManagement: React.FC = () => {
       .order('name');
     
     if (data) {
-      setClassList(["הכל", ...data.map(c => c.name)]);
+      // תיקון השגיאה: הוספת טיפוס מפורש (c: any)
+      setClassList(["הכל", ...data.map((c: any) => c.name)]);
     }
   };
 
-  // פונקציית הטעינה הראשית - צד שרת
+// פונקציית הטעינה הראשית - צד שרת
   const fetchStudents = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. בניית השאילתה הבסיסית
-      let query = supabase
-        .from('users')
-        .select(`
-          id, full_name, email, phone_number, created_at, role, status,
-          enrollments (
-            status,
-            classes ( name )
-          )
-        `, { count: 'exact' })
-        .eq('role', 'STUDENT');
+      let query;
 
-      // 2. הוספת חיפוש טקסט חופשי (שם או אימייל)
+      // בניית השאילתה בהתאם לסינון
+      if (selectedClass && selectedClass !== "הכל") {
+        // מצב סינון: שימוש ב-!inner כדי להכריח את ה-DB להחזיר רק תלמידים שרשומים לשיעור הספציפי
+        query = supabase
+          .from('users')
+          .select(`
+            id, full_name, email, phone_number, created_at, role, status,
+            enrollments!inner (
+              status,
+              classes!inner ( name )
+            )
+          `, { count: 'exact' })
+          .eq('role', 'STUDENT')
+          .eq('enrollments.status', 'ACTIVE') // מוודאים שההרשמה פעילה
+          .eq('enrollments.classes.name', selectedClass); // הסינון לפי שם השיעור
+      } else {
+        // מצב רגיל (ללא סינון שיעור): שליפה רגילה (Left Join)
+        query = supabase
+          .from('users')
+          .select(`
+            id, full_name, email, phone_number, created_at, role, status,
+            enrollments (
+              status,
+              classes ( name )
+            )
+          `, { count: 'exact' })
+          .eq('role', 'STUDENT');
+      }
+
+      // הוספת חיפוש טקסט חופשי (שם או אימייל) - עובד בשני המצבים
       if (searchTerm) {
         query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
       }
 
-      // 3. הוספת סינון לפי שיעור (דורש join מורכב יותר, לכן נשתמש בפילטר בסיסי כרגע או נסתמך על הטעינה)
-      // הערה: סינון עמוק ב-Supabase דורש !inner joins, כרגע נשאיר פשוט כדי לא לסבך את הקוד הראשוני
-      // אופטימיזציה: אם נבחר שיעור ספציפי, אפשר לסנן אותו בצד הלקוח על ה-Batch הנוכחי או לשנות את השאילתה.
-      // במימוש זה נתמקד בביצועים של הטעינה הראשונית.
-
-      // 4. מיון
+      // מיון
       const sortColumn = sortConfig.key === 'joinDate' ? 'created_at' : 
                          sortConfig.key === 'name' ? 'full_name' : 'created_at';
       
       query = query.order(sortColumn, { ascending: sortConfig.ascending });
 
-      // 5. דפדוף (Pagination)
+      // דפדוף (Pagination)
       const from = page * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
       query = query.range(from, to);
@@ -97,11 +112,11 @@ export const StudentManagement: React.FC = () => {
 
       if (data) {
         const formattedStudents: Student[] = data.map((user: any) => {
-          // מציאת השיעור הפעיל
-          const activeEnrollment = user.enrollments?.find((e: any) => e.status === 'ACTIVE');
+          // מציאת השיעור הפעיל לתצוגה
+          // במצב סינון, המערך יכיל רק את השיעור הרלוונטי. במצב רגיל, נחפש Active.
+          const activeEnrollment = user.enrollments?.find((e: any) => e.status === 'ACTIVE' || (selectedClass !== "הכל"));
           const className = activeEnrollment?.classes?.name || 'לא רשום';
 
-          // המרת סטטוס
           let status: EnrollmentStatus = 'Pending';
           if (user.status === 'ACTIVE') status = 'Active';
           else if (user.status === 'SUSPENDED') status = 'Suspended';
@@ -119,20 +134,15 @@ export const StudentManagement: React.FC = () => {
             joinDate: user.created_at
           };
         });
-
-        // אם יש סינון שיעור פעיל, נסנן את התוצאות שהתקבלו (בגרסה מתקדמת נעשה זאת בשרת)
-        const filteredByClass = selectedClass === "הכל" 
-          ? formattedStudents 
-          : formattedStudents.filter(s => s.enrolledClass === selectedClass);
           
-        setStudents(filteredByClass);
+        setStudents(formattedStudents);
       }
     } catch (error) {
       console.error('Error fetching students:', error);
     } finally {
       setLoading(false);
     }
-  }, [page, searchTerm, sortConfig, selectedClass]); // תלות משתנים לטעינה מחדש
+  }, [page, searchTerm, sortConfig, selectedClass]);
 
   useEffect(() => {
     fetchClassesList();
@@ -150,7 +160,6 @@ export const StudentManagement: React.FC = () => {
     }));
   };
 
-  // טיפול בייצוא (כרגע מייצא רק את העמוד הנוכחי - לשיפור בעתיד)
   const handleExportCSV = () => {
     const headers = ["ID", "שם", "שיעור", "סטטוס", "אימייל", "טלפון", "תאריך הצטרפות"];
     const rows = students.map((student) => [
