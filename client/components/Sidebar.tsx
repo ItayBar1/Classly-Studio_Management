@@ -1,64 +1,68 @@
-import React from 'react';
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  Users, 
-  CreditCard, 
+import React, { useEffect } from 'react';
+import {
+  LayoutDashboard,
+  Calendar,
+  Users,
+  CreditCard,
   Settings,
   LogOut,
-  Search // אייקון חדש לחיפוש קורסים
+  Search // New icon for browsing courses
 } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onLogout?: () => void;
-  userRole: string; // הוספת פרופ לתפקיד
+  userRole: string; // Added prop for role awareness
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLogout, userRole }) => {
-  
-  // הגדרת הפריטים עם הרשאות
+  useEffect(() => {
+    console.info('Sidebar mounted', { userRole });
+    return () => console.info('Sidebar unmounted');
+  }, [userRole]);
+
+  // Define menu items alongside authorization rules
   const allMenuItems = [
-    { 
-      id: 'dashboard', 
-      label: 'לוח בקרה', 
-      icon: LayoutDashboard, 
-      roles: ['ADMIN', 'INSTRUCTOR', 'STUDENT'] 
+    {
+      id: 'dashboard',
+      label: 'לוח בקרה',
+      icon: LayoutDashboard,
+      roles: ['ADMIN', 'INSTRUCTOR', 'STUDENT']
     },
-    { 
-      id: 'browse', 
-      label: 'הרשמה לקורסים', 
-      icon: Search, 
-      roles: ['STUDENT'] // רק לסטודנטים
+    {
+      id: 'browse',
+      label: 'הרשמה לקורסים',
+      icon: Search,
+      roles: ['STUDENT'] // Students only
     },
-    { 
-      id: 'schedule', 
-      label: 'מערכת שעות', 
-      icon: Calendar, 
-      roles: ['ADMIN', 'INSTRUCTOR'] 
+    {
+      id: 'schedule',
+      label: 'מערכת שעות',
+      icon: Calendar,
+      roles: ['ADMIN', 'INSTRUCTOR']
     },
-    { 
-      id: 'students', 
-      label: 'תלמידים', 
-      icon: Users, 
-      roles: ['ADMIN', 'INSTRUCTOR'] 
+    {
+      id: 'students',
+      label: 'תלמידים',
+      icon: Users,
+      roles: ['ADMIN', 'INSTRUCTOR']
     },
-    { 
-      id: 'payments', 
-      label: 'תשלומים', 
-      icon: CreditCard, 
-      roles: ['ADMIN'] // כרגע למנהל בלבד (לפי ה-PRD לסטודנט יש תשלום בתוך ההרשמה/דאשבורד)
+    {
+      id: 'payments',
+      label: 'תשלומים',
+      icon: CreditCard,
+      roles: ['ADMIN'] // Admin only for now (students pay inside registration/dashboard)
     },
-    { 
-      id: 'settings', 
-      label: 'הגדרות', 
-      icon: Settings, 
-      roles: ['ADMIN'] 
+    {
+      id: 'settings',
+      label: 'הגדרות',
+      icon: Settings,
+      roles: ['ADMIN'],
     },
   ];
 
-  // סינון הפריטים לפי התפקיד הנוכחי
+  // Filter menu items according to the current role
   const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
 
   return (
@@ -74,7 +78,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLog
         {menuItems.map((item) => (
           <button
             key={item.id}
-            onClick={() => setActiveTab(item.id)}
+            onClick={() => {
+              console.info('Sidebar navigation clicked', { tab: item.id });
+              setActiveTab(item.id);
+            }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
               activeTab === item.id
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50'
@@ -88,8 +95,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLog
       </nav>
 
       <div className="p-4 border-t border-slate-800">
-        <button 
-          onClick={onLogout}
+        <button
+          onClick={() => {
+            console.info('Sidebar logout clicked');
+            onLogout?.();
+          }}
           className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-red-400 transition-colors"
         >
           <LogOut size={20} />

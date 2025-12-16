@@ -1,38 +1,44 @@
-// server/src/routes/payments.ts
 import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
 import dotenv from 'dotenv';
+import { logger } from '../logger';
 
-// טעינת משתני סביבה באופן מפורש בקובץ הזה
+// Explicitly load environment variables for this module
 dotenv.config();
 
 const router = Router();
 
-// בדיקה שהמפתח קיים לפני שמנסים לאתחל
+// Validate the API key before initializing Stripe
 const stripeKey = process.env.STRIPE_SECRET_KEY;
 
 if (!stripeKey) {
-  console.error("FATAL ERROR: STRIPE_SECRET_KEY is missing in .env file!");
-  // אנחנו לא זורקים שגיאה כאן כדי לא להפיל את כל השרת, 
-  // אבל הראוטים של התשלום ייכשלו אם ייקראו.
+  logger.error('FATAL ERROR: STRIPE_SECRET_KEY is missing in .env file!');
+  // We do not throw here to keep the server running,
+  // but payment routes will fail if they are called.
 }
 
-// אתחול Stripe
+// Initialize Stripe with a safe fallback key to avoid crashes on startup
 const stripe = new Stripe(stripeKey || 'dummy_key_to_prevent_crash_on_startup', {
-  apiVersion: '2025-11-17.clover', // הגרסה המעודכנת
+  apiVersion: '2025-11-17.clover', // Updated API version
 });
 
 // POST /api/payment/create-intent
 router.post('/create-intent', async (req: Request, res: Response) => {
+  const requestLog = req.logger || logger.child({ route: 'create-intent' });
+  requestLog.info('Received request to create payment intent');
+
   try {
-    // בדיקת הגנה כפולה
+    // Double-check configuration safety
     if (!stripeKey) {
+      requestLog.error('Stripe key missing during intent creation');
       return res.status(500).json({ error: 'Server configuration error: Stripe key missing' });
     }
 
     const { amount, currency = 'ils', description } = req.body;
+    requestLog.info({ amount, currency, hasDescription: Boolean(description) }, 'Validating request payload');
 
     if (!amount) {
+      requestLog.warn('Payment intent creation failed: amount missing');
       return res.status(400).json({ error: 'Amount is required' });
     }
 
@@ -45,12 +51,13 @@ router.post('/create-intent', async (req: Request, res: Response) => {
       },
     });
 
+    requestLog.info({ paymentIntentId: paymentIntent.id }, 'Payment intent created successfully');
+
     res.status(200).json({
       clientSecret: paymentIntent.client_secret,
     });
-
   } catch (error: any) {
-    console.error('Error creating payment intent:', error);
+    requestLog.error({ err: error }, 'Error creating payment intent');
     res.status(500).json({ error: error.message });
   }
 });

@@ -2,16 +2,16 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "./services/supabaseClient";
 import { Session } from "@supabase/supabase-js";
 import { Sidebar } from "./components/Sidebar";
-// ייבוא הקומפוננטות של המנהל
+// Admin components
 import { Dashboard } from "./components/admin/Dashboard";
 import { StudentManagement } from "./components/admin/StudentManagement";
 import { ClassSchedule } from "./components/admin/ClassSchedule";
 import { Payments } from "./components/admin/Payments";
-// ייבוא הקומפוננטות של המדריך (חדשות)
+// Instructor components (new)
 import { InstructorDashboard } from "./components/instructor/InstructorDashboard";
 import { InstructorStudents } from "./components/instructor/InstructorStudents";
 import { InstructorSchedule } from "./components/instructor/InstructorSchedule";
-// ייבוא הקומפוננטות של הסטודנט
+// Student components
 import { StudentDashboard } from "./components/student/StudentDashboard";
 import { BrowseCourses } from "./components/student/BrowseCourses";
 
@@ -25,30 +25,44 @@ function App() {
   const [userRole, setUserRole] = useState<string>("STUDENT");
 
   useEffect(() => {
+    console.info('App initialization started');
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session?.user?.user_metadata?.role) {
         setUserRole(session.user.user_metadata.role);
+        console.info('Initial role detected', { role: session.user.user_metadata.role });
       }
       setLoading(false);
+      console.info('Initial session check completed');
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session?.user?.user_metadata?.role) {
         setUserRole(session.user.user_metadata.role);
+        console.info('Auth state change updated role', { role: session.user.user_metadata.role });
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.info('Cleaning up auth subscription');
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUserRole("STUDENT");
+    try {
+      console.info('User requested logout');
+      await supabase.auth.signOut();
+      setUserRole("STUDENT");
+      console.info('User signed out successfully');
+    } catch (error) {
+      console.error('Failed to sign out user', error);
+    }
   };
 
   const renderContent = () => {
+    console.info('Rendering tab', { activeTab, userRole });
     switch (activeTab) {
       case "dashboard":
         if (userRole === 'ADMIN') return <Dashboard />;
@@ -92,7 +106,7 @@ function App() {
       />
       <main className="flex-1 mr-64 p-8">
         <header className="flex justify-end mb-8">
-           {/* כותרת משתמש זהה לקוד הקודם */}
+           {/* User header reused from previous version */}
            <div className="flex items-center gap-4">
             <div className="text-left">
               <p className="text-sm font-bold text-slate-700">
