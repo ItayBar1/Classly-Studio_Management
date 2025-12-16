@@ -70,26 +70,65 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSucces
   
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+useEffect(() => {
     if (isOpen) {
       const fetchInstructors = async () => {
-        const { data } = await supabase
-          .from('users')
-          .select('id, full_name')
-          .eq('role', 'INSTRUCTOR');
-        
-        if (data) {
-          const typedInstructors = data as Instructor[];
-          setInstructors(typedInstructors);
-          
-          if (typedInstructors.length > 0 && !formData.instructor_id) {
-            setFormData(prev => ({ ...prev, instructor_id: typedInstructors[0].id }));
+        try {
+          // 1. קבלת המשתמש המחובר
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+
+          // 2. משיכת ה-ID של הסטודיו
+          const { data: rawUserData, error: userError } = await supabase
+            .from('users')
+            .select('studio_id')
+            .eq('id', user.id)
+            .single();
+
+          if (userError) {
+            console.error("Error fetching user studio:", userError);
+            return;
           }
+
+          // תיקון השגיאות: Casting מפורש למבנה המצופה
+          const userData = rawUserData as { studio_id: string | null } | null;
+
+          // בדיקה ש-userData קיים וש-studio_id אינו null/undefined
+          if (!userData || !userData.studio_id) {
+            console.error("User does not have a studio_id associated.");
+            return;
+          }
+
+          const currentStudioId = userData.studio_id;
+
+          // 3. משיכת מדריכים מאותו הסטודיו
+          const { data, error } = await supabase
+            .from('users')
+            .select('id, full_name')
+            .eq('role', 'INSTRUCTOR')
+            .eq('studio_id', currentStudioId); 
+
+          if (error) {
+            console.error("Error fetching instructors:", error);
+          }
+
+          if (data) {
+            const typedInstructors = data as Instructor[];
+            setInstructors(typedInstructors);
+            
+            // בחירת ברירת מחדל אם אין עדיין
+            if (typedInstructors.length > 0 && !formData.instructor_id) {
+              setFormData(prev => ({ ...prev, instructor_id: typedInstructors[0].id }));
+            }
+          }
+        } catch (err) {
+          console.error("Unexpected error:", err);
         }
       };
+      
       fetchInstructors();
     }
-  }, [isOpen]);
+  }, [isOpen]); // הקפד שהתלות תהיה [isOpen]
 
   if (!isOpen) return null;
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { supabase } from '../services/supabaseClient';
+import { supabase } from '../../services/supabaseClient';
 import { 
   CreditCard, 
   Calendar, 

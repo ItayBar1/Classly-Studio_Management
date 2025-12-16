@@ -6,6 +6,7 @@ import { Sidebar } from "./components/Sidebar";
 import { Dashboard } from "./components/admin/Dashboard";
 import { StudentManagement } from "./components/admin/StudentManagement";
 import { ClassSchedule } from "./components/admin/ClassSchedule";
+import { Payments } from "./components/admin/Payments";
 // ייבוא הקומפוננטות של המדריך (חדשות)
 import { InstructorDashboard } from "./components/instructor/InstructorDashboard";
 import { InstructorStudents } from "./components/instructor/InstructorStudents";
@@ -16,7 +17,6 @@ import { BrowseCourses } from "./components/student/BrowseCourses";
 
 import { AuthPage } from "./components/AuthPage";
 import { Loader2 } from "lucide-react";
-import { Payments } from "./components/Payments";
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
