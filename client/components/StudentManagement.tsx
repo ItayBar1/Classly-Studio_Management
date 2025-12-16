@@ -9,8 +9,15 @@ import {
   ArrowUpDown,
   Download,
 } from "lucide-react";
-import { Student, UserRole } from "../types/types";
+import { Student, UserRole, EnrollmentStatus } from "../types/types";
 import { supabase } from '../services/supabaseClient';
+
+// מילון תרגום לסטטוסים (מאנגלית לעברית לצורך תצוגה)
+const STATUS_TRANSLATION: Record<EnrollmentStatus, string> = {
+  'Active': 'פעיל',
+  'Pending': 'ממתין',
+  'Suspended': 'מושעה'
+};
 
 export const StudentManagement: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
@@ -51,6 +58,12 @@ export const StudentManagement: React.FC = () => {
           const activeEnrollment = user.enrollments?.find((e: any) => e.status === 'ACTIVE');
           const className = activeEnrollment?.classes?.name || 'לא רשום';
 
+          // המרה לטיפוס EnrollmentStatus חוקי (אנגלית)
+          let status: EnrollmentStatus = 'Pending';
+          if (user.status === 'ACTIVE') status = 'Active';
+          else if (user.status === 'SUSPENDED') status = 'Suspended';
+          else if (user.status === 'INACTIVE') status = 'Pending';
+
           return {
             id: user.id,
             name: user.full_name || 'שם לא ידוע',
@@ -59,9 +72,7 @@ export const StudentManagement: React.FC = () => {
             email: user.email,
             phone: user.phone_number || '',
             enrolledClass: className,
-            status: (user.status === 'ACTIVE' || user.status === 'INACTIVE' || user.status === 'SUSPENDED') 
-              ? (user.status === 'ACTIVE' ? 'פעיל' : user.status === 'SUSPENDED' ? 'מושהה' : 'ממתין')
-              : 'ממתין',
+            status: status, // כאן אנחנו שומרים אנגלית כדי לא לשבור את הטיפוסים
             joinDate: user.created_at
           };
         });
@@ -129,7 +140,7 @@ export const StudentManagement: React.FC = () => {
       student.id,
       student.name,
       student.enrolledClass,
-      student.status,
+      STATUS_TRANSLATION[student.status], // תרגום בייצוא
       student.email,
       student.phone,
       student.joinDate,
@@ -152,6 +163,20 @@ export const StudentManagement: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // פונקציית עזר לצבעי הסטטוס
+  const getStatusColor = (status: EnrollmentStatus) => {
+    switch (status) {
+      case 'Active':
+        return "bg-green-50 text-green-700 border-green-200";
+      case 'Pending':
+        return "bg-yellow-50 text-yellow-700 border-yellow-200";
+      case 'Suspended':
+        return "bg-red-50 text-red-700 border-red-200";
+      default:
+        return "bg-slate-50 text-slate-700 border-slate-200";
+    }
   };
 
   if (loading && students.length === 0) {
@@ -309,15 +334,9 @@ export const StudentManagement: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${
-                          student.status === "פעיל"
-                            ? "bg-green-50 text-green-700 border-green-200"
-                            : student.status === "ממתין"
-                            ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                            : "bg-red-50 text-red-700 border-red-200"
-                        }`}
+                        className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getStatusColor(student.status)}`}
                       >
-                        {student.status}
+                        {STATUS_TRANSLATION[student.status]}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
