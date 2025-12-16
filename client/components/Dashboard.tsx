@@ -69,40 +69,54 @@ export const Dashboard: React.FC = () => {
         sevenDaysAgo.setDate(now.getDate() - 7);
         const sevenDaysAgoStr = sevenDaysAgo.toISOString();
 
-        const { count: studentsCount } = await supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true })
-          .eq('role', 'STUDENT');
+        // ביצוע כל השאילתות במקביל באמצעות Promise.all
+        const [
+          { count: studentsCount },
+          { count: classesCount },
+          { data: payments },
+          { data: weekPayments },
+          { data: weekAttendance }
+        ] = await Promise.all([
+          // שאילתה 1: מספר תלמידים
+          supabase
+            .from('users')
+            .select('*', { count: 'exact', head: true })
+            .eq('role', 'STUDENT'),
+          
+          // שאילתה 2: מספר שיעורים פעילים
+          supabase
+            .from('classes')
+            .select('*', { count: 'exact', head: true })
+            .eq('is_active', true),
 
-        const { count: classesCount } = await supabase
-          .from('classes')
-          .select('*', { count: 'exact', head: true })
-          .eq('is_active', true);
+          // שאילתה 3: הכנסות החודש (שולפים רק את הסכום לחיסכון בתעבורה)
+          supabase
+            .from('payments')
+            .select('amount_ils')
+            .gte('created_at', firstDayOfMonth),
 
-        const { data: payments } = await supabase
-          .from('payments')
-          .select('amount_ils, created_at')
-          .gte('created_at', firstDayOfMonth)
-          .returns<PaymentData[]>(); 
+          // שאילתה 4: נתונים לגרף הכנסות שבועי
+          supabase
+            .from('payments')
+            .select('amount_ils, created_at')
+            .gte('created_at', sevenDaysAgoStr),
 
-        const monthlyRevenue = payments?.reduce((sum, p) => sum + Number(p.amount_ils), 0) || 0;
+          // שאילתה 5: נתונים לגרף נוכחות שבועי
+          supabase
+            .from('attendance')
+            .select('session_date, status')
+            .gte('session_date', sevenDaysAgoStr)
+            .eq('status', 'PRESENT')
+        ]);
 
-        const { data: weekPayments } = await supabase
-          .from('payments')
-          .select('amount_ils, created_at')
-          .gte('created_at', sevenDaysAgoStr)
-          .returns<PaymentData[]>();
+        // חישוב הכנסות
+        const monthlyRevenue = payments?.reduce((sum, p: any) => sum + Number(p.amount_ils), 0) || 0;
 
-        const { data: weekAttendance } = await supabase
-          .from('attendance')
-          .select('session_date, status')
-          .gte('session_date', sevenDaysAgoStr)
-          .eq('status', 'PRESENT')
-          .returns<AttendanceData[]>();
-
+        // עיבוד נתונים לגרפים
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const chartMap = new Map<string, ChartData>();
 
+        // אתחול 7 הימים האחרונים
         for (let i = 6; i >= 0; i--) {
           const d = new Date();
           d.setDate(now.getDate() - i);
@@ -113,7 +127,8 @@ export const Dashboard: React.FC = () => {
           chartMap.set(dateKey, { name: dayNameHeb, revenue: 0, attendance: 0 });
         }
 
-        weekPayments?.forEach((p) => {
+        // מילוי נתוני הכנסות
+        weekPayments?.forEach((p: any) => {
           const dateKey = new Date(p.created_at).toISOString().split('T')[0];
           if (chartMap.has(dateKey)) {
             const current = chartMap.get(dateKey)!;
@@ -121,7 +136,8 @@ export const Dashboard: React.FC = () => {
           }
         });
 
-        weekAttendance?.forEach((a) => {
+        // מילוי נתוני נוכחות
+        weekAttendance?.forEach((a: any) => {
            const dateKey = a.session_date; 
            if (chartMap.has(dateKey)) {
              const current = chartMap.get(dateKey)!;
