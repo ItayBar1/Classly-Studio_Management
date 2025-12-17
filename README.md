@@ -1,130 +1,151 @@
-# Classly - Studio Management Platform
+# Classly Studio Management
 
-Classly is a modern, comprehensive dashboard designed for managing dance studios, fitness centers, and educational programs. The platform streamlines administrative tasks ranging from student registration and class scheduling to payment tracking and attendance monitoring.
+Classly is a full-stack platform for managing classes, enrollments, and payments for studios. The system combines a Supabase-secured REST API with a React 19 dashboard that adapts to Admin, Instructor, and Student roles.
 
-Built with performance and user experience in mind, utilizing the latest web technologies including **React 19** and **Supabase**.
+## Project Overview
+- **Purpose:** Manage studios end-to-end—courses, schedules, enrollments, attendance, payments, and role-based analytics.
+- **Backend:** Express + TypeScript API backed by Supabase (PostgreSQL) with Stripe payment processing and role-aware middleware.
+- **Frontend:** React 19 + Vite single-page dashboard with role-driven navigation and feature gating.
+- **Database:** PostgreSQL schema (Supabase) with RLS policies, triggers, and indexes defined in `studio_management_schema_setup.sql`.
 
-![Classly Banner](https://via.placeholder.com/1200x400?text=Classly+Studio+Management)
+## Tech Stack
+- **API:** Node.js, Express, TypeScript, Pino, Helmet, Rate limiting, CORS, Supabase Admin SDK, Stripe SDK.
+- **Web:** React 19, TypeScript, Vite, Recharts, Lucide Icons, Supabase client, Axios, Stripe Elements.
+- **Database:** PostgreSQL (Supabase) with RLS, triggers for auth user provisioning, and domain tables for studios, classes, enrollments, attendance, and payments.
 
-## 🚀 Key Features
+## API Documentation
+All routes are prefixed with `/api` and secured by `authenticateUser` unless noted. Role enforcement uses `requireRole`.
 
-### 📊 Administrative Dashboard
-A centralized hub for real-time analytics:
-* **Key Metrics:** Instant view of total students, monthly revenue, active classes, and attendance rates.
-* **Visual Analytics:** Interactive charts (powered by **Recharts**) for tracking revenue trends and weekly attendance.
-* **Real-time Data:** Data is fetched dynamically from Supabase.
+| Method | Path | Description | Auth / Role | Params & Notes |
+| --- | --- | --- | --- | --- |
+| GET | `/api/health` | Health check. | Public | — |
+| GET | `/api/courses` | List courses; admins see all, others see relevant/active. | Auth (ADMIN/INSTRUCTOR/STUDENT) | Optional query filters forwarded to service. |
+| GET | `/api/courses/my-courses` | Instructor’s courses. | Auth (INSTRUCTOR/ADMIN) | — |
+| GET | `/api/courses/available` | Courses open for student registration. | Auth (STUDENT) | — |
+| GET | `/api/courses/:id` | Course details. | Auth | `:id` course id. |
+| POST | `/api/courses` | Create course in user’s studio. | Auth (ADMIN) | Body: course fields (merged with `studio_id` from user). |
+| PATCH | `/api/courses/:id` | Update course. | Auth (ADMIN) | `:id` course id; body: partial updates. |
+| DELETE | `/api/courses/:id` | Soft delete (deactivate) course. | Auth (ADMIN) | `:id` course id. |
+| GET | `/api/students` | Paginated students for studio. | Auth (ADMIN) | Query: `page`, `limit`, `search`. Requires `studioId` on request. |
+| POST | `/api/students` | Create student in studio. | Auth (ADMIN) | Body: student payload. |
+| DELETE | `/api/students/:id` | Soft delete student (status update). | Auth (ADMIN) | `:id` student id. |
+| GET | `/api/students/my-students` | Students assigned to instructor. | Auth (INSTRUCTOR/ADMIN) | — |
+| GET | `/api/students/:id` | Student details. | Auth (ADMIN/INSTRUCTOR) | `:id` student id. |
+| GET | `/api/instructors` | List instructors in studio. | Auth (ADMIN) | — |
+| GET | `/api/instructors/earnings` | Earnings/commissions for logged-in instructor. | Auth (INSTRUCTOR) | — |
+| GET | `/api/instructors/:id` | Instructor profile (self or admin). | Auth (ADMIN/INSTRUCTOR) | `:id` instructor id; controller ensures self-access or admin. |
+| DELETE | `/api/instructors/:id` | Soft delete instructor. | Auth (ADMIN) | `:id` instructor id. |
+| POST | `/api/attendance` | Bulk upsert attendance for a class session. | Auth (INSTRUCTOR) | Body: `classId`, `date`, `records[{studentId,status,notes}]`; verifies instructor owns class unless admin. |
+| GET | `/api/attendance/class/:classId` | Attendance history for class (optional date filter). | Auth (INSTRUCTOR/ADMIN) | `:classId`; query `date`; instructors must own class. |
+| GET | `/api/attendance/my-history` | Logged-in student attendance history. | Auth (STUDENT) | — |
+| POST | `/api/enrollments/admin` | Admin enrolls student and marks paid. | Auth (ADMIN) | Body: `studentId`, `classId`, optional `notes`. |
+| POST | `/api/enrollments/register` | Student self-registration -> pending enrollment + Stripe intent. | Auth (STUDENT) | Body: `classId`. Returns Stripe client secret. |
+| GET | `/api/enrollments/my-enrollments` | Logged-in student enrollments. | Auth (STUDENT) | — |
+| GET | `/api/enrollments/class/:classId` | Enrollments for class. | Auth (ADMIN/INSTRUCTOR) | `:classId`; instructor must own class. |
+| DELETE | `/api/enrollments/:id` | Cancel enrollment (soft delete/update). | Auth (ADMIN) | `:id` enrollment id. |
+| GET | `/api/dashboard/admin` | Studio-level metrics (students, revenue, classes, attendance). | Auth (ADMIN) | Requires `studioId`. |
+| GET | `/api/dashboard/instructor` | Instructor metrics. | Auth (INSTRUCTOR/ADMIN) | Uses logged-in instructor id. |
+| GET | `/api/payments` | Payment history for studio. | Auth (ADMIN/INSTRUCTOR in routes) | Requires `studioId`; route comment suggests limiting to admin. |
+| POST | `/api/payments/create-intent` | Create Stripe Payment Intent. | Auth | Body: `amount` (required), `currency`, `description`, `metadata`. |
+| POST | `/api/payments/confirm` | Confirm payment and update status. | Auth | Body: `paymentIntentId`. |
+| GET | `/api/users/me` | Current user profile from Supabase users table. | Auth | — |
+| POST | `/api/webhooks/stripe` | Stripe webhook receiver (raw body, signature validated). | Public (Stripe) | Header `stripe-signature`; processes payment events. |
 
-### 👥 Student Management
-Robust system for managing student rosters:
-* **Search & Filter:** Advanced filtering by student name, email, or specific enrolled classes.
-* **Data Export:** Built-in functionality to **export student data to CSV** for external processing.
-* **Status Tracking:** Visual indicators for enrollment status (Active, Pending, Suspended) with automated color coding.
-* **Communication:** Quick access to student contact details (Phone/Email).
+## Client-Side UX
+Role determines available tabs and content rendered via `Sidebar` and `App.tsx` state machine.
 
-### 📅 Class Schedule
-Dynamic weekly timetable view:
-* **Interactive Calendar:** View classes by day of the week with intuitive navigation.
-* **Capacity Management:** Visual progress bars indicating class occupancy vs. maximum capacity (turns red when full).
-* **Instructor Integration:** Displays instructor names and avatars automatically.
-* **Smart Filtering:** Filter view by specific days.
+### Admin
+- **Dashboard:** Metrics, revenue & attendance charts fed by `/api/dashboard/admin`.
+- **Students:** Advanced roster with search, pagination, CSV export, class filter, and sorting. Integrates API-backed fetching and course list loading for filters.
+- **Schedule:** Weekly class timetable with capacity indicators (see `components/admin/ClassSchedule.tsx`).
+- **Payments:** Payment history view (admin-only tab).
+- **Settings:** Placeholder tab for future admin settings.
 
-### 🔐 Authentication & Security
-* **Secure Access:** Powered by **Supabase Auth** for robust login and signup flows.
-* **Role-Based Access Control (RBAC):** Distinct flows and permissions for:
-  * **Admins:** Full system management.
-  * **Instructors:** Schedule and attendance view.
-  * **Students:** Registration and personal schedule.
+### Instructor
+- **Dashboard:** Instructor KPIs via `/api/dashboard/instructor` (uses `InstructorDashboard`).
+- **Students:** List of students registered to instructor’s classes (`/api/students/my-students`).
+- **Schedule:** Instructor’s schedule view (`InstructorSchedule`).
+- **Attendance:** Mark attendance through `/api/attendance` (accessed from schedule/related UI elements).
 
-## 🛠️ Tech Stack
+### Student
+- **Dashboard:** Personalized overview of enrollments and attendance (`StudentDashboard`).
+- **Browse Courses:** Discover enrollable courses (`/api/courses/available`) and initiate self-registration/payment via `/api/enrollments/register` and Stripe Elements.
 
-**Client:**
-* **Framework:** React 19
-* **Build Tool:** Vite
-* **Language:** TypeScript
-* **Styling:** Tailwind CSS
-* **Icons:** Lucide React
-* **Charts:** Recharts
+Navigation: `Sidebar` filters available tabs per role (Admin: dashboard, students, schedule, payments, settings; Instructor: dashboard, students, schedule; Student: dashboard, browse courses). Logout calls Supabase sign-out.
 
-**Backend & Infrastructure:**
-* **Database:** Supabase PostgreSQL
-* **Authentication:** Supabase Auth
-* **API:** Supabase Client (@supabase/supabase-js)
+## Database Schema
+Key tables from `studio_management_schema_setup.sql`:
 
-## 📦 Installation & Setup
+| Table | Purpose | Key Columns & Relationships |
+| --- | --- | --- |
+| `users` | Profiles synced with Supabase Auth users; includes roles and studio membership. | `id` (PK, FK auth.users), `role`, `studio_id` (FK studios), `status`, audit fields. |
+| `studios` | Studio entities owned by admin users. | `admin_id` (FK users), contact/billing info, `is_active`. |
+| `categories` | Class categories per studio. | `studio_id` FK studios, `type`, `is_active`, display fields. |
+| `classes` | Class definitions/schedules. | `studio_id` FK studios, `category_id` FK categories, `instructor_id` FK users, timing, capacity, pricing, `is_active`. |
+| `enrollments` | Student enrollment records with payment status and date range. | `studio_id` FK studios, `student_id` FK users, `class_id` FK classes, `parent_id` FK users, `status`, `payment_status`, `start_date`/`end_date`. |
+| `attendance` | Attendance logs per session and enrollment. | `studio_id` FK studios, `class_id` FK classes, `instructor_id` FK users, `enrollment_id` FK enrollments, `student_id` FK users, `session_date`, `status`. |
+| `payments` | Payment records with linkage to enrollments and instructors. | `studio_id` FK studios, `enrollment_id` FK enrollments, `student_id`/`instructor_id` FK users, `amount_ils`, `payment_method`, `status`, invoice fields. |
+| `instructor_commissions` | Commission settings and payouts. | `studio_id` FK studios, `instructor_id`/`class_id` FK users/classes, `commission_percentage`, `billing_cycle`, `payment_status`. |
+| `schedule_sessions` | Individual session occurrences for classes. | `studio_id` FK studios, `class_id` FK classes, `session_date`, time span, `status`, capacity counts. |
+| `notifications` | User notifications. | `user_id`/`studio_id` FKs users/studios, `type`, `title`, `message`, `is_read`. |
+| `audit_logs` | Audit trail of user actions. | `user_id`/`studio_id` FKs users/studios, `action`, `table_name`, `record_id`, `changes`. |
+
+Additional logic: trigger `handle_new_user` seeds `users` on auth signup; `increment_enrollment` helper updates class counts; RLS policies enforce studio-scoped access and role checks.
+
+## Getting Started
 
 ### Prerequisites
-- **Node.js 20+** and **npm** installed locally.
-- A Supabase project with URL and anonymous key available.
+- Node.js 20+ and npm
+- Supabase project (URL + service role key)
+- Stripe secret key for payments
 
-### 1) Clone the repository
+### Installation
 ```bash
+# Clone
 git clone <repository-url>
 cd Classly-Studio_Management
-```
 
-### 2) Install dependencies
-Client and server are installed separately:
-```bash
+# Install client
 cd client
 npm install
 
+# Install server
 cd ../server
 npm install
 ```
 
-### 3) Environment configuration
-Create environment files in each package:
+### Environment Variables
+Create `.env` files:
 
-**Client (`client/.env`):**
-```env
+`client/.env`
+```
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-**Server (`server/.env`):**
-```env
+`server/.env`
+```
 PORT=5000
+CLIENT_URL=http://localhost:5173
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=your_webhook_secret
 ```
 
-### 4) Run the apps
-- **Client:**
-  ```bash
-  cd client
-  npm run dev
-  ```
-  The Vite dev server runs on `http://localhost:5173` by default.
+### Running Locally
+```bash
+# API
+cd server
+npm run dev
 
-- **Server:**
-  ```bash
-  cd server
-  npm run dev
-  ```
-  The API server listens on the port set in `server/.env` (defaults to `5000`).
+# Web
+cd ../client
+npm run dev
+```
+Visit the client on the Vite dev URL (default `http://localhost:5173`) and ensure the server port matches `CLIENT_URL` CORS configuration.
 
-## 📂 Project Structure
-
-```text
-client/
-├── components/           # UI Components
-│   ├── AuthPage.tsx      # Login/Signup & Role selection
-│   ├── Dashboard.tsx     # Analytics, Stats cards & Charts
-│   ├── StudentManagement.tsx # Student list, CSV Export, Filters
-│   ├── ClassSchedule.tsx # Weekly calendar & Capacity logic
-│   └── Sidebar.tsx       # Navigation & Layout
-├── services/
-│   └── supabaseClient.ts # Supabase client configuration
-├── types/
-│   ├── types.ts          # General TypeScript interfaces
-│   └── database.ts       # Database Schema types (Supabase generated)
-├── App.tsx               # Main routing & Session management
-└── main.tsx              # Entry point
-server/
-├── src/
-│   ├── routes/           # Express route handlers
-│   ├── logger.ts         # Pino logger configuration
-│   └── index.ts          # Express app entry point
-├── package.json          # Server scripts & dependencies
-└── tsconfig.json         # Server TypeScript config
+### Notes & Ambiguities
+- Payments route currently allows `INSTRUCTOR` in `/api/payments`; comments suggest restricting to admins—validate with product requirements.
+- Self-registration flow assumes paid courses; zero-price handling is noted but not fully implemented.
+- Attendance and enrollment ownership checks rely on Supabase data consistency; ensure instructor-class relationships exist.
