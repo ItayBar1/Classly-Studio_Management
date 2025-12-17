@@ -20,4 +20,9 @@ router.post('/enroll', requireRole(['STUDENT']), CourseController.enroll);
 // נתיבי אדמין
 router.post('/', requireRole(['ADMIN']), CourseController.create);
 
+// הוסף לנתיבים הקיימים:
+router.get('/:id', authenticateUser, CourseController.getById); // Get details
+router.patch('/:id', requireRole(['ADMIN']), CourseController.update); // Edit
+router.delete('/:id', requireRole(['ADMIN']), CourseController.delete); // Soft Delete
+
 export default router;
