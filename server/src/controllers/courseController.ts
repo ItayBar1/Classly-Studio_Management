@@ -1,178 +1,104 @@
 import { Request, Response } from 'express';
-import { supabaseAdmin } from '../config/supabase';
+import { CourseService } from '../services/courseService';
 
-export const CourseController = {
-  // קבלת כל הקורסים (מסונן לפי הרשאה)
-  getAll: async (req: Request, res: Response) => {
+export class CourseController {
+  
+  // קבלת כל הקורסים (עם סינון אופציונלי)
+  static async getAll(req: Request, res: Response) {
     try {
-      const user = req.user;
-      const studioId = req.studioId;
+      // אם המשתמש הוא סטודנט, נחזיר רק קורסים פעילים (לפי PRD)
+      // אם אדמין, נחזיר הכל.
+      const userRole = req.user?.role;
+      const filters = req.query;
       
-      // שליפה בסיסית של קורסים מהסטודיו
-      let query = supabaseAdmin
-        .from('classes')
-        .select('*, instructor:users!classes_instructor_id_fkey(full_name, profile_image_url)') // Join להבאת פרטי המדריך
-        .eq('studio_id', studioId);
-
-      // לוגיקה עסקית לפי תפקיד
-      if (user.role === 'STUDENT') {
-        // סטודנט רואה רק קורסים פעילים
-        query = query.eq('is_active', true);
-      } else if (user.role === 'INSTRUCTOR') {
-        // מדריך רואה רק את הקורסים שלו דרך ה-API הזה או דרך getInstructorCourses הייעודי
-        // כאן נשאיר לו לראות הכל או נסנן, תלוי באפיון. לרוב בקטלוג הוא יראה הכל.
-      }
-      
-      const { data, error } = await query;
-      if (error) throw error;
-      
-      res.json(data);
-    } catch (error) {
-      console.error('Error fetching courses:', error);
-      res.status(500).json({ error: 'Failed to fetch courses' });
-    }
-  },
-
-  // קורסים של המדריך המחובר
-  getInstructorCourses: async (req: Request, res: Response) => {
-    try {
-      const { data, error } = await supabaseAdmin
-        .from('classes')
-        .select('*')
-        .eq('instructor_id', req.user.id)
-        .eq('studio_id', req.studioId);
-
-      if (error) throw error;
-      res.json(data);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch instructor courses' });
-    }
-  },
-
-  // הקורסים שהתלמיד רשום אליהם
-  getEnrolledCourses: async (req: Request, res: Response) => {
-    try {
-      // שליפת ההרשמות + פרטי הקורס המלאים
-      const { data, error } = await supabaseAdmin
-        .from('enrollments')
-        .select(`
-          class:classes (
-            *,
-            instructor:users!classes_instructor_id_fkey(full_name)
-          )
-        `)
-        .eq('student_id', req.user.id)
-        .eq('status', 'ACTIVE'); // רק הרשמות פעילות
-
-      if (error) throw error;
-
-      // המרה למבנה שטוח של מערך קורסים
-      const courses = data.map((enrollment: any) => enrollment.class);
+      const courses = await CourseService.getAllCourses(userRole, filters);
       res.json(courses);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch enrolled courses' });
-    }
-  },
-
-  // הרשמה לקורס
-  enroll: async (req: Request, res: Response) => {
-    try {
-      const { courseId } = req.body;
-      const studentId = req.user.id;
-      const studioId = req.studioId;
-
-      if (!courseId) {
-        return res.status(400).json({ error: 'Course ID is required' });
-      }
-
-      // 1. בדיקה אם הקורס קיים ויש מקום
-      const { data: course, error: courseError } = await supabaseAdmin
-        .from('classes')
-        .select('max_capacity, current_enrollment, price_ils')
-        .eq('id', courseId)
-        .single();
-
-      if (courseError || !course) {
-        return res.status(404).json({ error: 'Course not found' });
-      }
-
-      if (course.current_enrollment >= course.max_capacity) {
-        return res.status(400).json({ error: 'Course is full' });
-      }
-
-      // 2. בדיקה אם כבר רשום
-      const { data: existing, error: existError } = await supabaseAdmin
-        .from('enrollments')
-        .select('id')
-        .eq('student_id', studentId)
-        .eq('class_id', courseId)
-        .eq('status', 'ACTIVE') // או לבדוק כל סטטוס כדי למנוע כפילות
-        .single();
-
-      if (existing) {
-        return res.status(400).json({ error: 'Already enrolled in this course' });
-      }
-
-      // 3. ביצוע ההרשמה (Insert)
-      const { error: enrollError } = await supabaseAdmin
-        .from('enrollments')
-        .insert([{
-          studio_id: studioId,
-          student_id: studentId,
-          class_id: courseId,
-          status: 'ACTIVE',
-          enrollment_date: new Date().toISOString(),
-          start_date: new Date().toISOString(), // תאריך התחלה היום
-          total_amount_due: course.price_ils,
-          // תשלום בפועל מטופל בנפרד או מעודכן לאחר מכן
-        }]);
-
-      if (enrollError) throw enrollError;
-
-      // 4. עדכון מונה הנרשמים בקורס (אפשר גם לעשות בטריגר ב-DB)
-      await supabaseAdmin.rpc('increment_enrollment', { class_id: courseId }); // נניח שיש פונקציה כזו, או update רגיל:
-      /* await supabaseAdmin
-        .from('classes')
-        .update({ current_enrollment: course.current_enrollment + 1 })
-        .eq('id', courseId);
-      */
-
-      res.status(201).json({ message: 'Enrolled successfully' });
     } catch (error: any) {
-      console.error('Enrollment error:', error);
-      res.status(500).json({ error: error.message || 'Failed to enroll' });
-    }
-  },
-
-  // יצירת קורס (רק לאדמין)
-  create: async (req: Request, res: Response) => {
-    try {
-      const { name, description, instructor_id, start_time, end_time, price_ils, day_of_week, max_capacity, level, location_room } = req.body;
-      
-      const { data, error } = await supabaseAdmin
-        .from('classes')
-        .insert([{
-          studio_id: req.studioId,
-          name,
-          description,
-          instructor_id,
-          day_of_week,
-          start_time,
-          end_time,
-          max_capacity,
-          level,
-          location_room,
-          price_ils,
-          is_active: true
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      res.status(201).json(data);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Failed to create course' });
+      res.status(500).json({ error: error.message });
     }
   }
-};
+
+  // קבלת קורסים זמינים להרשמה (עבור סטודנט)
+  static async getAvailableCourses(req: Request, res: Response) {
+    try {
+      const studentId = req.user.id;
+      const courses = await CourseService.getAvailableForStudent(studentId);
+      res.json(courses);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  // קבלת קורס לפי ID
+  static async getById(req: Request, res: Response) {
+    try {
+      const course = await CourseService.getCourseById(req.params.id);
+      if (!course) {
+        return res.status(404).json({ error: 'Course not found' });
+      }
+      res.json(course);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  // קבלת קורסים של מדריך ספציפי
+  static async getInstructorCourses(req: Request, res: Response) {
+    try {
+      const instructorId = req.user.id;
+      const courses = await CourseService.getCoursesByInstructor(instructorId);
+      res.json(courses);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  // יצירת קורס חדש
+  static async create(req: Request, res: Response) {
+    try {
+      const courseData = req.body;
+      const studioId = req.user.studio_id; // בהנחה שהמשתמש משויך לסטודיו
+      
+      const newCourse = await CourseService.createCourse({ ...courseData, studio_id: studioId });
+      res.status(201).json(newCourse);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  // עריכת קורס
+  static async update(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const updatedCourse = await CourseService.updateCourse(id, updates);
+      res.json(updatedCourse);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  // מחיקת קורס (Soft Delete)
+  static async delete(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      await CourseService.softDeleteCourse(id);
+      res.json({ message: 'Course deactivated successfully' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  // פונקציות הרשמה יועברו לקונטרולר Enrollments/Student בהמשך, או יישארו כאן אם תחליט
+  // כרגע ב-PRD ההרשמה מתבצעת דרך studentRoutes או נתיב ייעודי, אבל נשאיר תמיכה לאחור אם היה קיים
+  static async getEnrolledCourses(req: Request, res: Response) {
+      // זה אמור להיות מטופל ב-StudentController לפי ה-PRD המעודכן, אך לבינתיים:
+      try {
+          const studentId = req.user.id;
+          // קריאה לשירות מתאים (נממש בהמשך ב-StudentService)
+          res.json({ message: "Moved to StudentController" });
+      } catch (error: any) {
+          res.status(500).json({ error: error.message });
+      }
+  }
+}
