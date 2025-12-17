@@ -1,11 +1,11 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { AttendanceService } from '../services/attendanceService';
 import { supabase } from '../config/supabase';
 
 export class AttendanceController {
 
     // דיווח נוכחות (יצירה או עדכון)
-    static async recordAttendance(req: Request, res: Response) {
+    static async recordAttendance(req: Request, res: Response, next: NextFunction) {
         try {
             const instructorId = req.user.id;
             const { classId, date, records } = req.body;
@@ -26,12 +26,12 @@ export class AttendanceController {
             const result = await AttendanceService.recordAttendance(classId, date, instructorId, records);
             res.json({ message: 'Attendance recorded successfully', count: result.length });
         } catch (error: any) {
-            res.status(500).json({ error: error.message });
+            next(error);
         }
     }
 
     // קבלת היסטוריה עבור כיתה ספציפית
-    static async getClassAttendance(req: Request, res: Response) {
+    static async getClassAttendance(req: Request, res: Response, next: NextFunction) {
         try {
             const { classId } = req.params;
             const { date } = req.query; // אופציונלי: סינון לפי תאריך
@@ -46,18 +46,18 @@ export class AttendanceController {
             const data = await AttendanceService.getClassAttendance(classId, date as string);
             res.json(data);
         } catch (error: any) {
-            res.status(500).json({ error: error.message });
+            next(error);
         }
     }
 
     // קבלת היסטוריה לתלמיד המחובר
-    static async getStudentHistory(req: Request, res: Response) {
+    static async getStudentHistory(req: Request, res: Response, next: NextFunction) {
         try {
             const studentId = req.user.id;
             const history = await AttendanceService.getStudentHistory(studentId);
             res.json(history);
         } catch (error: any) {
-            res.status(500).json({ error: error.message });
+            next(error);
         }
     }
 

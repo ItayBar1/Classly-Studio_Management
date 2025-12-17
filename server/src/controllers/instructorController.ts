@@ -1,21 +1,21 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { InstructorService } from '../services/instructorService';
 
 export class InstructorController {
     
     // שליפת כל המדריכים (לאדמין)
-    static async getAll(req: Request, res: Response) {
+    static async getAll(req: Request, res: Response, next: NextFunction) {
         try {
             const studioId = req.user.studio_id;
             const instructors = await InstructorService.getAllInstructors(studioId);
             res.json(instructors);
         } catch (error: any) {
-            res.status(500).json({ error: error.message });
+            next(error);
         }
     }
 
     // שליפת מדריך לפי ID
-    static async getById(req: Request, res: Response) {
+    static async getById(req: Request, res: Response, next: NextFunction) {
         try {
             const { id } = req.params;
             const requestingUser = req.user;
@@ -31,30 +31,30 @@ export class InstructorController {
             }
             res.json(instructor);
         } catch (error: any) {
-            res.status(500).json({ error: error.message });
+            next(error);
         }
     }
 
     // שליפת רווחים/עמלות (למדריך המחובר)
-    static async getMyEarnings(req: Request, res: Response) {
+    static async getMyEarnings(req: Request, res: Response, next: NextFunction) {
         try {
             const instructorId = req.user.id;
             const earnings = await InstructorService.getEarnings(instructorId);
             res.json(earnings);
         } catch (error: any) {
-            res.status(500).json({ error: error.message });
+            next(error);
         }
     }
 
     // מחיקה רכה של מדריך
-    static async delete(req: Request, res: Response) {
+    static async delete(req: Request, res: Response, next: NextFunction) {
         try {
             const { id } = req.params;
             // כאן נוכל להוסיף בעתיד בדיקה אם למדריך יש שיעורים פעילים לפני מחיקה
             await InstructorService.softDeleteInstructor(id);
             res.json({ message: 'Instructor deactivated successfully' });
         } catch (error: any) {
-            res.status(500).json({ error: error.message });
+            next(error);
         }
     }
 }

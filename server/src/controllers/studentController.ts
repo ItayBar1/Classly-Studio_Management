@@ -1,8 +1,8 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { StudentService } from '../services/studentService';
 
 export const StudentController = {
-  getAll: async (req: Request, res: Response) => {
+  getAll: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { page, limit, search } = req.query;
       const result = await StudentService.getAll(
@@ -13,36 +13,34 @@ export const StudentController = {
       );
       res.json(result);
     } catch (error) {
-      console.error('Error fetching students:', error);
-      res.status(500).json({ error: 'Failed to fetch students' });
+      next(error);
     }
   },
 
-  getById: async (req: Request, res: Response) => {
+  getById: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const student = await StudentService.getById(req.params.id);
       res.json(student);
     } catch (error) {
-      res.status(404).json({ error: 'Student not found' });
+      next(error);
     }
   },
 
-  getByInstructor: async (req: Request, res: Response) => {
+  getByInstructor: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const students = await StudentService.getByInstructor(req.user.id);
       res.json(students);
     } catch (error) {
-      console.error('Error fetching instructor students:', error);
-      res.status(500).json({ error: 'Failed to fetch students' });
+      next(error);
     }
   },
 
-  create: async (req: Request, res: Response) => {
+  create: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const newStudent = await StudentService.create(req.studioId, req.body);
       res.status(201).json(newStudent);
     } catch (error: any) {
-      res.status(500).json({ error: error.message || 'Failed to create student' });
+      next(error);
     }
   }
 };

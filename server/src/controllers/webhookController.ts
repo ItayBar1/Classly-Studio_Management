@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { PaymentService } from '../services/paymentService';
 
 export class WebhookController {
 
-    static async handleStripeWebhook(req: Request, res: Response) {
+    static async handleStripeWebhook(req: Request, res: Response, next: NextFunction) {
         const signature = req.headers['stripe-signature'];
 
         if (!signature) {
@@ -37,8 +37,7 @@ export class WebhookController {
             res.json({ received: true });
 
         } catch (err: any) {
-            console.error(`Webhook signature verification failed: ${err.message}`);
-            return res.status(400).send(`Webhook Error: ${err.message}`);
+            next(err);
         }
     }
 }

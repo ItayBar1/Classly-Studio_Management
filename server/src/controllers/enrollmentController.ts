@@ -1,11 +1,11 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { EnrollmentService } from '../services/enrollmentService';
 import { supabase } from '../config/supabase';
 
 export class EnrollmentController {
 
     // אדמין רושם תלמיד ידנית
-    static async adminEnrollStudent(req: Request, res: Response) {
+    static async adminEnrollStudent(req: Request, res: Response, next: NextFunction) {
         try {
             const { studentId, classId, notes } = req.body;
             const studioId = req.user.studio_id;
@@ -25,12 +25,12 @@ export class EnrollmentController {
 
             res.status(201).json(result);
         } catch (error: any) {
-            res.status(400).json({ error: error.message });
+            next(error);
         }
     }
 
     // תלמיד נרשם עצמאית (יוצר PENDING)
-    static async studentSelfRegister(req: Request, res: Response) {
+    static async studentSelfRegister(req: Request, res: Response, next: NextFunction) {
         try {
             const studentId = req.user.id;
             const studioId = req.user.studio_id;
@@ -58,23 +58,23 @@ export class EnrollmentController {
                 // clientSecret: ... (יטופל במודול תשלומים)
             });
         } catch (error: any) {
-            res.status(400).json({ error: error.message });
+            next(error);
         }
     }
 
     // תלמיד צופה בהרשמות שלו
-    static async getMyEnrollments(req: Request, res: Response) {
+    static async getMyEnrollments(req: Request, res: Response, next: NextFunction) {
         try {
             const studentId = req.user.id;
             const enrollments = await EnrollmentService.getStudentEnrollments(studentId);
             res.json(enrollments);
         } catch (error: any) {
-            res.status(500).json({ error: error.message });
+            next(error);
         }
     }
 
     // קבלת הרשמות לקורס (למדריך/אדמין)
-    static async getClassEnrollments(req: Request, res: Response) {
+    static async getClassEnrollments(req: Request, res: Response, next: NextFunction) {
         try {
             const { classId } = req.params;
             const userId = req.user.id;
@@ -90,18 +90,18 @@ export class EnrollmentController {
             const enrollments = await EnrollmentService.getClassEnrollments(classId);
             res.json(enrollments);
         } catch (error: any) {
-            res.status(500).json({ error: error.message });
+            next(error);
         }
     }
 
     // ביטול הרשמה
-    static async cancelEnrollment(req: Request, res: Response) {
+    static async cancelEnrollment(req: Request, res: Response, next: NextFunction) {
         try {
             const { id } = req.params;
             await EnrollmentService.cancelEnrollment(id);
             res.json({ message: 'Enrollment cancelled successfully' });
         } catch (error: any) {
-            res.status(500).json({ error: error.message });
+            next(error);
         }
     }
 }

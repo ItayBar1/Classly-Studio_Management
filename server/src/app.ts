@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
 // Import Routes
@@ -13,14 +14,32 @@ import webhookRoutes from './routes/webhookRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 // import paymentRoutes... (נחליף את הקובץ הישן בחדש אם תרצה, או שנשתמש בו ליצירת Intent)
 
-dotenv.config();
-
 export const app = express();
 
 // Security Middleware
 app.use(helmet());
+
+// Rate Limiting to prevent brute-force attacks
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+app.use(limiter);
+
+const allowedOrigins = [process.env.CLIENT_URL, 'http://localhost:3000'];
+
 app.use(cors({
-    origin: process.env.CLIENT_URL,
+    origin: (origin, callback) => {
+        // allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+            return callback(new Error(msg), false);
+        }
+        return callback(null, true);
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     credentials: true
 }));
@@ -46,5 +65,9 @@ app.use('/api/dashboard', dashboardRoutes);
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'Server is running 🚀' });
 });
+
+// Global Error Handler
+import errorHandler from './middleware/errorMiddleware';
+app.use(errorHandler);
 
 export default app;
