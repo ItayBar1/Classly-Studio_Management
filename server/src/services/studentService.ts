@@ -1,4 +1,25 @@
 import { supabaseAdmin } from "../config/supabase";
+import { logger } from "../logger";
+
+interface InstructorStudent {
+  student?: {
+    id: string;
+    full_name: string;
+    email: string;
+    phone_number: string;
+    profile_image_url?: string | null;
+  };
+  class?: {
+    name?: string | null;
+  };
+}
+
+interface StudentPayload {
+  email: string;
+  full_name: string;
+  phone_number?: string;
+  password?: string;
+}
 
 export const StudentService = {
   async getAll(
@@ -7,6 +28,9 @@ export const StudentService = {
     limit: number = 50,
     search: string = ""
   ) {
+    const serviceLogger = logger.child({ service: "StudentService", method: "getAll" });
+    serviceLogger.info({ studioId, page, limit, search }, "Fetching students list");
+
     const offset = (page - 1) * limit;
 
     let query = supabaseAdmin
@@ -21,23 +45,36 @@ export const StudentService = {
     }
 
     const { data, count, error } = await query;
-    if (error) throw error;
+    if (error) {
+      serviceLogger.error({ err: error }, "Failed to fetch students");
+      throw error;
+    }
 
+    serviceLogger.info({ count }, "Students fetched successfully");
     return { data, count };
   },
 
   async getById(id: string) {
+    const serviceLogger = logger.child({ service: "StudentService", method: "getById" });
+    serviceLogger.info({ id }, "Fetching student by id");
+
     const { data, error } = await supabaseAdmin
       .from("users")
       .select("*")
       .eq("id", id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      serviceLogger.error({ err: error }, "Failed to fetch student");
+      throw error;
+    }
     return data;
   },
 
   async getByInstructor(instructorId: string) {
+    const serviceLogger = logger.child({ service: "StudentService", method: "getByInstructor" });
+    serviceLogger.info({ instructorId }, "Fetching students by instructor");
+
     // שליפת כל ה-Enrollments של קורסים שהמדריך מלמד
     const { data, error } = await supabaseAdmin
       .from("enrollments")
@@ -54,12 +91,23 @@ export const StudentService = {
       .eq("class.instructor_id", instructorId)
       .eq("status", "ACTIVE");
 
-    if (error) throw error;
+    if (error) {
+      serviceLogger.error({ err: error }, "Failed to fetch instructor students");
+      throw error;
+    }
 
     // עיבוד הנתונים למניעת כפילויות
-    const studentMap = new Map();
+    const studentMap = new Map<string, {
+      id: string;
+      full_name: string;
+      email: string;
+      phone_number: string;
+      profile_image_url?: string | null;
+      enrolledClass: string;
+      role: string;
+    }>();
 
-    data.forEach((item: any) => {
+    data.forEach((item: InstructorStudent) => {
       if (!item.student) return;
 
       const existing = studentMap.get(item.student.id);
@@ -81,7 +129,10 @@ export const StudentService = {
     return Array.from(studentMap.values());
   },
 
-  async create(studioId: string, studentData: any) {
+  async create(studioId: string, studentData: StudentPayload) {
+    const serviceLogger = logger.child({ service: "StudentService", method: "create" });
+    serviceLogger.info({ studioId, email: studentData.email }, "Creating student");
+
     const { email, full_name, phone_number, password } = studentData;
 
     // 1. יצירת יוזר ב-Supabase Auth
@@ -92,7 +143,10 @@ export const StudentService = {
         email_confirm: true,
       });
 
-    if (authError) throw authError;
+    if (authError) {
+      serviceLogger.error({ err: authError }, "Failed to create auth user");
+      throw authError;
+    }
 
     // 2. עדכון פרטים בטבלת users
     const { data, error } = await supabaseAdmin
@@ -108,7 +162,10 @@ export const StudentService = {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      serviceLogger.error({ err: error }, "Failed to update student record");
+      throw error;
+    }
     return data;
   },
 
@@ -117,6 +174,9 @@ export const StudentService = {
    * @param studentId המזהה של התלמיד
    */
   async deleteStudent(studentId: string) {
+    const serviceLogger = logger.child({ service: "StudentService", method: "deleteStudent" });
+    serviceLogger.info({ studentId }, "Soft deleting student");
+
     // 1. בדיקה שהמשתמש קיים ושהוא אכן תלמיד (למניעת טעויות)
     const { data: user, error: fetchError } = await supabaseAdmin
       .from("users")
@@ -125,6 +185,7 @@ export const StudentService = {
       .single();
 
     if (fetchError || !user) {
+      serviceLogger.error({ err: fetchError }, "Student not found during delete");
       throw new Error("Student not found");
     }
 
@@ -146,9 +207,11 @@ export const StudentService = {
       .single();
 
     if (error) {
+      serviceLogger.error({ err: error }, "Failed to soft delete student");
       throw new Error(`Failed to delete student: ${error.message}`);
     }
 
+    serviceLogger.info({ studentId }, "Student soft deleted successfully");
     return data;
   },
 };
