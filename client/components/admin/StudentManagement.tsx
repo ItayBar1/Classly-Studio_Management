@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Student, UserRole, EnrollmentStatus } from "../../types/types";
 import { supabase } from '../../services/supabaseClient';
+import { StudentService, CourseService } from "../../services/api";
 
 // מילון תרגום לסטטוסים
 const STATUS_TRANSLATION: Record<EnrollmentStatus, string> = {
@@ -40,109 +41,42 @@ export const StudentManagement: React.FC = () => {
   });
 
   // טעינת רשימת השיעורים (עבור ה-Dropdown)
-  const fetchClassesList = async () => {
-    const { data } = await supabase
-      .from('classes')
-      .select('name')
-      .eq('is_active', true)
-      .order('name');
-    
-    if (data) {
-      // תיקון השגיאה: הוספת טיפוס מפורש (c: any)
-      setClassList(["הכל", ...data.map((c: any) => c.name)]);
+const fetchClassesList = async () => {
+    try {
+      // שימוש ב-CourseService כדי למשוך את כל הקורסים הפעילים
+      const courses = await CourseService.getAll({ status: 'active' });
+      
+      if (courses) {
+        // המרה לרשימת שמות ייחודיים
+        const uniqueNames = Array.from(new Set(courses.map(c => c.name))).sort();
+        setClassList(["הכל", ...uniqueNames]);
+      }
+    } catch (err) {
+      console.error("Failed to load class list", err);
     }
   };
 
 // פונקציית הטעינה הראשית - צד שרת
-  const fetchStudents = useCallback(async () => {
-    setLoading(true);
-    try {
-      let query;
-
-      // בניית השאילתה בהתאם לסינון
-      if (selectedClass && selectedClass !== "הכל") {
-        // מצב סינון: שימוש ב-!inner כדי להכריח את ה-DB להחזיר רק תלמידים שרשומים לשיעור הספציפי
-        query = supabase
-          .from('users')
-          .select(`
-            id, full_name, email, phone_number, created_at, role, status,
-            enrollments!inner (
-              status,
-              classes!inner ( name )
-            )
-          `, { count: 'exact' })
-          .eq('role', 'STUDENT')
-          .eq('enrollments.status', 'ACTIVE') // מוודאים שההרשמה פעילה
-          .eq('enrollments.classes.name', selectedClass); // הסינון לפי שם השיעור
-      } else {
-        // מצב רגיל (ללא סינון שיעור): שליפה רגילה (Left Join)
-        query = supabase
-          .from('users')
-          .select(`
-            id, full_name, email, phone_number, created_at, role, status,
-            enrollments (
-              status,
-              classes ( name )
-            )
-          `, { count: 'exact' })
-          .eq('role', 'STUDENT');
-      }
-
-      // הוספת חיפוש טקסט חופשי (שם או אימייל) - עובד בשני המצבים
-      if (searchTerm) {
-        query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
-      }
-
-      // מיון
-      const sortColumn = sortConfig.key === 'joinDate' ? 'created_at' : 
-                         sortConfig.key === 'name' ? 'full_name' : 'created_at';
-      
-      query = query.order(sortColumn, { ascending: sortConfig.ascending });
-
-      // דפדוף (Pagination)
-      const from = page * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-      query = query.range(from, to);
-
-      const { data, count, error } = await query;
-
-      if (error) throw error;
-      
-      if (count !== null) setTotalCount(count);
-
-      if (data) {
-        const formattedStudents: Student[] = data.map((user: any) => {
-          // מציאת השיעור הפעיל לתצוגה
-          // במצב סינון, המערך יכיל רק את השיעור הרלוונטי. במצב רגיל, נחפש Active.
-          const activeEnrollment = user.enrollments?.find((e: any) => e.status === 'ACTIVE' || (selectedClass !== "הכל"));
-          const className = activeEnrollment?.classes?.name || 'לא רשום';
-
-          let status: EnrollmentStatus = 'Pending';
-          if (user.status === 'ACTIVE') status = 'Active';
-          else if (user.status === 'SUSPENDED') status = 'Suspended';
-          else if (user.status === 'INACTIVE') status = 'Pending';
-
-          return {
-            id: user.id,
-            name: user.full_name || 'שם לא ידוע',
-            role: user.role as UserRole,
-            avatar: user.full_name ? user.full_name[0].toUpperCase() : '?',
-            email: user.email,
-            phone: user.phone_number || '',
-            enrolledClass: className,
-            status: status,
-            joinDate: user.created_at
-          };
-        });
-          
-        setStudents(formattedStudents);
-      }
-    } catch (error) {
-      console.error('Error fetching students:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, searchTerm, sortConfig, selectedClass]);
+const fetchStudents = useCallback(async () => {
+  setLoading(true);
+  try {
+    // קריאה ל-API במקום ל-Supabase
+    const response = await StudentService.getAll({
+      page,
+      searchTerm,
+      selectedClass,
+      sortKey: sortConfig.key,
+      ascending: sortConfig.ascending
+    });
+    
+    setStudents(response.data);
+    setTotalCount(response.count);
+  } catch (error) {
+    console.error('Error fetching students via API:', error);
+  } finally {
+    setLoading(false);
+  }
+}, [page, searchTerm, sortConfig, selectedClass]);
 
   useEffect(() => {
     fetchClassesList();

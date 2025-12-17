@@ -6,73 +6,23 @@ import {
   Clock,
   Loader2
 } from 'lucide-react';
-import { supabase } from '../../services/supabaseClient';
-
-// הגדרת טיפוס עבור הקורס כפי שהוא נשלף מהדאטהבייס
-interface InstructorClass {
-  id: string;
-  name: string;
-  day_of_week: number;
-  start_time: string;
-  current_enrollment: number;
-}
+import { DashboardService } from '../../services/api';
+import { InstructorStats } from '../../types/types';
 
 export const InstructorDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    myCoursesCount: 0,
-    myStudentsCount: 0,
-    nextClass: null as InstructorClass | null,
-    todayClassesCount: 0
-  });
+  const [stats, setStats] = useState<InstructorStats | null>(null);
   const [userName, setUserName] = useState('');
 
   useEffect(() => {
     const fetchInstructorData = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        setUserName(user.user_metadata.full_name || 'מדריך');
-
-        // 1. שליפת הקורסים של המדריך
-        const { data, error: classesError } = await supabase
-          .from('classes')
-          .select('id, name, day_of_week, start_time, current_enrollment')
-          .eq('instructor_id', user.id)
-          .eq('is_active', true);
-
-        if (classesError) throw classesError;
-
-        // המרה יזומה לטיפוס שהגדרנו כדי למנוע שגיאות TypeScript
-        const myClasses = (data || []) as unknown as InstructorClass[];
-
-        // 2. חישוב סה"כ תלמידים (סכום הרשומים בכל הקורסים)
-        const totalStudents = myClasses.reduce((acc, curr) => acc + (curr.current_enrollment || 0), 0);
-
-        // 3. מציאת השיעור הבא והשיעורים של היום
-        const today = new Date();
-        const currentDayOfWeek = today.getDay(); // 0 = Sunday
+        // קבלת שם המשתמש (אופציונלי: אפשר גם דרך UserService.getMe אם רוצים)
+        const storedUser = localStorage.getItem('sb-kvk...-auth-token'); // או דרך הקונטקסט
+        // למען הפשטות, ה-API יחזיר את הנתונים, את השם אפשר לשלוף מהקונטקסט או להשאיר סטטי כרגע
         
-        const todayClasses = myClasses.filter(c => c.day_of_week === currentDayOfWeek);
-        
-        // לוגיקה פשוטה למציאת השיעור הבא
-        const sortedClasses = [...myClasses].sort((a, b) => a.day_of_week - b.day_of_week);
-        
-        // נסיון למצוא שיעור מאוחר יותר היום או בהמשך השבוע
-        let nextClass = sortedClasses.find(c => c.day_of_week >= currentDayOfWeek);
-        // אם לא נמצא (אנחנו בסוף השבוע), ניקח את השיעור הראשון בשבוע הבא
-        if (!nextClass && sortedClasses.length > 0) {
-            nextClass = sortedClasses[0];
-        }
-
-        setStats({
-          myCoursesCount: myClasses.length,
-          myStudentsCount: totalStudents,
-          nextClass: nextClass || null,
-          todayClassesCount: todayClasses.length
-        });
-
+        const data = await DashboardService.getInstructorStats();
+        setStats(data);
       } catch (error) {
         console.error('Error fetching instructor data:', error);
       } finally {
@@ -91,11 +41,13 @@ export const InstructorDashboard: React.FC = () => {
     );
   }
 
+  if (!stats) return null;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">שלום, {userName}</h2>
+          <h2 className="text-2xl font-bold text-slate-800">לוח בקרה למדריך</h2>
           <p className="text-slate-500">סיכום פעילות הקורסים שלך</p>
         </div>
       </div>

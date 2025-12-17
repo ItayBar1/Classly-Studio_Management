@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { supabase } from '../../services/supabaseClient';
+import { PaymentService } from '../../services/api';
+import { PaymentRecord } from '../../types/types';
 import { 
   CreditCard, 
   Calendar, 
@@ -16,18 +17,7 @@ import {
   DollarSign
 } from 'lucide-react';
 
-// --- Types ---
-interface PaymentRecord {
-  id: string;
-  amount_ils: number;
-  status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED'; 
-  payment_method: string;
-  created_at: string;
-  invoice_number: string | null;
-  description?: string;
-}
-
-// טעינת Stripe (יש לוודא שהמפתח ב-.env)
+// טעינת Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
 
 // --- Checkout Form Component (Stripe Elements) ---
@@ -46,8 +36,6 @@ const CheckoutForm: React.FC<{ onSuccess: () => void; onError: (msg: string) => 
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        // ב-SPA רגיל לרוב לא נרצה רידיירקט מלא אלא טיפול בקוד, 
-        // אך לפי ה-PRD יש return_url. כאן נשתמש ב-redirect: 'if_required' לחוויה חלקה
         return_url: window.location.origin + '/payment/success',
       },
       redirect: 'if_required'
@@ -118,33 +106,16 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, refreshDat
     setError(null);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // שליחה לשרת ה-Express כפי שמוגדר ב-PRD
-      // הנחת עבודה: השרת רץ בכתובת המוגדרת ב-VITE_API_URL
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      
-      const response = await fetch(`${apiUrl}/payment/create-intent`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({
-          amount: Number(amount),
-          currency: 'ils',
-          metadata: { description } // אופציונלי
-        })
+      const data = await PaymentService.createIntent({
+        amount: Number(amount),
+        currency: 'ils',
+        description
       });
 
-      if (!response.ok) throw new Error('שגיאה ביצירת בקשת תשלום מול השרת');
-
-      const data = await response.json();
       setClientSecret(data.clientSecret);
     } catch (err: any) {
       console.error(err);
-      // Fallback לטובת הדגמה אם אין שרת Express פעיל כרגע:
-      setError('לא ניתן להתחבר לשרת התשלומים. וודא שה-Backend רץ.');
+      setError('לא ניתן ליצור בקשת תשלום. אנא נסה שנית.');
     } finally {
       setLoadingSecret(false);
     }
@@ -277,35 +248,18 @@ const fetchPayments = async () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
-        .from('payments')
-        .select(`
-          id,
-          amount_ils,
-          status,
-          payment_method,
-          created_at,
-          invoice_number
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      if (data) {
-        // המרה בטוחה לטיפוס המתוקן
-        const safeData = data as unknown as PaymentRecord[];
-        setPayments(safeData);
+      const data = await PaymentService.getAll();
+      setPayments(data);
         
-        // חישוב הסכום לפי הסטטוס הנכון במסד הנתונים (COMPLETED)
-        const total = safeData
-          .filter(p => p.status === 'COMPLETED')
-          .reduce((sum, p) => sum + p.amount_ils, 0);
+      const total = data
+        .filter(p => p.status === 'COMPLETED')
+        .reduce((sum, p) => sum + p.amount_ils, 0);
           
-        setStats({
-          totalPaid: total,
-          lastMonth: 0 
-        });
-      }
+      setStats({
+        totalPaid: total,
+        lastMonth: 0 
+      });
+
     } catch (err) {
       console.error('Error fetching payments:', err);
     } finally {

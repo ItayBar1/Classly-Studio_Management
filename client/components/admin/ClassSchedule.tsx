@@ -12,9 +12,8 @@ import {
   Save,
   DollarSign
 } from "lucide-react";
-import { supabase } from '../../services/supabaseClient';
-import { ClassSession } from "../../types/types";
-import { Database } from '../../types/database';
+import { CourseService, UserService } from "../../services/api";
+import { ClassSession, User } from "../../types/types";
 
 // --- Constants ---
 const DAY_MAP: Record<number, string> = {
@@ -29,32 +28,16 @@ const DAY_MAP: Record<number, string> = {
 
 const DAYS = Object.values(DAY_MAP);
 
-// --- Type Definitions ---
-type ClassLevel = Database['public']['Tables']['classes']['Row']['level'];
-
-// אינטרפייסים מקומיים לעבודה נוחה
-interface Instructor {
-  id: string;
-  full_name: string | null;
-}
-
-interface UserWithStudio {
-  studio_id: string | null;
-}
-
 // --- Add Class Modal ---
 interface AddClassModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  studioId?: string; 
 }
 
 const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
-  
-  // State עם טיפוס מוגדר
-  const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [instructors, setInstructors] = useState<User[]>([]);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -63,72 +46,31 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSucces
     start_time: '09:00',
     end_time: '10:00',
     max_capacity: 20,
-    level: 'ALL_LEVELS' as ClassLevel,
+    level: 'ALL_LEVELS' as const,
     price_ils: 0,
     location_room: 'אולם ראשי'
   });
   
   const [error, setError] = useState<string | null>(null);
 
-useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       const fetchInstructors = async () => {
         try {
-          // 1. קבלת המשתמש המחובר
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) return;
-
-          // 2. משיכת ה-ID של הסטודיו
-          const { data: rawUserData, error: userError } = await supabase
-            .from('users')
-            .select('studio_id')
-            .eq('id', user.id)
-            .single();
-
-          if (userError) {
-            console.error("Error fetching user studio:", userError);
-            return;
-          }
-
-          // תיקון השגיאות: Casting מפורש למבנה המצופה
-          const userData = rawUserData as { studio_id: string | null } | null;
-
-          // בדיקה ש-userData קיים וש-studio_id אינו null/undefined
-          if (!userData || !userData.studio_id) {
-            console.error("User does not have a studio_id associated.");
-            return;
-          }
-
-          const currentStudioId = userData.studio_id;
-
-          // 3. משיכת מדריכים מאותו הסטודיו
-          const { data, error } = await supabase
-            .from('users')
-            .select('id, full_name')
-            .eq('role', 'INSTRUCTOR')
-            .eq('studio_id', currentStudioId); 
-
-          if (error) {
-            console.error("Error fetching instructors:", error);
-          }
-
-          if (data) {
-            const typedInstructors = data as Instructor[];
-            setInstructors(typedInstructors);
-            
-            // בחירת ברירת מחדל אם אין עדיין
-            if (typedInstructors.length > 0 && !formData.instructor_id) {
-              setFormData(prev => ({ ...prev, instructor_id: typedInstructors[0].id }));
-            }
+          const data = await UserService.getInstructors();
+          setInstructors(data);
+          
+          // בחירת ברירת מחדל אם יש מדריכים ועדיין לא נבחר
+          if (data.length > 0 && !formData.instructor_id) {
+            setFormData(prev => ({ ...prev, instructor_id: data[0].id }));
           }
         } catch (err) {
-          console.error("Unexpected error:", err);
+          console.error("Error fetching instructors:", err);
         }
       };
-      
       fetchInstructors();
     }
-  }, [isOpen]); // הקפד שהתלות תהיה [isOpen]
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -138,26 +80,7 @@ useEffect(() => {
     setError(null);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
-
-      const { data } = await supabase
-        .from('users')
-        .select('studio_id')
-        .eq('id', user.id)
-        .single();
-        
-      const userData = data as UserWithStudio | null;
-      
-      if (!userData || !userData.studio_id) {
-        throw new Error("לא נמצא סטודיו משויך למשתמש");
-      }
-      
-      const studioId = userData.studio_id;
-
-      // הכנת האובייקט
       const newClassPayload = {
-        studio_id: studioId,
         name: formData.name,
         instructor_id: formData.instructor_id,
         day_of_week: Number(formData.day_of_week),
@@ -170,21 +93,16 @@ useEffect(() => {
         is_active: true
       };
 
-      // --- התיקון הסופי ---
-      // אנו מבצעים Casting ל-Builder עצמו ל-any.
-      // זה עוקף את הבדיקה של TypeScript שחושבת בטעות שהטבלה לא תומכת ב-Insert (type 'never').
-      const { error: insertError } = await (supabase.from('classes') as any)
-        .insert([newClassPayload]);
-
-      if (insertError) throw insertError;
+      await CourseService.create(newClassPayload);
 
       onSuccess();
       onClose();
+      // איפוס חלקי לטופס
       setFormData(prev => ({ ...prev, name: '', price_ils: 0 }));
 
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "שגיאה ביצירת השיעור");
+      setError(err.response?.data?.error || err.message || "שגיאה ביצירת השיעור");
     } finally {
       setLoading(false);
     }
@@ -278,8 +196,8 @@ useEffect(() => {
               <label className="text-sm font-medium text-slate-700">רמה</label>
               <select
                 className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-                value={formData.level || 'ALL_LEVELS'}
-                onChange={e => setFormData({...formData, level: e.target.value as ClassLevel})}
+                value={formData.level}
+                onChange={e => setFormData({...formData, level: e.target.value as any})}
               >
                 <option value="ALL_LEVELS">כל הרמות</option>
                 <option value="BEGINNER">מתחילים</option>
@@ -345,29 +263,17 @@ useEffect(() => {
 
 export const ClassSchedule: React.FC = () => {
   const [selectedDay, setSelectedDay] = useState("ראשון");
-  const [classes, setClasses] = useState<ClassSession[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchClasses = async () => {
     try {
       setLoading(true);
-      
-      const { data, error } = await supabase
-        .from('classes')
-        .select(`
-          *,
-          instructor:users!instructor_id (
-            full_name,
-            profile_image_url
-          )
-        `)
-        .eq('is_active', true);
-
-      if (error) throw error;
+      const data = await CourseService.getAll({ status: 'active' });
 
       if (data) {
-        const formattedClasses: ClassSession[] = data.map((cls: any) => {
+        const formattedClasses = data.map((cls) => {
           // Calculate duration
           const today = "1970-01-01";
           const start = new Date(`${today}T${cls.start_time}`);
@@ -379,7 +285,7 @@ export const ClassSchedule: React.FC = () => {
             name: cls.name,
             instructor: cls.instructor?.full_name || 'לא ידוע',
             instructorAvatar: cls.instructor?.full_name 
-              ? cls.instructor.full_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() 
+              ? cls.instructor.full_name.substring(0, 2).toUpperCase() 
               : '?',
             startTime: cls.start_time.substring(0, 5),
             duration: duration,

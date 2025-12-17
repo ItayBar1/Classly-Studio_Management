@@ -1,31 +1,23 @@
-// client/components/student/BrowseCourses.tsx
 import React, { useEffect, useState } from 'react';
 import { Search, Filter, Loader2 } from 'lucide-react';
-import { supabase } from '../../services/supabaseClient';
+import { CourseService } from '../../services/api'; // שינוי
 import { CourseCard } from './CourseCard';
 import { RegistrationModal } from './RegistrationModal';
+import { ClassSession } from '../../types/types';
 
 export const BrowseCourses: React.FC = () => {
-  const [courses, setCourses] = useState<any[]>([]);
+  const [courses, setCourses] = useState<ClassSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCourse, setSelectedCourse] = useState<any | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<ClassSession | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchCourses = async () => {
     setLoading(true);
     try {
-      // שליפת שיעורים פעילים + פרטי המדריך
-      const { data, error } = await supabase
-        .from('classes')
-        .select(`
-          *,
-          instructor:users!instructor_id(full_name)
-        `)
-        .eq('is_active', true);
-
-      if (error) throw error;
-      setCourses(data || []);
+      // שינוי: שימוש ב-CourseService.getAll
+      const data = await CourseService.getAll({ status: 'active' });
+      setCourses(data);
     } catch (err) {
       console.error('Error loading courses:', err);
     } finally {
@@ -37,14 +29,14 @@ export const BrowseCourses: React.FC = () => {
     fetchCourses();
   }, []);
 
-  const handleRegisterClick = (course: any) => {
+  const handleRegisterClick = (course: ClassSession) => {
     setSelectedCourse(course);
     setIsModalOpen(true);
   };
 
   const filteredCourses = courses.filter(course => 
     course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    course.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -67,9 +59,6 @@ export const BrowseCourses: React.FC = () => {
               className="w-full pr-10 pl-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
-          <button className="bg-white p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">
-            <Filter size={20} />
-          </button>
         </div>
       </div>
 
@@ -100,7 +89,7 @@ export const BrowseCourses: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={() => {
-          fetchCourses(); // רענון הנתונים (עדכון מקומות פנויים)
+          fetchCourses(); // רענון (עדכון המקומות הפנויים מהשרת)
         }}
       />
     </div>

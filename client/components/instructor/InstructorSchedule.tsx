@@ -1,25 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../services/supabaseClient';
+import { CourseService } from '../../services/api';
 import { Loader2, MapPin, Users } from 'lucide-react';
+import { ClassSession } from '../../types/types';
 
 export const InstructorSchedule: React.FC = () => {
-  const [classes, setClasses] = useState<any[]>([]);
+  const [classes, setClasses] = useState<ClassSession[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchMySchedule = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        // ה-API מזהה את המדריך לפי הטוקן ומחזיר את הקורסים שלו
+        const data = await CourseService.getInstructorCourses();
+        
+        // מיון הקורסים לפי יום ושעה (אפשר גם בשרת, אך בטוח לעשות גם כאן)
+        const sorted = data.sort((a, b) => {
+          if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
+          return a.start_time.localeCompare(b.start_time);
+        });
 
-        const { data, error } = await supabase
-          .from('classes')
-          .select('*')
-          .eq('instructor_id', user.id)
-          .order('day_of_week')
-          .order('start_time');
-
-        if (!error && data) setClasses(data);
+        setClasses(sorted);
       } catch (err) {
         console.error(err);
       } finally {

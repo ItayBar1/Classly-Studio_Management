@@ -17,8 +17,8 @@ import {
   LineChart,
   Line
 } from 'recharts';
-import { supabase } from '../../services/supabaseClient';
 import { Database } from '../../types/database';
+import { DashboardService } from "../../services/api";
 
 interface ChartData {
   name: string;
@@ -59,114 +59,26 @@ export const Dashboard: React.FC = () => {
   });
   const [chartData, setChartData] = useState<ChartData[]>([]);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        const now = new Date();
-        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(now.getDate() - 7);
-        const sevenDaysAgoStr = sevenDaysAgo.toISOString();
-
-        // ביצוע כל השאילתות במקביל באמצעות Promise.all
-        const [
-          { count: studentsCount },
-          { count: classesCount },
-          { data: payments },
-          { data: weekPayments },
-          { data: weekAttendance }
-        ] = await Promise.all([
-          // שאילתה 1: מספר תלמידים
-          supabase
-            .from('users')
-            .select('*', { count: 'exact', head: true })
-            .eq('role', 'STUDENT'),
-          
-          // שאילתה 2: מספר שיעורים פעילים
-          supabase
-            .from('classes')
-            .select('*', { count: 'exact', head: true })
-            .eq('is_active', true),
-
-          // שאילתה 3: הכנסות החודש (שולפים רק את הסכום לחיסכון בתעבורה)
-          supabase
-            .from('payments')
-            .select('amount_ils')
-            .gte('created_at', firstDayOfMonth),
-
-          // שאילתה 4: נתונים לגרף הכנסות שבועי
-          supabase
-            .from('payments')
-            .select('amount_ils, created_at')
-            .gte('created_at', sevenDaysAgoStr),
-
-          // שאילתה 5: נתונים לגרף נוכחות שבועי
-          supabase
-            .from('attendance')
-            .select('session_date, status')
-            .gte('session_date', sevenDaysAgoStr)
-            .eq('status', 'PRESENT')
-        ]);
-
-        // חישוב הכנסות
-        const monthlyRevenue = payments?.reduce((sum, p: any) => sum + Number(p.amount_ils), 0) || 0;
-
-        // עיבוד נתונים לגרפים
-        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        const chartMap = new Map<string, ChartData>();
-
-        // אתחול 7 הימים האחרונים
-        for (let i = 6; i >= 0; i--) {
-          const d = new Date();
-          d.setDate(now.getDate() - i);
-          const dayNameEng = days[d.getDay()];
-          const dayNameHeb = DAY_NAMES_HE[dayNameEng];
-          const dateKey = d.toISOString().split('T')[0];
-          
-          chartMap.set(dateKey, { name: dayNameHeb, revenue: 0, attendance: 0 });
-        }
-
-        // מילוי נתוני הכנסות
-        weekPayments?.forEach((p: any) => {
-          const dateKey = new Date(p.created_at).toISOString().split('T')[0];
-          if (chartMap.has(dateKey)) {
-            const current = chartMap.get(dateKey)!;
-            current.revenue += Number(p.amount_ils);
-          }
-        });
-
-        // מילוי נתוני נוכחות
-        weekAttendance?.forEach((a: any) => {
-           const dateKey = a.session_date; 
-           if (chartMap.has(dateKey)) {
-             const current = chartMap.get(dateKey)!;
-             current.attendance += 1;
-           }
-        });
-
-        const formattedChartData = Array.from(chartMap.values());
-        const totalAttendance = weekAttendance?.length || 0;
-        const avgAtt = totalAttendance > 0 ? Math.round((totalAttendance / 7) * 10) / 10 : 0; 
-
-        setStats({
-          totalStudents: studentsCount || 0,
-          activeClasses: classesCount || 0,
-          monthlyRevenue,
-          avgAttendance: avgAtt 
-        });
-        
-        setChartData(formattedChartData);
-
-      } catch (error) {
-        console.error('Error loading dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-  }, []);
+useEffect(() => {
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const data = await DashboardService.getAdminStats();
+      setStats({
+        totalStudents: data.totalStudents,
+        monthlyRevenue: data.monthlyRevenue,
+        activeClasses: data.activeClasses,
+        avgAttendance: data.avgAttendance
+      });
+      setChartData(data.chartData);
+    } catch (error) {
+      console.error('Failed to load dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  loadData();
+}, []);
 
   if (loading) {
     return (
