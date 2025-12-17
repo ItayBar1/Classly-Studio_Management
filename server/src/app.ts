@@ -12,7 +12,7 @@ import attendanceRoutes from './routes/attendanceRoutes';
 import enrollmentRoutes from './routes/enrollmentRoutes';
 import webhookRoutes from './routes/webhookRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
-// import paymentRoutes... (נחליף את הקובץ הישן בחדש אם תרצה, או שנשתמש בו ליצירת Intent)
+import paymentRoutes from './routes/paymentsRoutes';
 
 export const app = express();
 
@@ -59,7 +59,7 @@ app.use('/api/instructors', instructorRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-// app.use('/api/payments', paymentRoutes); // אם יש לך נתיב ליצירת תשלום (create-intent)
+app.use('/api/payments', paymentRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

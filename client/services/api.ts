@@ -1,4 +1,3 @@
-// client/services/api.ts
 import axios from "axios";
 import { supabase } from "./supabaseClient";
 import { 
@@ -15,7 +14,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 // יצירת מופע Axios
 export const apiClient = axios.create({
-  baseURL: API_URL,
+  baseURL: API_URL, // וודא ש-VITE_API_URL כולל את ה-suffix '/api' אם צריך (למשל http://localhost:5000/api)
   headers: {
     "Content-Type": "application/json",
   },
@@ -35,74 +34,68 @@ apiClient.interceptors.request.use(async (config) => {
 // --- Services ---
 
 export const UserService = {
-  // שליפת המשתמש הנוכחי (פרופיל מורחב מה-DB)
+  // שליפת המשתמש הנוכחי
   getMe: () => apiClient.get<User>('/users/me').then(res => res.data),
   
-  // שליפת כל המדריכים (עבור Dropdown בשיבוץ שיעורים)
-  getInstructors: () => apiClient.get<User[]>('/users/instructors').then(res => res.data),
+  // שליפת כל המדריכים
+  getInstructors: () => apiClient.get<User[]>('/instructors').then(res => res.data),
 };
 
+// --- NEW: Student Service (נוסף כדי לתמוך במחיקה וניהול תלמידים) ---
 export const StudentService = {
-  // שליפת כל התלמידים (Admin) עם סינון ופייג'ינג
-  getAll: (params?: { page?: number; limit?: number; search?: string; classId?: string }) => 
-    apiClient.get<{ data: Student[]; count: number }>('/students', { params }).then(res => res.data),
-  
-  // שליפת תלמיד בודד
-  getById: (id: string) => apiClient.get<Student>(`/students/${id}`).then(res => res.data),
-  
-  // יצירת תלמיד חדש (Admin)
-  create: (data: Partial<Student>) => apiClient.post<Student>('/students', data).then(res => res.data),
-  
-  // עדכון פרטי תלמיד
-  update: (id: string, data: Partial<Student>) => apiClient.put<Student>(`/students/${id}`, data).then(res => res.data),
-  
-  // מחיקת תלמיד (Soft Delete)
-  delete: (id: string) => apiClient.delete(`/students/${id}`).then(res => res.data),
+  // שליפת כל התלמידים (Admin)
+  getAll: () => apiClient.get<Student[]>('/students').then(res => res.data),
 
-  // שליפת תלמידים המשויכים למדריך (Instructor View)
-  getByInstructor: () => apiClient.get<Student[]>('/students/my-students').then(res => res.data),
+  // הוספת תלמיד ידנית
+  create: (data: Partial<Student>) => apiClient.post('/students', data).then(res => res.data),
+
+  // מחיקת תלמיד (Soft Delete) - התוספת החדשה
+  delete: (id: string) => apiClient.delete(`/students/${id}`).then(res => res.data),
 };
 
 export const CourseService = {
-  // שליפת כל הקורסים (Admin/Catalog)
-  getAll: (params?: { day?: number; instructorId?: string; status?: 'active' | 'inactive' }) => 
-    apiClient.get<ClassSession[]>('/courses', { params }).then(res => res.data),
+  // שליפת כל הקורסים
+  getAll: () => apiClient.get<ClassSession[]>('/courses').then(res => res.data),
   
-  // שליפת קורס בודד
-  getById: (id: string) => apiClient.get<ClassSession>(`/courses/${id}`).then(res => res.data),
-  
-  // יצירת קורס חדש (Admin)
+  // יצירת קורס חדש
   create: (data: Partial<ClassSession>) => apiClient.post<ClassSession>('/courses', data).then(res => res.data),
   
-  // עדכון קורס
-  update: (id: string, data: Partial<ClassSession>) => apiClient.put<ClassSession>(`/courses/${id}`, data).then(res => res.data),
+  // עדכון קורס - תוקן ל-PATCH
+  update: (id: string, data: Partial<ClassSession>) => apiClient.patch<ClassSession>(`/courses/${id}`, data).then(res => res.data),
   
   // מחיקת קורס
   delete: (id: string) => apiClient.delete(`/courses/${id}`).then(res => res.data),
 
-  // שליפת הקורסים של המדריך המחובר (Instructor View)
+  // שליפת הקורסים של המדריך המחובר
   getInstructorCourses: () => apiClient.get<ClassSession[]>('/courses/my-courses').then(res => res.data),
 
-  // שליפת הקורסים שהתלמיד רשום אליהם (Student View)
-  getEnrolledCourses: () => apiClient.get<ClassSession[]>('/courses/enrolled').then(res => res.data),
+  // שליפת הקורסים הפנויים להרשמה (עבור ה-Browse Courses)
+  getAvailableCourses: () => apiClient.get<ClassSession[]>('/courses/available').then(res => res.data),
+};
 
-  // הרשמה לקורס (Student Action)
-  enroll: (courseId: string) => apiClient.post('/courses/enroll', { courseId }).then(res => res.data),
+export const EnrollmentService = {
+  // --- תוקן: שימוש בנתיבים הנכונים מול השרת ---
+
+  // הרשמה לקורס (Student Action) - תוקן מ-/courses/enroll
+  register: (courseId: string) => apiClient.post('/enrollments/register', { courseId }).then(res => res.data),
+
+  // שליפת הקורסים שהתלמיד רשום אליהם - תוקן מ-/courses/enrolled
+  getMyEnrollments: () => apiClient.get<any[]>('/enrollments/my-enrollments').then(res => res.data),
+  
+  // שליפת נרשמים לקורס ספציפי (עבור מדריך/אדמין)
+  getClassEnrollments: (classId: string) => apiClient.get<any[]>(`/enrollments/class/${classId}`).then(res => res.data),
 };
 
 export const PaymentService = {
-  // שליפת היסטוריית תשלומים (Admin)
+  // הערה: נתיב זה חסר בשרת כרגע, יש לוודא מימוש ב-payments.ts
   getAll: () => apiClient.get<PaymentRecord[]>('/payments').then(res => res.data),
   
-  // יצירת כוונת תשלום (Stripe Payment Intent)
+  // יצירת כוונת תשלום
   createIntent: (data: { amount: number; currency?: string; description?: string }) => 
-    apiClient.post<{ clientSecret: string }>('/payments/create-intent', data).then(res => res.data),
+    apiClient.post<{ clientSecret: string }>('/payment/create-intent', data).then(res => res.data),
 };
 
 export const DashboardService = {
-  // סטטיסטיקות לאדמין
   getAdminStats: () => apiClient.get<DashboardStats>('/dashboard/admin').then(res => res.data),
-  
-  // סטטיסטיקות למדריך
   getInstructorStats: () => apiClient.get<InstructorStats>('/dashboard/instructor').then(res => res.data),
 };

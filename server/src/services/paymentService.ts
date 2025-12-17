@@ -1,66 +1,77 @@
-import { supabase } from '../config/supabase';
+import { supabaseAdmin } from '../config/supabase';
 import Stripe from 'stripe';
+import dotenv from 'dotenv';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2025-11-17.clover' as any, // או הגרסה העדכנית שלך
+dotenv.config();
+
+// אתחול Stripe
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2025-01-27.acacia' as any, // וודא שהגרסה תואמת
 });
 
 export class PaymentService {
-
-    /**
-     * מטפל באירוע הצלחת תשלום (נקרא מה-Webhook)
-     */
-    static async handlePaymentSuccess(paymentIntentId: string) {
-        // 1. עדכון טבלת התשלומים ל-SUCCEEDED
-        const { data: payment, error: paymentError } = await supabase
-            .from('payments')
-            .update({ 
-                status: 'SUCCEEDED', 
-                paid_date: new Date().toISOString() 
-            })
-            .eq('stripe_payment_intent_id', paymentIntentId)
-            .select('enrollment_id') // נשלוף את ה-ID של ההרשמה כדי לעדכן גם אותה
-            .single();
-
-        if (paymentError) {
-            console.error('Error updating payment status:', paymentError);
-            throw new Error(paymentError.message);
-        }
-
-        if (!payment || !payment.enrollment_id) {
-            console.warn(`Payment record not found or no enrollment linked for Intent ID: ${paymentIntentId}`);
-            return;
-        }
-
-        // 2. עדכון טבלת ההרשמות ל-ACTIVE ו-PAID
-        const { error: enrollmentError } = await supabase
-            .from('enrollments')
-            .update({ 
-                status: 'ACTIVE', 
-                payment_status: 'PAID' 
-            })
-            .eq('id', payment.enrollment_id);
-
-        if (enrollmentError) {
-            console.error('Error updating enrollment status:', enrollmentError);
-            throw new Error(enrollmentError.message);
-        }
-        
-        console.log(`Successfully processed payment for enrollment ${payment.enrollment_id}`);
+  
+  /**
+   * יצירת כוונת תשלום (Payment Intent) ב-Stripe
+   */
+  static async createIntent(amount: number, currency: string = 'ils', description?: string, metadata?: any) {
+    if (!amount || amount <= 0) {
+      throw new Error('Invalid amount');
     }
 
-    /**
-     * פונקציה לאימות החתימה של Stripe
-     */
-    static constructEvent(payload: Buffer, signature: string) {
-        try {
-            return stripe.webhooks.constructEvent(
-                payload,
-                signature,
-                process.env.STRIPE_WEBHOOK_SECRET!
-            );
-        } catch (err: any) {
-            throw new Error(`Webhook Error: ${err.message}`);
-        }
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100), // Stripe דורש אגורות/סנטים
+      currency: currency,
+      description: description,
+      metadata: metadata,
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+
+    return { clientSecret: paymentIntent.client_secret, id: paymentIntent.id };
+  }
+
+  /**
+   * אימות תשלום ועדכון מסד הנתונים (הפונקציה שיצרנו קודם)
+   */
+  static async confirmPayment(paymentIntentId: string) {
+    // 1. אימות מול Stripe
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    if (paymentIntent.status !== 'succeeded') {
+      throw new Error(`Payment not succeeded. Status: ${paymentIntent.status}`);
     }
+
+    // 2. עדכון טבלת התשלומים
+    const { data: paymentRecord, error: paymentError } = await supabaseAdmin
+      .from('payments')
+      .update({
+        status: 'SUCCEEDED',
+        paid_date: new Date().toISOString(),
+        stripe_charge_id: paymentIntent.latest_charge as string,
+        updated_at: new Date().toISOString()
+      })
+      .eq('stripe_payment_intent_id', paymentIntentId)
+      .select()
+      .single();
+
+    if (paymentError) {
+      throw new Error(`Failed to update payment record: ${paymentError.message}`);
+    }
+
+    // 3. עדכון סטטוס הרשמה אם קיים
+    if (paymentRecord.enrollment_id) {
+      await supabaseAdmin
+        .from('enrollments')
+        .update({
+          payment_status: 'PAID',
+          status: 'ACTIVE',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', paymentRecord.enrollment_id);
+    }
+
+    return { success: true, payment: paymentRecord };
+  }
 }
