@@ -71,10 +71,7 @@ export const StudentService = {
     return data;
   },
 
-  async getByInstructor(instructorId: string) {
-    const serviceLogger = logger.child({ service: "StudentService", method: "getByInstructor" });
-    serviceLogger.info({ instructorId }, "Fetching students by instructor");
-
+async getByInstructor(instructorId: string) {
     // שליפת כל ה-Enrollments של קורסים שהמדריך מלמד
     const { data, error } = await supabaseAdmin
       .from("enrollments")
@@ -91,35 +88,31 @@ export const StudentService = {
       .eq("class.instructor_id", instructorId)
       .eq("status", "ACTIVE");
 
-    if (error) {
-      serviceLogger.error({ err: error }, "Failed to fetch instructor students");
-      throw error;
-    }
+    if (error) throw error;
 
     // עיבוד הנתונים למניעת כפילויות
-    const studentMap = new Map<string, {
-      id: string;
-      full_name: string;
-      email: string;
-      phone_number: string;
-      profile_image_url?: string | null;
-      enrolledClass: string;
-      role: string;
-    }>();
+    const studentMap = new Map();
 
-    data.forEach((item: InstructorStudent) => {
-      if (!item.student) return;
+    // תיקון: המרה ל-any[] כדי לעקוף את שגיאת הטיפוסים של Supabase
+    (data as any[]).forEach((item) => {
+      // הגנה נוספת: וידוא שיש אובייקט student (במקרה שחזר ריק או כמערך)
+      const studentData = Array.isArray(item.student) ? item.student[0] : item.student;
+      
+      if (!studentData) return;
 
-      const existing = studentMap.get(item.student.id);
-      const className = item.class?.name;
+      const existing = studentMap.get(studentData.id);
+      
+      // טיפול במקרה ש-class חוזר כמערך או אובייקט
+      const classData = Array.isArray(item.class) ? item.class[0] : item.class;
+      const className = classData?.name;
 
       if (existing) {
         if (className && !existing.enrolledClass.includes(className)) {
           existing.enrolledClass += `, ${className}`;
         }
       } else {
-        studentMap.set(item.student.id, {
-          ...item.student,
+        studentMap.set(studentData.id, {
+          ...studentData,
           enrolledClass: className || "",
           role: "STUDENT",
         });

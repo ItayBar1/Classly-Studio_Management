@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AttendanceService } from '../services/attendanceService';
-import { supabase } from '../config/supabase';
+import { supabaseAdmin as supabase} from '../config/supabase';
 import { logger } from '../logger';
 
 export class AttendanceController {

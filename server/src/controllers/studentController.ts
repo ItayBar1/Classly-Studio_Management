@@ -7,6 +7,10 @@ export const StudentController = {
     const requestLog = req.logger || logger.child({ controller: "StudentController", method: "getAll" });
     requestLog.info({ params: req.params, query: req.query }, "Controller entry");
     try {
+      if (!req.studioId) {
+        res.status(400).json({ error: "Studio ID is missing" });
+        return;
+      }
       const { page, limit, search } = req.query;
       const result = await StudentService.getAll(
         req.studioId,
