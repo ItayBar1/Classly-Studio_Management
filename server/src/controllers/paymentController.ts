@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { PaymentService } from '../services/paymentService';
 import { logger } from '../logger';
 
@@ -7,9 +7,10 @@ export class PaymentController {
   /**
    * יצירת Payment Intent חדש
    */
-  static async createIntent(req: Request, res: Response) {
+  static async createIntent(req: Request, res: Response, next: NextFunction) {
     const requestLog = req.logger || logger.child({ controller: 'PaymentController', method: 'createIntent' });
-    
+    requestLog.info({ body: req.body }, 'Controller entry');
+
     try {
       const { amount, currency, description, metadata } = req.body;
 
@@ -19,21 +20,22 @@ export class PaymentController {
       }
 
       const result = await PaymentService.createIntent(amount, currency, description, metadata);
-      
+
       requestLog.info({ amount, currency }, 'Payment intent created successfully');
       res.status(200).json(result);
 
     } catch (error: any) {
       requestLog.error({ err: error }, 'Error creating payment intent');
-      res.status(500).json({ error: error.message });
+      next(error);
     }
   }
 
   /**
    * אישור תשלום (לאחר סליקה מוצלחת בצד לקוח)
    */
-  static async confirmPayment(req: Request, res: Response) {
+  static async confirmPayment(req: Request, res: Response, next: NextFunction) {
     const requestLog = req.logger || logger.child({ controller: 'PaymentController', method: 'confirmPayment' });
+    requestLog.info({ body: req.body }, 'Controller entry');
 
     try {
       const { paymentIntentId } = req.body;
@@ -43,21 +45,22 @@ export class PaymentController {
       }
 
       const result = await PaymentService.confirmPayment(paymentIntentId);
-      
+
       requestLog.info({ paymentIntentId }, 'Payment confirmed successfully');
       res.status(200).json(result);
 
     } catch (error: any) {
       requestLog.error({ err: error }, 'Error confirming payment');
-      res.status(500).json({ error: error.message });
+      next(error);
     }
   }
 
   /**
    * שליפת כל התשלומים
    */
-  static async getAll(req: Request, res: Response) {
+  static async getAll(req: Request, res: Response, next: NextFunction) {
     const requestLog = req.logger || logger.child({ controller: 'PaymentController', method: 'getAll' });
+    requestLog.info({ studioId: req.studioId }, 'Controller entry');
 
     try {
       const studioId = req.studioId; // מגיע מ-authMiddleware
@@ -67,13 +70,13 @@ export class PaymentController {
       }
 
       const payments = await PaymentService.getAllPayments(studioId);
-      
+
       requestLog.info({ count: payments?.length }, 'Fetched payment history');
       res.status(200).json(payments);
 
     } catch (error: any) {
       requestLog.error({ err: error }, 'Error fetching payment history');
-      res.status(500).json({ error: error.message });
+      next(error);
     }
   }
 }

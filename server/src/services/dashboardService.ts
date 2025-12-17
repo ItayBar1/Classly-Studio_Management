@@ -1,7 +1,10 @@
 import { supabaseAdmin } from '../config/supabase';
+import { logger } from '../logger';
 
 export const DashboardService = {
   async getAdminStats(studioId: string) {
+    const serviceLogger = logger.child({ service: 'DashboardService', method: 'getAdminStats' });
+    serviceLogger.info({ studioId }, 'Fetching admin stats');
     try {
       const [studentsRes, classesRes, revenueRes] = await Promise.all([
         // סה"כ תלמידים
@@ -22,7 +25,10 @@ export const DashboardService = {
       if(classesRes.error) throw classesRes.error;
       if(revenueRes.error) throw revenueRes.error;
 
-      const monthlyRevenue = revenueRes.data?.reduce((sum, p) => sum + p.amount_ils, 0) || 0;
+      const monthlyRevenue = (revenueRes.data ?? []).reduce(
+        (sum: number, payment: { amount_ils: number }) => sum + payment.amount_ils,
+        0
+      );
 
       // נתונים לגרף (Hardcoded כרגע לדוגמה, בעתיד שאילתת SQL מורכבת)
       const chartData = [
@@ -39,11 +45,14 @@ export const DashboardService = {
         chartData
       };
     } catch (error) {
+      serviceLogger.error({ err: error }, 'Failed to fetch admin stats');
       throw error;
     }
   },
 
   async getInstructorStats(instructorId: string) {
+    const serviceLogger = logger.child({ service: 'DashboardService', method: 'getInstructorStats' });
+    serviceLogger.info({ instructorId }, 'Fetching instructor stats');
     try {
       const todayDayOfWeek = new Date().getDay();
 
@@ -57,8 +66,8 @@ export const DashboardService = {
 
       if(coursesRes.error) throw coursesRes.error;
 
-      const myCourses = coursesRes.data || [];
-      const todayClasses = myCourses.filter(c => c.day_of_week === todayDayOfWeek);
+      const myCourses = (coursesRes.data || []) as Array<{ day_of_week?: number }>;
+      const todayClasses = myCourses.filter((course) => course.day_of_week === todayDayOfWeek);
       const nextClass = todayClasses.length > 0 ? todayClasses[0] : null;
 
       return {
@@ -68,6 +77,7 @@ export const DashboardService = {
         nextClass: nextClass
       };
     } catch (error) {
+      serviceLogger.error({ err: error }, 'Failed to fetch instructor stats');
       throw error;
     }
   }
