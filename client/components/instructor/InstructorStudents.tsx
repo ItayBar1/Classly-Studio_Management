@@ -1,90 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../services/supabaseClient';
+import { StudentService } from '../../services/api';
 import { Loader2, Search, Mail, Phone } from 'lucide-react';
-
-interface StudentWithCourses {
-    id: string;
-    full_name: string;
-    email: string;
-    phone_number: string;
-    courses: string;
-}
+import { Student } from '../../types/types';
 
 export const InstructorStudents: React.FC = () => {
-  const [students, setStudents] = useState<StudentWithCourses[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const fetchMyStudents = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        // 1. קבלת ה-IDs של הקורסים שלי
-        const { data: myClassesData } = await supabase
-          .from('classes')
-          .select('id, name')
-          .eq('instructor_id', user.id);
-            
-        const myClasses = myClassesData as any[] || [];
-
-        if (!myClasses.length) {
-            setStudents([]);
-            setLoading(false);
-            return;
-        }
-
-        const classIds = myClasses.map((c: any) => c.id);
-
-        // 2. קבלת ה-Enrollments לקורסים אלו
-        // שימוש ב-any כדי למנוע שגיאות על ה-Join
-        const { data: enrollmentsData } = await supabase
-          .from('enrollments')
-          .select('student_id, classes(name)')
-          .in('class_id', classIds)
-          .eq('status', 'ACTIVE'); 
-
-        const enrollments = enrollmentsData as any[] || [];
-
-        if (!enrollments.length) {
-             setStudents([]);
-             setLoading(false);
-             return;
-        }
-
-        const studentIds = enrollments.map((e: any) => e.student_id);
-
-        // 3. קבלת פרטי התלמידים
-        const { data: studentsData } = await supabase
-          .from('users')
-          .select('*')
-          .in('id', studentIds);
-        
-        const rawStudents = studentsData as any[] || [];
-
-        // מיזוג המידע
-        const combinedData: StudentWithCourses[] = rawStudents.map((student: any) => {
-            // מציאת כל ההרשמות של התלמיד הספציפי מתוך רשימת ההרשמות ששלפנו קודם
-            const studentEnrollments = enrollments.filter((e: any) => e.student_id === student.id);
-            
-            // חילוץ שמות הקורסים
-            const courseNames = studentEnrollments
-                .map((e: any) => e.classes?.name)
-                .filter(Boolean) // סינון ערכים ריקים
-                .join(', ');
-
-            return { 
-                id: student.id,
-                full_name: student.full_name,
-                email: student.email,
-                phone_number: student.phone_number,
-                courses: courseNames 
-            };
-        });
-
-        setStudents(combinedData);
-
+        const data = await StudentService.getByInstructor();
+        setStudents(data);
       } catch (error) {
         console.error('Error loading students:', error);
       } finally {
@@ -139,7 +67,8 @@ export const InstructorStudents: React.FC = () => {
                   </div>
                 </td>
                 <td className="px-6 py-4 text-slate-600">
-                    {student.courses}
+                    {/* כאן אנו מניחים שה-API מחזיר שדה enrolledClass שהוא מחרוזת של שמות הקורסים */}
+                    {student.enrolledClass || '-'} 
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-col gap-1 text-sm text-slate-500">

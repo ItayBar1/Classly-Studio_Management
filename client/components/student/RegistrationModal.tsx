@@ -1,14 +1,14 @@
-// client/components/student/RegistrationModal.tsx
 import React, { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { X, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { supabase } from '../../services/supabaseClient';
+import { PaymentService, CourseService } from '../../services/api'; // שינוי
+import { ClassSession } from '../../types/types';
 
 // טעינת Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
 
-// --- טופס הסליקה הפנימי ---
+// --- CheckoutForm (ללא שינוי מהותי) ---
 const CheckoutForm = ({ onSuccess, onError }: { onSuccess: () => void, onError: (msg: string) => void }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -48,7 +48,7 @@ const CheckoutForm = ({ onSuccess, onError }: { onSuccess: () => void, onError: 
 
 // --- המודל הראשי ---
 interface RegistrationModalProps {
-  course: any | null;
+  course: ClassSession | null;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -66,27 +66,13 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ course, is
         setLoading(true);
         setError(null);
         try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session) throw new Error('משתמש לא מחובר');
-
-          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-          
-          const res = await fetch(`${apiUrl}/payment/create-intent`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify({
-              amount: course.price_ils,
-              currency: 'ils',
-              description: `הרשמה לקורס: ${course.name}`
-            })
+          // שינוי: יצירת Payment Intent דרך PaymentService
+          const data = await PaymentService.createIntent({
+            amount: course.price_ils,
+            currency: 'ils',
+            description: `הרשמה לקורס: ${course.name}`
           });
-
-          if (!res.ok) throw new Error('שגיאה ביצירת תשלום');
           
-          const data = await res.json();
           setClientSecret(data.clientSecret);
         } catch (err: any) {
           console.error(err);
@@ -106,34 +92,9 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ course, is
 
   const handlePaymentSuccess = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user && course) {
-        // --- תיקון אגרסיבי: שימוש ב-Any כדי לעקוף את TypeScript ---
-        
-        // 1. הוספת הרשמה
-        const enrollmentData = {
-          student_id: user.id,
-          class_id: course.id,
-          studio_id: course.studio_id,
-          status: 'ACTIVE',
-          payment_status: 'PAID',
-          start_date: new Date().toISOString(),
-          total_amount_paid: Number(course.price_ils),
-          total_amount_due: Number(course.price_ils)
-        };
-
-        // אנחנו אומרים ל-TS: "תתייחס ל-supabase.from כאל משהו שמקבל הכל"
-        const { error: enrollError } = await (supabase.from('enrollments') as any).insert(enrollmentData);
-        
-        if (enrollError) throw enrollError;
-
-        // 2. עדכון מונה נרשמים
-        const { error: rpcError } = await (supabase.rpc as any)('increment_enrollment', { 
-          class_id: course.id 
-        });
-
-        if (rpcError) throw rpcError;
+      if (course) {
+        // שינוי: הרשמה דרך ה-API (השרת יבצע את ה-Insert ל-DB ויעדכן את המונה)
+        await CourseService.enroll(course.id);
       }
       
       setPaymentSuccess(true);
@@ -143,8 +104,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ course, is
       }, 3000);
     } catch (err) {
       console.error("Error finalizing enrollment:", err);
-      // במקרה של שגיאה ברישום למרות שהתשלום עבר, עדיין נציג הצלחה ללקוח
-      setPaymentSuccess(true);
+      setError("התשלום עבר בהצלחה אך ההרשמה נכשלה. אנא פנה לשירות לקוחות.");
     }
   };
 
