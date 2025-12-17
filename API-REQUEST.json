@@ -1,0 +1,230 @@
+{
+  "api_structure": {
+    "base_url": "/api",
+    "authentication": "Bearer Token (JWT) via Supabase Auth"
+  },
+  "resources": [
+    {
+      "resource": "Students",
+      "base_path": "/students",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/",
+          "access": "Admin",
+          "description": "Retrieves a list of all students registered in the studio."
+        },
+        {
+          "method": "POST",
+          "path": "/",
+          "access": "Admin",
+          "description": "Creates a new student profile manually."
+        },
+        {
+          "method": "GET",
+          "path": "/my-students",
+          "access": "Instructor, Admin",
+          "description": "Retrieves students associated with the logged-in instructor's classes."
+        },
+        {
+          "method": "GET",
+          "path": "/:id",
+          "access": "Admin, Instructor",
+          "description": "Retrieves detailed profile information for a specific student."
+        },
+        {
+          "method": "DELETE",
+          "path": "/:id",
+          "access": "Admin",
+          "description": "Soft deletes a student by changing their status to 'INACTIVE'. [New Feature]"
+        }
+      ]
+    },
+    {
+      "resource": "Courses (Classes)",
+      "base_path": "/courses",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/",
+          "access": "All (Filtered)",
+          "description": "Retrieves all courses. Admins see all; others see active/relevant courses."
+        },
+        {
+          "method": "GET",
+          "path": "/my-courses",
+          "access": "Instructor, Admin",
+          "description": "Retrieves courses assigned to the logged-in instructor."
+        },
+        {
+          "method": "GET",
+          "path": "/available",
+          "access": "Student",
+          "description": "Retrieves a list of active courses available for registration."
+        },
+        {
+          "method": "GET",
+          "path": "/:id",
+          "access": "All Authenticated",
+          "description": "Retrieves details for a single course."
+        },
+        {
+          "method": "POST",
+          "path": "/",
+          "access": "Admin",
+          "description": "Creates a new course/class."
+        },
+        {
+          "method": "PATCH",
+          "path": "/:id",
+          "access": "Admin",
+          "description": "Updates course details."
+        },
+        {
+          "method": "DELETE",
+          "path": "/:id",
+          "access": "Admin",
+          "description": "Soft deletes a course by setting 'is_active' to false."
+        }
+      ]
+    },
+    {
+      "resource": "Enrollments",
+      "base_path": "/enrollments",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/admin",
+          "access": "Admin",
+          "description": "Manually enrolls a student into a class (bypassing payment)."
+        },
+        {
+          "method": "POST",
+          "path": "/register",
+          "access": "Student",
+          "description": "Initiates student self-registration. Creates a PENDING enrollment, generates a Stripe Payment Intent, and returns the Client Secret. [Updated Flow]"
+        },
+        {
+          "method": "GET",
+          "path": "/my-enrollments",
+          "access": "Student",
+          "description": "Retrieves all enrollments for the logged-in student."
+        },
+        {
+          "method": "GET",
+          "path": "/class/:classId",
+          "access": "Admin, Instructor",
+          "description": "Retrieves the roster of students enrolled in a specific class."
+        },
+        {
+          "method": "DELETE",
+          "path": "/:id",
+          "access": "Admin",
+          "description": "Cancels an enrollment."
+        }
+      ]
+    },
+    {
+      "resource": "Payments",
+      "base_path": "/payment",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/create-intent",
+          "access": "Authenticated User",
+          "description": "Creates a new Stripe Payment Intent manually (mostly used internally by register, but exposed if needed)."
+        },
+        {
+          "method": "POST",
+          "path": "/confirm",
+          "access": "Authenticated User",
+          "description": "Validates a successful Stripe payment via PaymentIntent ID and updates the database record to 'PAID'. [New Feature]"
+        }
+      ]
+    },
+    {
+      "resource": "Instructors",
+      "base_path": "/instructors",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/",
+          "access": "Admin",
+          "description": "Retrieves a list of all instructors."
+        },
+        {
+          "method": "GET",
+          "path": "/earnings",
+          "access": "Instructor",
+          "description": "Retrieves earnings and commission data for the logged-in instructor."
+        },
+        {
+          "method": "GET",
+          "path": "/:id",
+          "access": "Admin, Instructor",
+          "description": "Retrieves details of a specific instructor."
+        },
+        {
+          "method": "DELETE",
+          "path": "/:id",
+          "access": "Admin",
+          "description": "Soft deletes an instructor."
+        }
+      ]
+    },
+    {
+      "resource": "Attendance",
+      "base_path": "/attendance",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/",
+          "access": "Instructor",
+          "description": "Records or updates attendance for a class session."
+        },
+        {
+          "method": "GET",
+          "path": "/class/:classId",
+          "access": "Instructor, Admin",
+          "description": "Gets attendance history for a specific class."
+        },
+        {
+          "method": "GET",
+          "path": "/my-history",
+          "access": "Student",
+          "description": "Gets attendance history for the logged-in student."
+        }
+      ]
+    },
+    {
+      "resource": "Dashboard",
+      "base_path": "/dashboard",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/admin",
+          "access": "Admin",
+          "description": "Retrieves aggregated statistics and metrics for the admin dashboard."
+        },
+        {
+          "method": "GET",
+          "path": "/instructor",
+          "access": "Instructor, Admin",
+          "description": "Retrieves statistics for the instructor dashboard."
+        }
+      ]
+    },
+    {
+      "resource": "Webhooks",
+      "base_path": "/webhooks",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/stripe",
+          "access": "Public (Signature Verified)",
+          "description": "Handles asynchronous events from Stripe (e.g., payment_intent.succeeded) to sync database state."
+        }
+      ]
+    }
+  ]
+}
