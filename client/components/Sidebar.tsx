@@ -55,6 +55,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLog
       roles: ['ADMIN'] // Admin only for now (students pay inside registration/dashboard)
     },
     {
+      id: 'administration',
+      label: 'ניהול',
+      icon: Users, // Changed icon to distinguish
+      roles: ['ADMIN', 'SUPER_ADMIN'],
+    },
+    {
       id: 'settings',
       label: 'הגדרות',
       icon: Settings,
@@ -82,11 +88,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLog
               console.info('Sidebar navigation clicked', { tab: item.id });
               setActiveTab(item.id);
             }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-              activeTab === item.id
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50'
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-            }`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${activeTab === item.id
+              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50'
+              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
           >
             <item.icon size={20} />
             <span className="font-medium">{item.label}</span>

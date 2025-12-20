@@ -7,6 +7,11 @@ import { Dashboard } from "./components/admin/Dashboard";
 import { StudentManagement } from "./components/admin/StudentManagement";
 import { ClassSchedule } from "./components/admin/ClassSchedule";
 import { Payments } from "./components/admin/Payments";
+import { Administration } from "./components/admin/Administration";
+import { PlatformAdministration } from "./components/admin/PlatformAdministration";
+import { Settings } from "./components/admin/Settings";
+
+
 // Instructor components (new)
 import { InstructorDashboard } from "./components/instructor/InstructorDashboard";
 import { InstructorStudents } from "./components/instructor/InstructorStudents";
@@ -23,6 +28,8 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [userRole, setUserRole] = useState<string>("STUDENT");
+  // Keep track of which tabs have been visited to lazy-load them
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(new Set(["dashboard"]));
 
   useEffect(() => {
     console.info('App initialization started');
@@ -50,43 +57,63 @@ function App() {
     };
   }, []);
 
+  // Update visited tabs when active tab changes
+  useEffect(() => {
+    setVisitedTabs(prev => {
+      const newSet = new Set(prev);
+      newSet.add(activeTab);
+      return newSet;
+    });
+  }, [activeTab]);
+
   const handleLogout = async () => {
     try {
       console.info('User requested logout');
       await supabase.auth.signOut();
       setUserRole("STUDENT");
+      // Reset visited tabs on logout
+      setVisitedTabs(new Set(["dashboard"]));
+      setActiveTab("dashboard");
       console.info('User signed out successfully');
     } catch (error) {
       console.error('Failed to sign out user', error);
     }
   };
 
-  const renderContent = () => {
-    console.info('Rendering tab', { activeTab, userRole });
-    switch (activeTab) {
+  const getComponentForTab = (tabName: string) => {
+    switch (tabName) {
       case "dashboard":
         if (userRole === 'ADMIN') return <Dashboard />;
         if (userRole === 'INSTRUCTOR') return <InstructorDashboard />;
         return <StudentDashboard />;
-        
+
       case "students":
         if (userRole === 'ADMIN') return <StudentManagement />;
         if (userRole === 'INSTRUCTOR') return <InstructorStudents />;
         return <div>אין הרשאה</div>;
-        
+
       case "schedule":
         if (userRole === 'ADMIN') return <ClassSchedule />;
         if (userRole === 'INSTRUCTOR') return <InstructorSchedule />;
         return <div>אין הרשאה</div>;
-        
+
       case "payments":
         if (userRole === 'ADMIN') return <Payments />;
         return <div>אין הרשאה</div>;
-        
+
+      case "administration":
+        if (userRole === 'SUPER_ADMIN') return <PlatformAdministration />;
+        if (userRole === 'ADMIN') return <Administration />;
+        return <div>אין הרשאה</div>;
+
+      case "settings":
+        if (userRole === 'ADMIN') return <Settings />;
+        return <div>אין הרשאה</div>;
+
       case "browse":
         if (userRole === 'STUDENT') return <BrowseCourses />;
         return <div>אין הרשאה</div>;
-        
+
       default:
         return <div>המודול בבנייה</div>;
     }
@@ -94,6 +121,9 @@ function App() {
 
   if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin w-10 h-10 text-indigo-600" /></div>;
   if (!session) return <AuthPage />;
+
+  // List of all possible tabs to iterate or manage
+  const allTabs = ["dashboard", "students", "schedule", "payments", "administration", "settings", "browse"];
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans" dir="rtl">
@@ -106,8 +136,8 @@ function App() {
       />
       <main className="flex-1 mr-64 p-8">
         <header className="flex justify-end mb-8">
-           {/* User header reused from previous version */}
-           <div className="flex items-center gap-4">
+          {/* User header reused from previous version */}
+          <div className="flex items-center gap-4">
             <div className="text-left">
               <p className="text-sm font-bold text-slate-700">
                 {session.user.user_metadata.full_name || "משתמש"}
@@ -122,7 +152,17 @@ function App() {
           </div>
         </header>
         <div className="max-w-7xl mx-auto animate-fadeIn">
-          {renderContent()}
+          {/* Render content with Keep Alive strategy */}
+          {allTabs.map(tab => {
+            // Only render if visited (lazy load) or active
+            if (!visitedTabs.has(tab) && activeTab !== tab) return null;
+
+            return (
+              <div key={tab} className={activeTab === tab ? "block" : "hidden"}>
+                {getComponentForTab(tab)}
+              </div>
+            );
+          })}
         </div>
       </main>
     </div>
