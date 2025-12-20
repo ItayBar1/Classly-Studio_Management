@@ -28,7 +28,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLog
       id: 'dashboard',
       label: 'לוח בקרה',
       icon: LayoutDashboard,
-      roles: ['ADMIN', 'INSTRUCTOR', 'STUDENT']
+      roles: ['ADMIN', 'INSTRUCTOR', 'STUDENT', 'SUPER_ADMIN']
     },
     {
       id: 'browse',

@@ -7,8 +7,10 @@ import { Dashboard } from "./components/admin/Dashboard";
 import { StudentManagement } from "./components/admin/StudentManagement";
 import { ClassSchedule } from "./components/admin/ClassSchedule";
 import { Payments } from "./components/admin/Payments";
-import { Administration } from "./components/admin/Administration";
-import { PlatformAdministration } from "./components/admin/PlatformAdministration";
+import { Administration } from "./components/admin/Administration/Administration";
+// Super Admin components
+import { PlatformAdministration } from "./components/super-admin/PlatformAdministration";
+import { SuperAdminDashboard } from "./components/super-admin/SuperAdminDashboard";
 import { Settings } from "./components/admin/Settings";
 
 
@@ -22,6 +24,7 @@ import { BrowseCourses } from "./components/student/BrowseCourses";
 
 import { AuthPage } from "./components/AuthPage";
 import { Loader2 } from "lucide-react";
+import { UserService } from "./services/api";
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -31,13 +34,30 @@ function App() {
   // Keep track of which tabs have been visited to lazy-load them
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(new Set(["dashboard"]));
 
+  // Fetch the latest role from the backend (authoritative source)
+  const fetchUserRole = async () => {
+    try {
+      const user = await UserService.getMe();
+      if (user && user.role) {
+        setUserRole(user.role);
+        console.info('Role updated from backend', { role: user.role });
+      }
+    } catch (err) {
+      console.error('Failed to fetch user role from backend', err);
+    }
+  };
+
   useEffect(() => {
     console.info('App initialization started');
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session?.user?.user_metadata?.role) {
-        setUserRole(session.user.user_metadata.role);
-        console.info('Initial role detected', { role: session.user.user_metadata.role });
+      if (session?.user) {
+        // Optimistically set from metadata first (fast)
+        if (session.user.user_metadata?.role) {
+          setUserRole(session.user.user_metadata.role);
+        }
+        // Then fetch authoritative role from DB (reliable)
+        fetchUserRole();
       }
       setLoading(false);
       console.info('Initial session check completed');
@@ -45,9 +65,11 @@ function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session?.user?.user_metadata?.role) {
-        setUserRole(session.user.user_metadata.role);
-        console.info('Auth state change updated role', { role: session.user.user_metadata.role });
+      if (session?.user) {
+        if (session.user.user_metadata?.role) {
+          setUserRole(session.user.user_metadata.role);
+        }
+        fetchUserRole();
       }
     });
 
@@ -83,6 +105,7 @@ function App() {
   const getComponentForTab = (tabName: string) => {
     switch (tabName) {
       case "dashboard":
+        if (userRole === 'SUPER_ADMIN') return <SuperAdminDashboard />;
         if (userRole === 'ADMIN') return <Dashboard />;
         if (userRole === 'INSTRUCTOR') return <InstructorDashboard />;
         return <StudentDashboard />;
@@ -143,7 +166,7 @@ function App() {
                 {session.user.user_metadata.full_name || "משתמש"}
               </p>
               <p className="text-xs text-slate-500 uppercase">
-                {userRole === 'ADMIN' ? 'מנהל מערכת' : userRole === 'INSTRUCTOR' ? 'מדריך' : 'סטודנט'}
+                {userRole === 'SUPER_ADMIN' ? 'מנהל פלטפורמה' : userRole === 'ADMIN' ? 'מנהל מערכת' : userRole === 'INSTRUCTOR' ? 'מדריך' : 'סטודנט'}
               </p>
             </div>
             <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold border-2 border-white shadow-sm">
