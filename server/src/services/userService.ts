@@ -22,4 +22,29 @@ export class UserService {
     serviceLogger.info({ userId }, 'User profile fetched successfully');
     return data;
   }
+
+  /**
+   * בדיקת קיים סטודיו לפי מספר סידורי
+   */
+  static async validateStudioSerial(serialNumber: string) {
+    const serviceLogger = logger.child({ service: 'UserService', method: 'validateStudioSerial' });
+    serviceLogger.info({ serialNumber }, 'Validating studio serial number');
+
+    const { data, error } = await supabaseAdmin
+      .from('studios')
+      .select('id, name')
+      .eq('serial_number', serialNumber)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') { // No rows found
+        serviceLogger.warn({ serialNumber }, 'Studio serial number not found');
+      }
+      serviceLogger.error({ err: error }, 'Failed to validate studio serial');
+      throw new Error(`Error validating studio serial: ${error.message}`);
+    }
+
+    serviceLogger.info({ studioId: data.id }, 'Studio serial validated successfully');
+    return data;
+  }
 }

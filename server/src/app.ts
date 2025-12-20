@@ -14,6 +14,9 @@ import webhookRoutes from './routes/webhookRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import paymentRoutes from './routes/paymentsRoutes';
 import userRoutes from './routes/userRoutes';
+import studioRoutes from './routes/studioRoutes';
+import branchRoutes from './routes/branchRoutes';
+import roomRoutes from './routes/roomRoutes';
 
 export const app = express();
 
@@ -62,6 +65,9 @@ app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/studios', studioRoutes);
+app.use('/api/branches', branchRoutes);
+app.use('/api/rooms', roomRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

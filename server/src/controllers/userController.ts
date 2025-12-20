@@ -26,4 +26,29 @@ export class UserController {
       next(error);
     }
   }
+
+
+  static async validateStudio(req: Request, res: Response, next: NextFunction) {
+    const requestLog = req.logger || logger.child({ controller: 'UserController', method: 'validateStudio' });
+    const { serialNumber } = req.params;
+
+    if (!serialNumber) {
+      return res.status(400).json({ error: 'Studio serial number is required' });
+    }
+
+    requestLog.info({ serialNumber }, 'Validating studio serial request');
+
+    try {
+      const studio = await UserService.validateStudioSerial(serialNumber);
+
+      if (!studio) {
+        return res.status(404).json({ valid: false, message: 'Studio not found' });
+      }
+
+      res.status(200).json({ valid: true, studio });
+    } catch (error) {
+      requestLog.error({ err: error }, 'Error validating studio');
+      next(error);
+    }
+  }
 }
