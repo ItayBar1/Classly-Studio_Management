@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "./services/supabaseClient";
 import { Session } from "@supabase/supabase-js";
 import { Sidebar } from "./components/Sidebar";
+import { MobileDrawer } from "./components/MobileDrawer"; // Import the new component
 import LandingPage from "./components/LandingPage"; // Import the new LandingPage component
 
 // Admin components
@@ -23,13 +24,14 @@ import { StudentDashboard } from "./components/student/StudentDashboard";
 import { BrowseCourses } from "./components/student/BrowseCourses";
 
 import { AuthPage } from "./components/AuthPage";
-import { Loader2 } from "lucide-react";
+import { Loader2, Menu } from "lucide-react"; // Import Menu icon
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [userRole, setUserRole] = useState<string>("STUDENT");
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false); // State for mobile drawer
   const [showLogin, setShowLogin] = useState(false); // State to toggle between LandingPage and AuthPage
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(new Set(["dashboard"]));
 
@@ -135,15 +137,34 @@ function App() {
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans" dir="rtl">
-      <Sidebar
+      {/* Desktop Sidebar - hidden on small screens */}
+      <div className="hidden md:block">
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onLogout={handleLogout}
+          userRole={userRole}
+        />
+      </div>
+      
+      {/* Mobile Drawer */}
+      <MobileDrawer
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onLogout={handleLogout}
         userRole={userRole}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
       />
 
-      <main className="flex-1 mr-64 p-8">
-        <header className="flex justify-end mb-8">
+      <main className="flex-1 md:mr-64 p-4 sm:p-8">
+        <header className="flex justify-between items-center mb-8">
+          {/* Hamburger Menu - visible only on small screens */}
+          <button onClick={() => setIsDrawerOpen(true)} className="md:hidden p-2 text-slate-600 hover:text-indigo-600">
+            <Menu size={24} />
+          </button>
+          
+          {/* User header reused from previous version */}
           <div className="flex items-center gap-4">
             <div className="text-left">
               <p className="text-sm font-bold text-slate-700">
