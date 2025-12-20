@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Search,
   Filter,
@@ -12,8 +12,7 @@ import {
   ChevronRight,
   Loader2
 } from "lucide-react";
-import { Student, UserRole, EnrollmentStatus } from "../../types/types";
-import { supabase } from '../../services/supabaseClient';
+import { Student, EnrollmentStatus } from "../../types/types";
 import { StudentService, CourseService } from "../../services/api";
 
 // מילון תרגום לסטטוסים
@@ -27,16 +26,15 @@ const STATUS_TRANSLATION: Record<EnrollmentStatus, string> = {
 const ITEMS_PER_PAGE = 10;
 
 export const StudentManagement: React.FC = () => {
-  const [students, setStudents] = useState<Student[]>([]);
+  const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [classList, setClassList] = useState<string[]>([]);
 
   // State עבור דפדוף וחיפוש
   const [page, setPage] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClass, setSelectedClass] = useState("הכל");
-  const [sortConfig, setSortConfig] = useState<{ key: string; ascending: boolean }>({
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Student | 'created_at'; ascending: boolean }>({
     key: 'created_at',
     ascending: false
   });
@@ -57,38 +55,70 @@ export const StudentManagement: React.FC = () => {
     }
   };
 
-  // פונקציית הטעינה הראשית - צד שרת
-  const fetchStudents = useCallback(async () => {
+  // פונקציית הטעינה הראשית - טעינה חד פעמית של כל המידע
+  const fetchStudents = async () => {
     setLoading(true);
     try {
-      // קריאה ל-API במקום ל-Supabase
+      // Fetching up to 1000 students to allow client-side filtering
       const response = await StudentService.getAll({
-        page,
-        limit: ITEMS_PER_PAGE,
-        search: searchTerm,
-        // selectedClass - API currently doesn't support class filter, adding TODO
-        ascending: sortConfig.ascending
+        limit: 1000
       });
 
-      setStudents(response.students);
-      setTotalCount(response.count);
+      setAllStudents(response.students);
     } catch (error) {
-      console.error('Error fetching students via API:', error);
+      console.error('Error fetching students:', error);
     } finally {
       setLoading(false);
     }
-  }, [page, searchTerm, sortConfig, selectedClass]);
+  };
 
   useEffect(() => {
     fetchClassesList();
+    fetchStudents();
   }, []);
 
-  useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
+  // Client-side filtering and sorting
+  const filteredAndSortedStudents = useMemo(() => {
+    let result = [...allStudents];
+
+    // Filter by Search Term
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      result = result.filter(student =>
+        student.full_name.toLowerCase().includes(lowerSearch) ||
+        student.email.toLowerCase().includes(lowerSearch) ||
+        (student.phone_number && student.phone_number.includes(searchTerm))
+      );
+    }
+
+    // Filter by Class
+    if (selectedClass !== "הכל") {
+      result = result.filter(student => student.enrolledClass === selectedClass);
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      const aValue = a[sortConfig.key] || "";
+      const bValue = b[sortConfig.key] || "";
+
+      if (aValue < bValue) return sortConfig.ascending ? -1 : 1;
+      if (aValue > bValue) return sortConfig.ascending ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [allStudents, searchTerm, selectedClass, sortConfig]);
+
+  // Pagination
+  const totalCount = filteredAndSortedStudents.length;
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  const displayedStudents = filteredAndSortedStudents.slice(
+    page * ITEMS_PER_PAGE,
+    (page + 1) * ITEMS_PER_PAGE
+  );
 
   // טיפול במיון
-  const handleSort = (key: string) => {
+  const handleSort = (key: keyof Student | 'created_at') => {
     setSortConfig(current => ({
       key,
       ascending: current.key === key ? !current.ascending : true
@@ -97,7 +127,7 @@ export const StudentManagement: React.FC = () => {
 
   const handleExportCSV = () => {
     const headers = ["ID", "שם", "שיעור", "סטטוס", "אימייל", "טלפון", "תאריך הצטרפות"];
-    const rows = students.map((student) => [
+    const rows = filteredAndSortedStudents.map((student) => [
       student.id, student.full_name, student.enrolledClass || '-', STATUS_TRANSLATION[student.status], student.email, student.phone_number || '-', student.created_at || '-',
     ]);
     const csvContent = [headers.join(","), ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join("\n");
@@ -120,8 +150,6 @@ export const StudentManagement: React.FC = () => {
       default: return "bg-slate-50 text-slate-700 border-slate-200";
     }
   };
-
-  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   return (
     <div className="space-y-6">
@@ -192,10 +220,9 @@ export const StudentManagement: React.FC = () => {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-500"><Loader2 className="animate-spin h-6 w-6 mx-auto mb-2" />טוען נתונים...</td></tr>
-              ) : students.length > 0 ? (
-                students.map((student) => (
+              ) : displayedStudents.length > 0 ? (
+                displayedStudents.map((student) => (
                   <tr key={student.id} className="hover:bg-slate-50 transition-colors">
-// ... (inside map)
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-10 w-10 flex-shrink-0 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
@@ -234,7 +261,7 @@ export const StudentManagement: React.FC = () => {
                   <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center">
                       <Search className="h-10 w-10 text-slate-300 mb-2" />
-                      <p className="font-medium">לא נמצאו תלמידים</p>
+                      <p className="font-medium">{searchTerm ? 'לא נמצאו תוצאות לחיפוש זה' : 'לא נמצאו תלמידים'}</p>
                     </div>
                   </td>
                 </tr>
