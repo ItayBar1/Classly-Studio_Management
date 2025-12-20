@@ -30,7 +30,7 @@ export const Navbar: React.FC = () => {
                 <Dumbbell className="h-6 w-6 text-white" />
               </div>
               <span className="font-black text-2xl tracking-tight text-white">
-                IRON<span className="text-brand-orange">PULSE</span>
+                CLASSLY<span className="text-brand-orange">STUDIO</span>
               </span>
             </div>
 
