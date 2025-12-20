@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { X, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { PaymentService, CourseService } from '../../services/api'; // שינוי
+import { PaymentService, CourseService, EnrollmentService } from '../../services/api'; // שינוי
 import { ClassSession } from '../../types/types';
 
 // טעינת Stripe
@@ -72,7 +72,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ course, is
             currency: 'ils',
             description: `הרשמה לקורס: ${course.name}`
           });
-          
+
           setClientSecret(data.clientSecret);
         } catch (err: any) {
           console.error(err);
@@ -94,9 +94,9 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ course, is
     try {
       if (course) {
         // שינוי: הרשמה דרך ה-API (השרת יבצע את ה-Insert ל-DB ויעדכן את המונה)
-        await CourseService.enroll(course.id);
+        await EnrollmentService.register(course.id);
       }
-      
+
       setPaymentSuccess(true);
       setTimeout(() => {
         onSuccess();
