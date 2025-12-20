@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "./services/supabaseClient";
 import { Session } from "@supabase/supabase-js";
 import { Sidebar } from "./components/Sidebar";
-import { MobileDrawer } from "./components/MobileDrawer"; // Import the new component
+import LandingPage from "./components/LandingPage"; // Import the new LandingPage component
+
 // Admin components
 import { Dashboard } from "./components/admin/Dashboard";
 import { StudentManagement } from "./components/admin/StudentManagement";
@@ -12,24 +13,24 @@ import { Administration } from "./components/admin/Administration";
 import { PlatformAdministration } from "./components/admin/PlatformAdministration";
 import { Settings } from "./components/admin/Settings";
 
-// Instructor components (new)
+// Instructor components
 import { InstructorDashboard } from "./components/instructor/InstructorDashboard";
 import { InstructorStudents } from "./components/instructor/InstructorStudents";
 import { InstructorSchedule } from "./components/instructor/InstructorSchedule";
+
 // Student components
 import { StudentDashboard } from "./components/student/StudentDashboard";
 import { BrowseCourses } from "./components/student/BrowseCourses";
 
 import { AuthPage } from "./components/AuthPage";
-import { Loader2, Menu } from "lucide-react"; // Import Menu icon
+import { Loader2 } from "lucide-react";
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [userRole, setUserRole] = useState<string>("STUDENT");
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false); // State for mobile drawer
-  // Keep track of which tabs have been visited to lazy-load them
+  const [showLogin, setShowLogin] = useState(false); // State to toggle between LandingPage and AuthPage
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(new Set(["dashboard"]));
 
   useEffect(() => {
@@ -49,6 +50,9 @@ function App() {
       if (session?.user?.user_metadata?.role) {
         setUserRole(session.user.user_metadata.role);
         console.info('Auth state change updated role', { role: session.user.user_metadata.role });
+      } else {
+        // When user logs out, show the landing page again
+        setShowLogin(false);
       }
     });
 
@@ -58,7 +62,6 @@ function App() {
     };
   }, []);
 
-  // Update visited tabs when active tab changes
   useEffect(() => {
     setVisitedTabs(prev => {
       const newSet = new Set(prev);
@@ -72,7 +75,6 @@ function App() {
       console.info('User requested logout');
       await supabase.auth.signOut();
       setUserRole("STUDENT");
-      // Reset visited tabs on logout
       setVisitedTabs(new Set(["dashboard"]));
       setActiveTab("dashboard");
       console.info('User signed out successfully');
@@ -82,6 +84,7 @@ function App() {
   };
 
   const getComponentForTab = (tabName: string) => {
+    // ... (rest of the function remains the same)
     switch (tabName) {
       case "dashboard":
         if (userRole === 'ADMIN') return <Dashboard />;
@@ -121,42 +124,26 @@ function App() {
   };
 
   if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin w-10 h-10 text-indigo-600" /></div>;
-  if (!session) return <AuthPage />;
 
-  // List of all possible tabs to iterate or manage
+  // If there's no session, decide whether to show the LandingPage or the AuthPage
+  if (!session) {
+    return showLogin ? <AuthPage /> : <LandingPage onLoginClick={() => setShowLogin(true)} />;
+  }
+
+  // List of all possible tabs for authenticated users
   const allTabs = ["dashboard", "students", "schedule", "payments", "administration", "settings", "browse"];
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans" dir="rtl">
-      {/* Desktop Sidebar - hidden on small screens */}
-      <div className="hidden md:block">
-        <Sidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          // @ts-ignore
-          onLogout={handleLogout}
-          userRole={userRole}
-        />
-      </div>
-      
-      {/* Mobile Drawer */}
-      <MobileDrawer
+      <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onLogout={handleLogout}
         userRole={userRole}
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
       />
 
-      <main className="flex-1 md:mr-64 p-4 sm:p-8">
-        <header className="flex justify-between items-center mb-8">
-          {/* Hamburger Menu - visible only on small screens */}
-          <button onClick={() => setIsDrawerOpen(true)} className="md:hidden p-2 text-slate-600 hover:text-indigo-600">
-            <Menu size={24} />
-          </button>
-          
-          {/* User header reused from previous version */}
+      <main className="flex-1 mr-64 p-8">
+        <header className="flex justify-end mb-8">
           <div className="flex items-center gap-4">
             <div className="text-left">
               <p className="text-sm font-bold text-slate-700">
@@ -172,11 +159,8 @@ function App() {
           </div>
         </header>
         <div className="max-w-7xl mx-auto animate-fadeIn">
-          {/* Render content with Keep Alive strategy */}
           {allTabs.map(tab => {
-            // Only render if visited (lazy load) or active
             if (!visitedTabs.has(tab) && activeTab !== tab) return null;
-
             return (
               <div key={tab} className={activeTab === tab ? "block" : "hidden"}>
                 {getComponentForTab(tab)}
