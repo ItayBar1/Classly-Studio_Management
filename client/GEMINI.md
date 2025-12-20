@@ -5,7 +5,7 @@ Classly is a multi-tenant studio management platform built for the Israeli marke
 
 ## 🛠 Tech Stack Summary
 - **Backend:** Node.js (v20+), Express.js, TypeScript.
-- **Frontend:** React 19, Vite, TypeScript, Material-UI (MUI), Tailwind CSS.
+- **Frontend:** React 19, Vite, TypeScript, Tailwind CSS (via CDN).
 - **Database:** Supabase (PostgreSQL) with Row-Level Security (RLS).
 - **Payments:** Stripe Payment Intents API + Webhooks.
 - **Logging:** Pino.
@@ -16,6 +16,8 @@ Classly is a multi-tenant studio management platform built for the Israeli marke
 - `/server/src/repositories`: Database abstraction and direct Supabase calls.
 - `/server/src/middleware`: Auth validation and `requireRole` checks.
 - `/client/src/components/[role]`: UI restricted by user role.
+- `/client/src/components/LandingPage.tsx`: The main marketing landing page for unauthenticated users.
+- `/client/src/components/landing/**`: Sub-components for the marketing landing page.
 - `/client/src/services/api.ts`: Centralized Axios instance for backend communication.
 
 ## 🔐 Security & RBAC Protocols
