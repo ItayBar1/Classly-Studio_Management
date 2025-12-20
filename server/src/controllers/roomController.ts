@@ -39,9 +39,10 @@ export class RoomController {
 
     static async update(req: Request, res: Response, next: NextFunction) {
         try {
+            const studioId = req.user.studio_id;
             const { id } = req.params;
             const updates = req.body;
-            const room = await RoomService.update(id, updates);
+            const room = await RoomService.update(id, studioId, updates);
             res.json(room);
         } catch (error) {
             next(error);
@@ -50,8 +51,9 @@ export class RoomController {
 
     static async delete(req: Request, res: Response, next: NextFunction) {
         try {
+            const studioId = req.user.studio_id;
             const { id } = req.params;
-            await RoomService.delete(id);
+            await RoomService.delete(id, studioId);
             res.json({ message: 'Room deleted' });
         } catch (error) {
             next(error);

@@ -39,6 +39,7 @@ export class UserService {
     if (error) {
       if (error.code === 'PGRST116') { // No rows found
         serviceLogger.warn({ serialNumber }, 'Studio serial number not found');
+        return null;
       }
       serviceLogger.error({ err: error }, 'Failed to validate studio serial');
       throw new Error(`Error validating studio serial: ${error.message}`);
