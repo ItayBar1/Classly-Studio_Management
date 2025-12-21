@@ -5,7 +5,7 @@ import { logger } from '../logger';
 
 export class EnrollmentController {
 
-    // אדמין רושם תלמיד ידנית
+    // Admin enrolls a student manually
 static async adminEnrollStudent(req: Request, res: Response, next: NextFunction) {
         const requestLog = req.logger || logger.child({ controller: 'EnrollmentController', method: 'adminEnrollStudent' });
         requestLog.info({ body: req.body, studioId: req.user.studio_id }, 'Controller entry');
@@ -34,7 +34,7 @@ static async adminEnrollStudent(req: Request, res: Response, next: NextFunction)
         }
     }
 
-// תלמיד נרשם עצמאית (יוצר PENDING enrollment + PENDING payment + Stripe Intent)
+// Student self-registration (creates PENDING enrollment + payment + Stripe intent)
     static async studentSelfRegister(req: Request, res: Response, next: NextFunction) {
         const requestLog = req.logger || logger.child({ controller: 'EnrollmentController', method: 'studentSelfRegister' });
         requestLog.info({ userId: req.user.id, body: req.body }, 'Controller entry');
@@ -47,21 +47,21 @@ static async adminEnrollStudent(req: Request, res: Response, next: NextFunction)
                 return res.status(400).json({ error: 'Class ID is required' });
             }
 
-            // 1. יצירת הרשמה (PENDING) וקבלת פרטי המחיר
+            // 1. Create a PENDING enrollment and collect pricing
             const { enrollment, courseDetails } = await EnrollmentService.enrollStudent(
                 studioId,
                 studentId,
                 classId,
-                'PENDING', // סטטוס הרשמה ממתין לתשלום
-                'PENDING'  // סטטוס תשלום ממתין
+                'PENDING', // Enrollment status awaiting payment
+                'PENDING'  // Payment status awaiting payment
             );
 
-            // אם הקורס בחינם (נדיר, אבל אפשרי), נחזיר מיד הצלחה ללא תשלום
+            // If the course is free (rare), we could complete without payment
             if (courseDetails.price === 0) {
-                 // עדכון ל-ACTIVE במידה וזה חינם (דורש לוגיקה נוספת, נניח כרגע שזה תמיד בתשלום)
+                 // Future: set to ACTIVE when free (assuming paid for now)
             }
 
-            // 2. יצירת Payment Intent מול Stripe
+            // 2. Create a Stripe Payment Intent
             const paymentIntent = await PaymentService.createIntent(
                 courseDetails.price,
                 'ils',
@@ -73,8 +73,8 @@ static async adminEnrollStudent(req: Request, res: Response, next: NextFunction)
                 }
             );
 
-            // 3. יצירת רשומת תשלום (PENDING) ב-DB שלנו
-            // זה מבטיח שכאשר נקרא ל-confirmPayment, הרשומה תהיה קיימת
+            // 3. Create a PENDING payment record locally
+            // Ensures confirmPayment has a backing record
             await PaymentService.createPaymentRecord({
                 studioId: studioId,
                 studentId: studentId,
@@ -83,11 +83,11 @@ static async adminEnrollStudent(req: Request, res: Response, next: NextFunction)
                 stripePaymentIntentId: paymentIntent.id
             });
 
-            // 4. החזרת ה-Client Secret לקליינט
+            // 4. Return client secret to the client
             requestLog.info({ enrollmentId: enrollment.id, paymentIntentId: paymentIntent.id }, 'Self registration initiated');
             res.status(201).json({
                 message: 'Registration initiated, proceed to payment',
-                clientSecret: paymentIntent.clientSecret, // הקליינט ישתמש בזה ב-Stripe Elements
+                clientSecret: paymentIntent.clientSecret, // Consumed by Stripe Elements on the client
                 enrollmentId: enrollment.id,
                 amount: courseDetails.price
             });
@@ -98,7 +98,7 @@ static async adminEnrollStudent(req: Request, res: Response, next: NextFunction)
         }
     }
 
-    // תלמיד צופה בהרשמות שלו
+    // Student views own enrollments
     static async getMyEnrollments(req: Request, res: Response, next: NextFunction) {
         const requestLog = req.logger || logger.child({ controller: 'EnrollmentController', method: 'getMyEnrollments' });
         requestLog.info({ userId: req.user.id }, 'Controller entry');
@@ -113,7 +113,7 @@ static async adminEnrollStudent(req: Request, res: Response, next: NextFunction)
         }
     }
 
-    // קבלת הרשמות לקורס (למדריך/אדמין)
+    // Fetch enrollments for a class (instructor/admin)
     static async getClassEnrollments(req: Request, res: Response, next: NextFunction) {
         const requestLog = req.logger || logger.child({ controller: 'EnrollmentController', method: 'getClassEnrollments' });
         requestLog.info({ params: req.params, userId: req.user.id }, 'Controller entry');
@@ -121,7 +121,7 @@ static async adminEnrollStudent(req: Request, res: Response, next: NextFunction)
             const { classId } = req.params;
             const userId = req.user.id;
 
-            // למדריך: ווידוא שהקורס שייך לו
+            // For instructors: ensure the class belongs to them
             if (req.user.role === 'INSTRUCTOR') {
                 const isOwner = await EnrollmentService.verifyInstructorClass(userId, classId);
                 if (!isOwner) {
@@ -138,7 +138,7 @@ static async adminEnrollStudent(req: Request, res: Response, next: NextFunction)
         }
     }
 
-    // ביטול הרשמה
+    // Cancel an enrollment
     static async cancelEnrollment(req: Request, res: Response, next: NextFunction) {
         const requestLog = req.logger || logger.child({ controller: 'EnrollmentController', method: 'cancelEnrollment' });
         requestLog.info({ params: req.params }, 'Controller entry');

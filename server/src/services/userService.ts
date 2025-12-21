@@ -3,7 +3,7 @@ import { logger } from '../logger';
 
 export class UserService {
   /**
-   * שליפת פרופיל משתמש מלא לפי ID
+   * Retrieve a full user profile by ID
    */
   static async getUserProfile(userId: string) {
     const serviceLogger = logger.child({ service: 'UserService', method: 'getUserProfile' });
@@ -24,7 +24,7 @@ export class UserService {
   }
 
   /**
-   * בדיקת קיים סטודיו לפי מספר סידורי
+   * Validate studio existence by serial number
    */
   static async validateStudioSerial(serialNumber: string) {
     const serviceLogger = logger.child({ service: 'UserService', method: 'validateStudioSerial' });

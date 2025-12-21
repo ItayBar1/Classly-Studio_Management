@@ -16,7 +16,7 @@ export class AttendanceService {
     static async recordAttendance(classId: string, date: string, instructorId: string, records: AttendanceRecord[]) {
         const serviceLogger = logger.child({ service: 'AttendanceService', method: 'recordAttendance' });
         serviceLogger.info({ classId, date, instructorId, recordCount: records.length }, 'Recording attendance');
-        // 1. שליפת ה-enrollment_id עבור התלמידים בקורס זה
+        // 1. Fetch enrollment_id values for the students in this class
         const studentIds = records.map(r => r.studentId);
         
         const { data: enrollments, error: enrollError } = await supabase
@@ -30,23 +30,23 @@ export class AttendanceService {
             throw new Error(`Error fetching enrollments: ${enrollError.message}`);
         }
 
-        // יצירת מפה (Map) לגישה מהירה: studentId -> enrollmentId
+        // Create a map for quick lookups: studentId -> enrollmentId
         const enrollmentMap = new Map<string, string>(
             (enrollments ?? []).map(({ student_id, id }: { student_id: string; id: string }) => [student_id, id])
         );
 
-        // 2. הכנת המידע להכנסה (Upsert Data)
+        // 2. Prepare the upsert payload
         const upsertData = records.map(record => {
             const enrollmentId = enrollmentMap.get(record.studentId);
 
-            // אם אין הרשמה, אי אפשר לרשום נוכחות (לפי ה-PRD)
+            // Attendance cannot be recorded without an enrollment
             if (!enrollmentId) {
                 serviceLogger.warn({ studentId: record.studentId, classId }, 'Skipping attendance: enrollment not found');
                 return null;
             }
 
             return {
-                studio_id: undefined, // מתעדכן בהמשך לאחר שליפת ה-studio_id של הכיתה
+                studio_id: undefined, // Updated later after fetching class studio_id
                 class_id: classId,
                 instructor_id: instructorId,
                 enrollment_id: enrollmentId,
@@ -57,9 +57,9 @@ export class AttendanceService {
                 recorded_by: instructorId,
                 recorded_at: new Date().toISOString()
             };
-        }).filter(item => item !== null); // מסנן את אלו ללא הרשמה
+        }).filter(item => item !== null); // Remove entries without enrollment
 
-        // שלב 0 (השלמה): שליפת ה-studio_id כדי למלא את השדה חובה
+        // Preliminary step: fetch studio_id to populate the required field
         if (upsertData.length > 0) {
             const { data: classData, error: classError } = await supabase.from('classes').select('studio_id').eq('id', classId).single();
             if (classError) {
@@ -71,10 +71,10 @@ export class AttendanceService {
             }
         }
 
-        // 3. ביצוע ה-Upsert
+        // 3. Perform upsert
         const { data, error } = await supabase
             .from('attendance')
-            .upsert(upsertData, { onConflict: 'enrollment_id, session_date' }) // לפי האינדקס ב-PRD
+            .upsert(upsertData, { onConflict: 'enrollment_id, session_date' }) // Uses the composite index
             .select();
 
         if (error) {

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { supabaseAdmin } from '../config/supabase';
 
-// הרחבת ה-Type של Request כדי לכלול את המשתמש
+// Extend Request typing to include user context
 declare global {
   namespace Express {
     interface Request {
@@ -21,14 +21,14 @@ export const authenticateUser = async (req: Request, res: Response, next: NextFu
   const token = authHeader.split(' ')[1];
 
   try {
-    // 1. אימות הטוקן מול Supabase Auth
+    // 1. Validate the token with Supabase Auth
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !user) {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    // 2. שליפת פרטי המשתמש והרול מהטבלה הציבורית שלנו
+    // 2. Fetch user profile and role from the public table
     const { data: userData, error: dbError } = await supabaseAdmin
       .from('users')
       .select('*')
@@ -39,7 +39,7 @@ export const authenticateUser = async (req: Request, res: Response, next: NextFu
       return res.status(403).json({ error: 'User profile not found' });
     }
 
-    // 3. הצמדת המשתמש ל-Request להמשך הטיפול
+    // 3. Attach user to the Request for downstream handlers
     req.user = userData;
     req.studioId = userData.studio_id;
 
@@ -49,7 +49,7 @@ export const authenticateUser = async (req: Request, res: Response, next: NextFu
   }
 };
 
-// Middleware לבדיקת הרשאות (Role)
+// Middleware to enforce required roles
 export const requireRole = (allowedRoles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user || !allowedRoles.includes(req.user.role)) {

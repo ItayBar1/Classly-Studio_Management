@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
+import { allowedCorsOrigins } from './config/env';
 
 // Import Routes
 import courseRoutes from './routes/courseRoutes';
@@ -17,6 +17,7 @@ import userRoutes from './routes/userRoutes';
 import studioRoutes from './routes/studioRoutes';
 import branchRoutes from './routes/branchRoutes';
 import roomRoutes from './routes/roomRoutes';
+import { requestLogger } from './logger';
 
 export const app = express();
 
@@ -32,13 +33,11 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-const allowedOrigins = [process.env.CLIENT_URL, 'http://localhost:3000'];
-
 app.use(cors({
     origin: (origin, callback) => {
         // allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
+        if (allowedCorsOrigins.indexOf(origin) === -1) {
             const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
             return callback(new Error(msg), false);
         }
@@ -48,13 +47,16 @@ app.use(cors({
     credentials: true
 }));
 
+// Request logging
+app.use(requestLogger);
+
 // --- Critical Section for Webhooks ---
-// מגדירים את ה-Webhook לפני ה-JSON Parser הגלובלי!
-// אנו משתמשים ב-express.raw() ספציפית לנתיב זה כדי לשמור על החתימה המקורית
+// Configure the webhook before the global JSON parser.
+// express.raw() is required to preserve the original body for signature validation.
 app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhookRoutes);
 
 // --- General Middleware ---
-app.use(express.json()); // שאר האפליקציה עובדת עם JSON רגיל
+app.use(express.json()); // The rest of the app uses standard JSON parsing.
 
 // Routes
 app.use('/api/courses', courseRoutes);

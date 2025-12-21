@@ -43,15 +43,15 @@ export class CourseService {
   static async getAvailableForStudent(studentId: string) {
     const serviceLogger = logger.child({ service: 'CourseService', method: 'getAvailableForStudent' });
     serviceLogger.info({ studentId }, 'Fetching available courses for student');
-    // מביא קורסים פעילים.
-    // בשיפור עתידי: נסנן קורסים שהתלמיד כבר רשום אליהם באמצעות join ל-enrollments
+    // Fetch active courses.
+    // Future improvement: filter out courses the student is already enrolled in
     const { data, error } = await supabaseAdmin
       .from('classes')
       .select('*, instructor:users(full_name)')
       .eq('is_active', true)
-      .gt('max_capacity', supabaseAdmin.rpc('current_enrollment_check')); // או פשוט סינון בקוד
+      .gt('max_capacity', supabaseAdmin.rpc('current_enrollment_check')); // Or filter in code
 
-    // לבינתיים פשוט נחזיר פעילים, הסינון של "כבר רשום" יכול להיעשות בקלינט או בשאילתה מורכבת יותר
+    // Currently returns active courses; filtering already-enrolled students can be added later
     if (error) {
       serviceLogger.error({ err: error }, 'Failed to fetch available courses');
       throw new Error(error.message);

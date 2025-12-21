@@ -146,6 +146,28 @@ npm run dev
 ```
 Visit the client on the Vite dev URL (default `http://localhost:5173`) and ensure the server port matches `CLIENT_URL` CORS configuration.
 
+## Server Development
+
+The Express API lives in `/server/src` and follows a routes → controllers → services layout:
+- **Entry point:** `src/index.ts` exports the Express app for serverless platforms and starts the listener locally.
+- **App wiring:** `src/app.ts` registers security middleware, request logging, CORS, rate limiting, webhooks, and routes.
+- **Configuration:** `src/config/env.ts` centralizes environment parsing/validation (Supabase, Stripe, JWT, client URL, port).
+- **Logging:** `src/logger.ts` configures Pino and a `requestLogger` middleware that attaches a request ID and duration to every request. Errors are surfaced via `middleware/errorMiddleware.ts` without changing response format.
+- **Authentication:** `middleware/authMiddleware.ts` attaches the authenticated Supabase user and studio metadata to each request; `requireRole` enforces role-based access.
+- **Business logic:** Services under `src/services` encapsulate Supabase/Stripe access and are invoked by controllers in `src/controllers`.
+
+### Server Scripts
+- `npm run dev` — start the API in watch mode.
+- `npm run build` — compile TypeScript to `dist/`.
+- `npm start` — run the compiled server.
+- `npm test`, `npm run test:unit`, `npm run test:integration`, `npm run test:watch` — test commands (see Tests below).
+
+### Environment Validation
+- Required: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+- Common: `CLIENT_URL` (CORS), `FRONTEND_URL` (invitation links), `PORT`, `LOG_LEVEL`.
+- Payments: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
+- Auth/Invites: `JWT_SECRET` (falls back to service role key in non-production).
+
 ## Features & Improvements
 
 ### Forgot Password Flow
@@ -161,9 +183,18 @@ The application supports a secure password reset flow:
 -   **Forms:** Inputs are properly labeled for screen readers.
 
 ### Testing
-Unit and integration tests are set up for the client using Vitest and React Testing Library.
+- **Server:** Jest + Supertest (see `/server` package scripts) for unit/integration coverage of controllers, services, and middleware.
+- **Client:** Vitest + React Testing Library.
 
-**Running Tests:**
+**Running Server Tests:**
+```bash
+cd server
+npm test             # all tests
+npm run test:unit    # unit only
+npm run test:integration  # integration only
+```
+
+**Running Client Tests:**
 ```bash
 cd client
 npm test

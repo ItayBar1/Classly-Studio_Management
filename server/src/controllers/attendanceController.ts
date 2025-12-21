@@ -5,7 +5,7 @@ import { logger } from '../logger';
 
 export class AttendanceController {
 
-    // דיווח נוכחות (יצירה או עדכון)
+    // Record attendance (create or update)
     static async recordAttendance(req: Request, res: Response, next: NextFunction) {
         const requestLog = req.logger || logger.child({ controller: 'AttendanceController', method: 'recordAttendance' });
         requestLog.info({ body: req.body, userId: req.user.id }, 'Controller entry');
@@ -18,9 +18,8 @@ export class AttendanceController {
                 return res.status(400).json({ error: 'Missing required fields: classId, date, or records array' });
             }
 
-            // אימות שהמדריך הוא אכן המדריך של הקורס (אלא אם הוא אדמין)
-            // (בדיקה זו יכולה להתבצע גם ב-Service, אך כאן זה חוסך קריאה אם המידע לא תקין)
-            // לצורך הפשטות נסמוך על ה-Service שיבדוק או על RLS, אך נוסיף בדיקה בסיסית:
+            // Validate instructor owns the class (unless admin)
+            // Basic guard before calling service to avoid unnecessary work
             const isAuthorized = await AttendanceController.verifyInstructorForClass(instructorId, classId);
             if (!isAuthorized && req.user.role !== 'ADMIN') {
                 requestLog.warn({ instructorId, classId }, 'Unauthorized attendance attempt');
@@ -36,16 +35,16 @@ export class AttendanceController {
         }
     }
 
-    // קבלת היסטוריה עבור כיתה ספציפית
+    // Get attendance history for a specific class
     static async getClassAttendance(req: Request, res: Response, next: NextFunction) {
         const requestLog = req.logger || logger.child({ controller: 'AttendanceController', method: 'getClassAttendance' });
         requestLog.info({ params: req.params, query: req.query, userId: req.user.id }, 'Controller entry');
         try {
             const { classId } = req.params;
-            const { date } = req.query; // אופציונלי: סינון לפי תאריך
+            const { date } = req.query; // Optional: date filter
             const instructorId = req.user.id;
 
-            // בדיקת הרשאה
+            // Authorization check
             if (req.user.role === 'INSTRUCTOR') {
                  const isAuthorized = await AttendanceController.verifyInstructorForClass(instructorId, classId);
                  if (!isAuthorized) return res.status(403).json({ error: 'Unauthorized' });
@@ -60,7 +59,7 @@ export class AttendanceController {
         }
     }
 
-    // קבלת היסטוריה לתלמיד המחובר
+    // Get attendance history for the authenticated student
     static async getStudentHistory(req: Request, res: Response, next: NextFunction) {
         const requestLog = req.logger || logger.child({ controller: 'AttendanceController', method: 'getStudentHistory' });
         requestLog.info({ userId: req.user.id }, 'Controller entry');
@@ -75,7 +74,7 @@ export class AttendanceController {
         }
     }
 
-    // Helper: בדיקה שהמדריך משויך לקורס
+    // Helper: ensure instructor is assigned to the class
     private static async verifyInstructorForClass(instructorId: string, classId: string): Promise<boolean> {
         const { data } = await supabase
             .from('classes')

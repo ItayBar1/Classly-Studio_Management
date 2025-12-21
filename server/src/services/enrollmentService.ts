@@ -16,7 +16,7 @@ export class EnrollmentService {
   ) {
     const serviceLogger = logger.child({ service: "EnrollmentService", method: "enrollStudent" });
     serviceLogger.info({ studioId, studentId, classId, status, paymentStatus }, "Enrolling student to class");
-    // 1. קבלת פרטי הקורס (קיבולת נוכחית ומקסימלית) ומחיר
+    // 1. Fetch course details (capacity and pricing)
     const { data: course, error: courseError } = await supabaseAdmin
       .from("classes")
       .select("max_capacity, current_enrollment, price_ils, start_time, name")
@@ -28,13 +28,13 @@ export class EnrollmentService {
       throw new Error("Course not found");
     }
 
-    // 2. בדיקת קיבולת
+    // 2. Validate capacity
     if (course.current_enrollment >= course.max_capacity) {
       serviceLogger.warn({ classId }, "Course is full");
       throw new Error("Course is full");
     }
 
-    // 3. בדיקת רישום כפול
+    // 3. Prevent duplicate enrollment
     const { data: existing } = await supabaseAdmin
       .from("enrollments")
       .select("id")
@@ -48,7 +48,7 @@ export class EnrollmentService {
       throw new Error("Student is already enrolled in this course");
     }
 
-    // 4. יצירת ההרשמה
+    // 4. Create enrollment
     const { data: enrollment, error: enrollError } = await supabaseAdmin
       .from("enrollments")
       .insert([
@@ -71,14 +71,14 @@ export class EnrollmentService {
       throw new Error(enrollError.message);
     }
 
-    // 5. עדכון מונה הנרשמים
+    // 5. Update enrollment counters
     if (status === "ACTIVE" || status === "PENDING") {
       const { error: rpcError } = await supabaseAdmin.rpc(
         "increment_enrollment_count",
         { row_id: classId }
       );
 
-      // Fallback אם ה-RPC לא קיים או נכשל
+      // Fallback if the RPC is unavailable or fails
       if (rpcError) {
         serviceLogger.warn({ err: rpcError, classId }, "RPC increment failed, applying fallback");
         await supabaseAdmin
@@ -88,7 +88,7 @@ export class EnrollmentService {
       }
     }
 
-    // החזרת ההרשמה + פרטי הקורס הרלוונטיים לתשלום
+    // Return enrollment alongside pricing details for payment
     return {
       enrollment,
       courseDetails: {
@@ -156,7 +156,7 @@ export class EnrollmentService {
   static async cancelEnrollment(enrollmentId: string) {
     const serviceLogger = logger.child({ service: "EnrollmentService", method: "cancelEnrollment" });
     serviceLogger.info({ enrollmentId }, "Cancelling enrollment");
-    // 1. קבלת ה-class_id לפני המחיקה כדי לעדכן מונה
+    // 1. Retrieve class_id prior to cancellation to update counters
     const { data: enrollment } = await supabaseAdmin
       .from("enrollments")
       .select("class_id, status")
@@ -168,7 +168,7 @@ export class EnrollmentService {
       throw new Error("Enrollment not found");
     }
 
-    // 2. עדכון הסטטוס ל-CANCELLED
+    // 2. Update status to CANCELLED
     const { error } = await supabaseAdmin
       .from("enrollments")
       .update({ status: "CANCELLED" })
@@ -179,7 +179,7 @@ export class EnrollmentService {
       throw new Error(error.message);
     }
 
-    // 3. עדכון מונה הנרשמים (הפחתה)
+    // 3. Decrease enrollment counter
     if (enrollment.status === "ACTIVE" || enrollment.status === "PENDING") {
       const { error: decrementError } = await supabaseAdmin.rpc("decrement_enrollment_count", {
         row_id: enrollment.class_id,

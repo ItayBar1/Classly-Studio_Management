@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { InvitationService } from '../services/invitationService';
 import { logger } from '../logger';
+import { environment } from '../config/env';
 
 export class InvitationController {
 
@@ -32,7 +33,7 @@ export class InvitationController {
             res.status(201).json({
                 message: 'Invitation created successfully',
                 invitation,
-                link: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/?token=${invitation.token}`
+                link: `${environment.frontendUrl}/?token=${invitation.token}`
             });
 
         } catch (error) {
