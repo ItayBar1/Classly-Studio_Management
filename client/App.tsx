@@ -16,7 +16,6 @@ import { PlatformAdministration } from "./components/super-admin/PlatformAdminis
 import { SuperAdminDashboard } from "./components/super-admin/SuperAdminDashboard";
 import { Settings } from "./components/admin/Settings";
 
-
 // Instructor components (new)
 import { InstructorDashboard } from "./components/instructor/InstructorDashboard";
 import { InstructorStudents } from "./components/instructor/InstructorStudents";
@@ -27,6 +26,7 @@ import { StudentDashboard } from "./components/student/StudentDashboard";
 import { BrowseCourses } from "./components/student/BrowseCourses";
 
 import { AuthPage } from "./components/AuthPage";
+import { ResetPassword } from "./components/ResetPassword"; // Import ResetPassword
 import { Loader2, Menu } from "lucide-react";
 import { UserService } from "./services/api";
 
@@ -41,6 +41,26 @@ function App() {
 
   // Keep track of which tabs have been visited to lazy-load them
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(new Set(["dashboard"]));
+
+  // Check for reset password route
+  const isResetPassword = window.location.pathname === '/reset-password';
+
+  // Accessibility Widget Injection
+  useEffect(() => {
+    const isA11yEnabled = import.meta.env.VITE_A11Y_WIDGET_ENABLED === 'true';
+    if (isA11yEnabled) {
+      const scriptId = 'a11y-widget-script';
+      if (!document.getElementById(scriptId)) {
+        const script = document.createElement('script');
+        script.id = scriptId;
+        script.src = 'https://nagishli.co.il/widget.js'; // Example provider
+        script.async = true;
+        script.defer = true;
+        document.body.appendChild(script);
+        console.info('Accessibility widget injected');
+      }
+    }
+  }, []);
 
   // Fetch the latest role from the backend (authoritative source)
   const fetchUserRole = async () => {
@@ -152,6 +172,10 @@ function App() {
   };
 
   if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin w-10 h-10 text-indigo-600" /></div>;
+
+  if (isResetPassword) {
+    return <ResetPassword onSuccess={() => window.location.href = '/'} />;
+  }
 
   // If there's no session, decide whether to show the LandingPage or the AuthPage
   if (!session) {

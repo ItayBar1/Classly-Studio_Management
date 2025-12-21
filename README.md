@@ -121,6 +121,7 @@ Create `.env` files:
 ```
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_A11Y_WIDGET_ENABLED=true  # Set to true to enable the accessibility widget
 ```
 
 `server/.env`
@@ -145,7 +146,28 @@ npm run dev
 ```
 Visit the client on the Vite dev URL (default `http://localhost:5173`) and ensure the server port matches `CLIENT_URL` CORS configuration.
 
-### Notes & Ambiguities
-- Payments route currently allows `INSTRUCTOR` in `/api/payments`; comments suggest restricting to admins—validate with product requirements.
-- Self-registration flow assumes paid courses; zero-price handling is noted but not fully implemented.
-- Attendance and enrollment ownership checks rely on Supabase data consistency; ensure instructor-class relationships exist.
+## Features & Improvements
+
+### Forgot Password Flow
+The application supports a secure password reset flow:
+1.  User requests a password reset link via the login page ("שכחת סיסמה?").
+2.  Supabase sends an email with a redirect link to the application.
+3.  The application routes the user to the Reset Password page (`/reset-password`).
+4.  User sets a new password.
+
+### Accessibility
+-   **Widget:** An accessibility widget can be enabled via `VITE_A11Y_WIDGET_ENABLED=true`.
+-   **Password Toggle:** All password fields include an accessible show/hide toggle.
+-   **Forms:** Inputs are properly labeled for screen readers.
+
+### Testing
+Unit and integration tests are set up for the client using Vitest and React Testing Library.
+
+**Running Tests:**
+```bash
+cd client
+npm test
+```
+
+### Logging
+A structured logging service is implemented for the client (`logger.ts`) to handle errors and important events securely (masking sensitive data). Server-side logging uses Pino.
