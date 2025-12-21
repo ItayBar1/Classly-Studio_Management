@@ -314,7 +314,7 @@ export const AuthPage: React.FC = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full pr-10 pl-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
                     placeholder="••••••••"
-                    dir="ltr"
+                    dir="rtl"
                     minLength={6}
                   />
                   <button
