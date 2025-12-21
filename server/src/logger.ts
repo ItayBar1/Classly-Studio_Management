@@ -6,7 +6,7 @@ import { environment } from './config/env';
 const loggerOptions: LoggerOptions = {
   level: environment.logLevel || 'info',
   base: { service: 'classly-server' },
-  transport: environment.nodeEnv !== 'production' ? {
+  transport: (environment.nodeEnv !== 'production' && environment.nodeEnv !== 'test') ? {
     target: 'pino-pretty',
     options: { colorize: true }
   } : undefined
