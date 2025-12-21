@@ -161,9 +161,6 @@ function App() {
   // List of all possible tabs for authenticated users
   const allTabs = ["dashboard", "students", "schedule", "payments", "administration", "settings", "browse"];
 
-  // List of all possible tabs to iterate or manage
-  const allTabs = ["dashboard", "students", "schedule", "payments", "administration", "settings", "browse"];
-
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans" dir="rtl">
       {/* Desktop Sidebar - hidden on small screens */}
