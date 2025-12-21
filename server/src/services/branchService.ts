@@ -48,11 +48,12 @@ export class BranchService {
         return branch;
     }
 
-    static async update(branchId: string, data: Partial<BranchDTO>) {
+    static async update(branchId: string, studioId: string, data: Partial<BranchDTO>) {
         const { data: branch, error } = await supabaseAdmin
             .from('branches')
             .update(data)
             .eq('id', branchId)
+            .eq('studio_id', studioId)
             .select()
             .single();
 
@@ -60,7 +61,7 @@ export class BranchService {
         return branch;
     }
 
-    static async delete(branchId: string) {
+    static async delete(branchId: string, studioId: string) {
         // Soft delete (set inactive) or hard delete?
         // User asked to 'remove', but usually hard delete is risky with dependencies.
         // We will do hard delete but let FK constraints fail if used.
@@ -68,7 +69,8 @@ export class BranchService {
         const { error } = await supabaseAdmin
             .from('branches')
             .delete()
-            .eq('id', branchId);
+            .eq('id', branchId)
+            .eq('studio_id', studioId);
 
         if (error) throw error;
         return true;

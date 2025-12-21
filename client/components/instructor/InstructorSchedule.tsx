@@ -1,25 +1,49 @@
 import React, { useEffect, useState } from 'react';
 import { CourseService } from '../../services/api';
-import { Loader2, MapPin, Users } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { ClassSession } from '../../types/types';
+import { ClassCard } from '../common/ClassCard';
 
 export const InstructorSchedule: React.FC = () => {
-  const [classes, setClasses] = useState<ClassSession[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Helper to format class for display (similar to Admin Schedule but simpler)
+  const formatClassForDisplay = (cls: any) => {
+    const today = "1970-01-01";
+    const start = new Date(`${today}T${cls.start_time}`);
+    const end = new Date(`${today}T${cls.end_time}`);
+    const duration = (end.getTime() - start.getTime()) / 60000;
+
+    return {
+      id: cls.id,
+      name: cls.name,
+      // Instructor sees their own schedule, so instructor name is redundant but kept for layout consistency
+      instructor: cls.instructor?.full_name,
+      startTime: cls.start_time.substring(0, 5),
+      duration: duration,
+      dayOfWeek: cls.day_of_week, // Keep as number for sorting
+      students: cls.current_enrollment || 0,
+      capacity: cls.max_capacity,
+      level: cls.level,
+      room: cls.location_room || 'לא צוין מיקום',
+      color: 'indigo',
+    };
+  };
 
   useEffect(() => {
     const fetchMySchedule = async () => {
       try {
-        // ה-API מזהה את המדריך לפי הטוקן ומחזיר את הקורסים שלו
         const data = await CourseService.getInstructorCourses();
-        
-        // מיון הקורסים לפי יום ושעה (אפשר גם בשרת, אך בטוח לעשות גם כאן)
-        const sorted = data.sort((a, b) => {
-          if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
-          return a.start_time.localeCompare(b.start_time);
-        });
-
-        setClasses(sorted);
+        if (data) {
+          // Sort by Day then Time
+          const sorted = data.sort((a, b) => {
+            if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
+            return a.start_time.localeCompare(b.start_time);
+          });
+          const formatted = sorted.map(formatClassForDisplay);
+          setClasses(formatted);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -31,33 +55,21 @@ export const InstructorSchedule: React.FC = () => {
 
   const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
-  if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin"/></div>;
+  if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-slate-800">מערכת השעות שלי</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {classes.map((cls) => (
-          <div key={cls.id} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 border-r-4 border-r-indigo-500">
-            <div className="flex justify-between items-start mb-3">
+          <div key={cls.id} className="relative">
+            {/* Add a day header above the card since this is a grid view, unlike the day-tab view in admin */}
+            <div className="mb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
-                {days[cls.day_of_week]}
-              </span>
-              <span className="text-sm font-medium text-slate-500">
-                {cls.start_time.slice(0,5)} - {cls.end_time.slice(0,5)}
+                {days[cls.dayOfWeek]}
               </span>
             </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-2">{cls.name}</h3>
-            <div className="space-y-2 text-sm text-slate-600">
-              <div className="flex items-center gap-2">
-                <MapPin size={16} className="text-slate-400" />
-                {cls.location_room || 'לא צוין מיקום'}
-              </div>
-              <div className="flex items-center gap-2">
-                <Users size={16} className="text-slate-400" />
-                {cls.current_enrollment} / {cls.max_capacity} רשומים
-              </div>
-            </div>
+            <ClassCard session={cls} isAdmin={false} />
           </div>
         ))}
         {classes.length === 0 && (

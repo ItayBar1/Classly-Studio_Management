@@ -53,9 +53,7 @@ export class BranchController {
             // Relying on RLS if possible is good, but here we manually check studio first.
             if (!studio) return res.status(403).json({ error: 'Forbidden' });
 
-            // Proceed with update (Service layer assumes owner check passed or implicit)
-            // Ideally BranchService.update should check studio_id matches.
-            const branch = await BranchService.update(id, updates);
+            const branch = await BranchService.update(id, studio.id, updates);
             res.json(branch);
         } catch (error) {
             next(error);
@@ -64,9 +62,14 @@ export class BranchController {
 
     static async delete(req: Request, res: Response, next: NextFunction) {
         try {
+           const adminId = req.user?.id;
+            if (!adminId) return res.status(401).json({ error: "Unauthorized" });
             const { id } = req.params;
-            // Add ownership check
-            await BranchService.delete(id);
+
+            const studio = await StudioService.getStudioByAdmin(adminId!);
+            if (!studio) return res.status(403).json({ error: 'Forbidden' });
+
+            await BranchService.delete(id, studio.id);
             res.status(204).send();
         } catch (error) {
             next(error);

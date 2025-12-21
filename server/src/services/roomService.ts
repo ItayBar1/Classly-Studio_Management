@@ -45,11 +45,12 @@ export class RoomService {
         return room;
     }
 
-    static async update(roomId: string, data: Partial<RoomDTO>) {
+    static async update(roomId: string, studioId: string, data: Partial<RoomDTO>) {
         const { data: room, error } = await supabaseAdmin
             .from('studio_rooms')
             .update(data)
             .eq('id', roomId)
+            .eq('studio_id', studioId)
             .select()
             .single();
 
@@ -57,11 +58,12 @@ export class RoomService {
         return room;
     }
 
-    static async delete(roomId: string) {
+    static async delete(roomId: string, studioId: string) {
         const { error } = await supabaseAdmin
             .from('studio_rooms')
             .delete()
-            .eq('id', roomId);
+            .eq('id', roomId)
+            .eq('studio_id', studioId);
 
         if (error) throw error;
         return true;
