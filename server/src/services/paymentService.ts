@@ -8,7 +8,6 @@ import { environment } from '../config/env';
  * Stripe client configured with the latest stable API version.
  * Using the ApiVersion constant from the Stripe SDK ensures type safety
  * and automatic compatibility with the installed stripe package.
- * Current version: 2025-12-15.clover (from stripe@20.1.0)
  * @see https://stripe.com/docs/api/versioning
  */
 const stripe = new Stripe(environment.stripe.secretKey || '', {
