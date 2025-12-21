@@ -3,8 +3,15 @@ import Stripe from 'stripe';
 import { logger } from '../logger';
 import { environment } from '../config/env';
 
+/**
+ * Stripe client configured with the latest stable API version.
+ * Using the typed LatestApiVersion from the Stripe SDK ensures type safety
+ * and compatibility with the installed stripe package (v20.1.0).
+ * API Version: 2025-12-15.clover
+ * @see https://stripe.com/docs/api/versioning
+ */
 const stripe = new Stripe(environment.stripe.secretKey || '', {
-  apiVersion: '2025-01-27.acacia' as any, // Ensure the version matches
+  apiVersion: '2025-12-15.clover',
 });
 
 export class PaymentService {
