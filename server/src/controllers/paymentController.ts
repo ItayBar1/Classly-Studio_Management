@@ -5,7 +5,7 @@ import { logger } from '../logger';
 export class PaymentController {
   
   /**
-   * יצירת Payment Intent חדש
+   * Create a new Payment Intent
    */
   static async createIntent(req: Request, res: Response, next: NextFunction) {
     const requestLog = req.logger || logger.child({ controller: 'PaymentController', method: 'createIntent' });
@@ -14,7 +14,7 @@ export class PaymentController {
     try {
       const { amount, currency, description, metadata } = req.body;
 
-      // ולידציה בסיסית
+      // Basic validation
       if (!amount) {
         return res.status(400).json({ error: 'Amount is required' });
       }
@@ -31,7 +31,7 @@ export class PaymentController {
   }
 
   /**
-   * אישור תשלום (לאחר סליקה מוצלחת בצד לקוח)
+   * Confirm a payment after a successful client-side flow
    */
   static async confirmPayment(req: Request, res: Response, next: NextFunction) {
     const requestLog = req.logger || logger.child({ controller: 'PaymentController', method: 'confirmPayment' });
@@ -56,14 +56,14 @@ export class PaymentController {
   }
 
   /**
-   * שליפת כל התשלומים
+   * Retrieve all payments
    */
   static async getAll(req: Request, res: Response, next: NextFunction) {
     const requestLog = req.logger || logger.child({ controller: 'PaymentController', method: 'getAll' });
     requestLog.info({ studioId: req.studioId }, 'Controller entry');
 
     try {
-      const studioId = req.studioId; // מגיע מ-authMiddleware
+      const studioId = req.studioId; // Injected by authMiddleware
 
       if (!studioId) {
         return res.status(400).json({ error: 'Studio ID is missing' });

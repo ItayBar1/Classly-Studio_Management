@@ -4,13 +4,12 @@ import { logger } from '../logger';
 
 export class CourseController {
   
-  // קבלת כל הקורסים (עם סינון אופציונלי)
+  // Get all courses (optional filters)
   static async getAll(req: Request, res: Response, next: NextFunction) {
     const requestLog = req.logger || logger.child({ controller: 'CourseController', method: 'getAll' });
     requestLog.info({ params: req.params, query: req.query, userRole: req.user?.role }, 'Controller entry');
     try {
-      // אם המשתמש הוא סטודנט, נחזיר רק קורסים פעילים (לפי PRD)
-      // אם אדמין, נחזיר הכל.
+      // Students see only active courses; admins see all
       const userRole = req.user?.role;
       const filters = req.query;
 
@@ -23,7 +22,7 @@ export class CourseController {
     }
   }
 
-  // קבלת קורסים זמינים להרשמה (עבור סטודנט)
+  // Get courses available for student registration
   static async getAvailableCourses(req: Request, res: Response, next: NextFunction) {
     const requestLog = req.logger || logger.child({ controller: 'CourseController', method: 'getAvailableCourses' });
     requestLog.info({ userId: req.user.id }, 'Controller entry');
@@ -38,7 +37,7 @@ export class CourseController {
     }
   }
 
-  // קבלת קורס לפי ID
+  // Get course by ID
   static async getById(req: Request, res: Response, next: NextFunction) {
     const requestLog = req.logger || logger.child({ controller: 'CourseController', method: 'getById' });
     requestLog.info({ params: req.params }, 'Controller entry');
@@ -55,7 +54,7 @@ export class CourseController {
     }
   }
 
-  // קבלת קורסים של מדריך ספציפי
+  // Get courses for the instructor
   static async getInstructorCourses(req: Request, res: Response, next: NextFunction) {
     const requestLog = req.logger || logger.child({ controller: 'CourseController', method: 'getInstructorCourses' });
     requestLog.info({ userId: req.user.id }, 'Controller entry');
@@ -70,13 +69,13 @@ export class CourseController {
     }
   }
 
-  // יצירת קורס חדש
+  // Create a new course
   static async create(req: Request, res: Response, next: NextFunction) {
     const requestLog = req.logger || logger.child({ controller: 'CourseController', method: 'create' });
     requestLog.info({ body: req.body, userId: req.user.id }, 'Controller entry');
     try {
       const courseData = req.body;
-      const studioId = req.user.studio_id; // בהנחה שהמשתמש משויך לסטודיו
+      const studioId = req.user.studio_id; // Assuming the user belongs to a studio
 
       const newCourse = await CourseService.createCourse({ ...courseData, studio_id: studioId });
       requestLog.info({ courseId: newCourse?.id }, 'Created course successfully');
@@ -87,7 +86,7 @@ export class CourseController {
     }
   }
 
-  // עריכת קורס
+  // Update a course
   static async update(req: Request, res: Response, next: NextFunction) {
     const requestLog = req.logger || logger.child({ controller: 'CourseController', method: 'update' });
     requestLog.info({ params: req.params, body: req.body }, 'Controller entry');
@@ -103,7 +102,7 @@ export class CourseController {
     }
   }
 
-  // מחיקת קורס (Soft Delete)
+  // Soft delete a course
   static async delete(req: Request, res: Response, next: NextFunction) {
     const requestLog = req.logger || logger.child({ controller: 'CourseController', method: 'delete' });
     requestLog.info({ params: req.params }, 'Controller entry');
@@ -118,15 +117,15 @@ export class CourseController {
     }
   }
 
-  // פונקציות הרשמה יועברו לקונטרולר Enrollments/Student בהמשך, או יישארו כאן אם תחליט
-  // כרגע ב-PRD ההרשמה מתבצעת דרך studentRoutes או נתיב ייעודי, אבל נשאיר תמיכה לאחור אם היה קיים
+  // Enrollment-related functions can move to Student/Enrollment controllers if needed
+  // Enrollment currently handled via studentRoutes or dedicated routes; kept for backward compatibility
   static async getEnrolledCourses(req: Request, res: Response, next: NextFunction) {
       const requestLog = req.logger || logger.child({ controller: 'CourseController', method: 'getEnrolledCourses' });
       requestLog.info({ userId: req.user.id }, 'Controller entry');
-      // זה אמור להיות מטופל ב-StudentController לפי ה-PRD המעודכן, אך לבינתיים:
+      // Placeholder until StudentController handles this per PRD
       try {
           const studentId = req.user.id;
-          // קריאה לשירות מתאים (נממש בהמשך ב-StudentService)
+          // Redirect to StudentController logic when implemented
           requestLog.info({ studentId }, 'Redirecting to StudentController behavior');
           res.json({ message: "Moved to StudentController" });
       } catch (error: any) {

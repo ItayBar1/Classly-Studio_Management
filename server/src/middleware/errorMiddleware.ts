@@ -7,19 +7,22 @@ interface AppError extends Error {
 }
 
 const errorHandler = (err: AppError, req: Request, res: Response, next: NextFunction) => {
-    const statusCode = err.statusCode || 500;
+    if (res.headersSent) {
+        return next(err);
+    }
 
-    // Log the error
-    logger.error({
+    const statusCode = err.statusCode || 500;
+    const requestLogger = req.logger || logger;
+
+    requestLogger.error({
         message: err.message,
         stack: err.stack,
-        statusCode: statusCode,
+        statusCode,
         path: req.path,
         method: req.method,
+        requestId: req.requestId,
     });
 
-    // Send a generic message to the client
-    // For operational errors, we can send a more specific message
     const message = err.isOperational ? err.message : 'Something went wrong on the server.';
 
     res.status(statusCode).json({

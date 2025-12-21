@@ -6,7 +6,7 @@ const router = Router();
 
 router.use(authenticateUser);
 
-// נתיבי אדמין
+// Admin routes
 router.get('/', requireRole(['ADMIN']), StudentController.getAll);
 router.post('/', requireRole(['ADMIN']), StudentController.create);
 /**
@@ -16,10 +16,10 @@ router.post('/', requireRole(['ADMIN']), StudentController.create);
  */
 router.delete('/:id', requireRole(['ADMIN']), StudentController.delete);
 
-// נתיב למדריך (חייב להיות לפני :id כדי שלא יתפוס אותו כ-ID)
+// Instructor route (must precede :id to avoid being treated as an ID)
 router.get('/my-students', requireRole(['INSTRUCTOR', 'ADMIN']), StudentController.getByInstructor);
 
-// פרטי תלמיד ספציפי
+// Specific student details
 router.get('/:id', requireRole(['ADMIN', 'INSTRUCTOR']), StudentController.getById);
 
 export default router;

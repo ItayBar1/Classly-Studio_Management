@@ -1,13 +1,14 @@
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '../config/supabase';
 import { logger } from '../logger';
+import { environment } from '../config/env';
 
 // SECURITY: Validation to prevent insecure production deployments
-if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+if (environment.nodeEnv === 'production' && !environment.jwtSecret && !environment.supabase.serviceRoleKey) {
     throw new Error('FATAL: JWT_SECRET or SUPABASE_SERVICE_ROLE_KEY is missing in production.');
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || 'insecure-fallback-dev-secret';
+const JWT_SECRET = environment.jwtSecret || environment.supabase.serviceRoleKey || 'insecure-fallback-dev-secret';
 
 // Define the custom claims we add to the token
 interface InvitationClaims {

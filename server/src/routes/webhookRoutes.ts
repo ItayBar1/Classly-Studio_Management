@@ -8,8 +8,8 @@ const router = Router();
  * @desc    Handle incoming Stripe webhooks
  * @access  Public (Validated by Stripe Signature)
  */
-// שים לב: אנחנו לא משתמשים כאן ב-Middleware של אימות משתמש, כי הבקשה מגיעה מ-Stripe ולא מהלקוח.
-// הטיפול ב-Body Parser יעשה ב-app.ts באופן ייחודי לנתיב זה.
+// Authentication middleware is not applied because requests originate from Stripe.
+// Body parsing is configured in app.ts specifically for this route.
 router.post('/stripe', WebhookController.handleStripeWebhook);
 
 export default router;

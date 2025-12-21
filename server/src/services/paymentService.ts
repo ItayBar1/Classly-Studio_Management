@@ -1,19 +1,16 @@
 import { supabaseAdmin } from '../config/supabase';
 import Stripe from 'stripe';
-import dotenv from 'dotenv';
 import { logger } from '../logger';
+import { environment } from '../config/env';
 
-dotenv.config();
-
-// אתחול Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-01-27.acacia' as any, // וודא שהגרסה תואמת
+const stripe = new Stripe(environment.stripe.secretKey || '', {
+  apiVersion: '2025-01-27.acacia' as any, // Ensure the version matches
 });
 
 export class PaymentService {
   
   /**
-   * יצירת כוונת תשלום (Payment Intent) ב-Stripe
+   * Create a Stripe payment intent
    */
   static async createIntent(amount: number, currency: string = 'ils', description?: string, metadata?: Record<string, unknown>) {
     const serviceLogger = logger.child({ service: 'PaymentService', method: 'createIntent' });
@@ -24,7 +21,7 @@ export class PaymentService {
     }
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Stripe דורש אגורות/סנטים
+      amount: Math.round(amount * 100), // Stripe expects the smallest currency unit
       currency: currency,
       description: description,
       metadata: metadata as any,
@@ -38,8 +35,8 @@ export class PaymentService {
   }
 
   /**
-   * יצירת רשומת תשלום ב-DB בסטטוס PENDING
-   * זהו הקישור בין ה-Stripe Payment Intent לבין ההרשמה והמשתמש במערכת
+   * Create a payment record with PENDING status
+   * Bridges the Stripe Payment Intent with the enrollment and user
    */
   static async createPaymentRecord(params: {
     studioId: string;
@@ -68,7 +65,7 @@ export class PaymentService {
         currency: currency,
         payment_method: 'STRIPE',
         stripe_payment_intent_id: stripePaymentIntentId,
-        status: 'PENDING', // ממתין לאישור ב-Webhook או ב-Client
+        status: 'PENDING', // Pending approval via webhook or client
         created_at: new Date()
       }])
       .select()
@@ -83,20 +80,20 @@ export class PaymentService {
   }
 
   /**
-   * אימות תשלום ועדכון מסד הנתונים (הפונקציה שיצרנו קודם)
+   * Validate a payment and update the database
    */
   static async confirmPayment(paymentIntentId: string) {
     const serviceLogger = logger.child({ service: 'PaymentService', method: 'confirmPayment' });
     serviceLogger.info({ paymentIntentId }, 'Starting confirmPayment');
 
-    // 1. אימות מול Stripe
+    // 1. Validate against Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
     if (paymentIntent.status !== 'succeeded') {
       throw new Error(`Payment not succeeded. Status: ${paymentIntent.status}`);
     }
 
-    // 2. עדכון טבלת התשלומים
+    // 2. Update payment record
     const { data: paymentRecord, error: paymentError } = await supabaseAdmin
       .from('payments')
       .update({
@@ -114,7 +111,7 @@ export class PaymentService {
       throw new Error(`Failed to update payment record: ${paymentError.message}`);
     }
 
-    // 3. עדכון סטטוס הרשמה אם קיים
+    // 3. Update enrollment status if available
     if (paymentRecord.enrollment_id) {
       serviceLogger.info({ enrollmentId: paymentRecord.enrollment_id }, 'Updating enrollment after payment confirmation');
       await supabaseAdmin
@@ -132,14 +129,14 @@ export class PaymentService {
   }
 
   /**
-   * שליפת כל היסטוריית התשלומים (עבור אדמין)
+   * Retrieve full payment history (admin)
    */
   static async getAllPayments(studioId: string) {
     const serviceLogger = logger.child({ service: 'PaymentService', method: 'getAllPayments' });
     serviceLogger.info({ studioId }, 'Fetching all payments for studio');
 
-    // הנחה: הטבלה payments מקושרת ל-users ול-enrollments
-    // נבצע שליפה שכוללת את שם הסטודנט
+    // Assumption: payments table links to users and enrollments
+    // Include student details for reporting
     const { data, error } = await supabaseAdmin
       .from('payments')
       .select(`
@@ -149,7 +146,7 @@ export class PaymentService {
           class:courses ( title ) 
         )
       `)
-      .eq('studio_id', studioId) // סינון לפי סטודיו
+      .eq('studio_id', studioId) // Filter by studio
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -162,7 +159,7 @@ export class PaymentService {
   }
 
   static constructEvent(payload: Buffer, signature: string) {
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const webhookSecret = environment.stripe.webhookSecret;
     const serviceLogger = logger.child({ service: 'PaymentService', method: 'constructEvent' });
 
     if (!webhookSecret) {

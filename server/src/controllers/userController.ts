@@ -9,7 +9,7 @@ export class UserController {
     requestLog.info({ params: req.params, userId: req.user?.id }, 'Controller entry');
 
     try {
-      // ה-ID מגיע מה-authMiddleware
+      // The ID is added by authMiddleware
       const userId = req.user?.id;
 
       if (!userId) {

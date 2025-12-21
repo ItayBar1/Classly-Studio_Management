@@ -7,13 +7,13 @@ export const DashboardService = {
     serviceLogger.info({ studioId }, 'Fetching admin stats');
     try {
       const [studentsRes, classesRes, revenueRes] = await Promise.all([
-        // סה"כ תלמידים
+        // Total students
         supabaseAdmin.from('users').select('*', { count: 'exact', head: true }).eq('role', 'STUDENT').eq('studio_id', studioId),
         
-        // כיתות פעילות
+        // Active classes
         supabaseAdmin.from('classes').select('*', { count: 'exact', head: true }).eq('is_active', true).eq('studio_id', studioId),
 
-        // הכנסות החודש
+        // Current month revenue
         supabaseAdmin.from('payments')
             .select('amount_ils')
             .eq('status', 'COMPLETED')
@@ -30,7 +30,7 @@ export const DashboardService = {
         0
       );
 
-      // נתונים לגרף (Hardcoded כרגע לדוגמה, בעתיד שאילתת SQL מורכבת)
+      // Chart data placeholder (hardcoded for now, can be replaced with SQL aggregation)
       const chartData = [
         { name: 'ינואר', revenue: 4000, attendance: 240 },
         { name: 'פברואר', revenue: 3000, attendance: 139 },
@@ -72,7 +72,7 @@ export const DashboardService = {
 
       return {
         myCoursesCount: myCourses.length,
-        myStudentsCount: 0, // לשיפור בעתיד
+        myStudentsCount: 0, // Future enhancement
         todayClassesCount: todayClasses.length,
         nextClass: nextClass
       };

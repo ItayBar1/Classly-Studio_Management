@@ -1,14 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
+import { environment } from './env';
 
-dotenv.config();
+const { url, serviceRoleKey } = environment.supabase;
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // שים לב: זה ה-Service Role, לא ה-Anon!
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase credentials in .env');
+if (!url || !serviceRoleKey) {
+  throw new Error('Missing Supabase credentials in environment variables');
 }
 
-// קליינט עם הרשאות אדמין מלאות לשימוש השרת
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+export const supabaseAdmin = createClient(url, serviceRoleKey);
