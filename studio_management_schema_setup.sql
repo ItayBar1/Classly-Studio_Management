@@ -309,10 +309,12 @@ BEGIN
      SELECT id INTO default_studio_id FROM public.studios ORDER BY created_at ASC LIMIT 1;
   END IF;
 
-  IF (UPPER(NEW.raw_user_meta_data->>'role') IN ('ADMIN', 'INSTRUCTOR', 'SUPER_ADMIN')) THEN
-      user_role := 'STUDENT';
+  -- Security: Prevent users from self-assigning privileged roles via metadata
+  -- Only allow STUDENT or PARENT. Everything else defaults to STUDENT.
+  IF (UPPER(NEW.raw_user_meta_data->>'role') IN ('STUDENT', 'PARENT')) THEN
+      user_role := UPPER(NEW.raw_user_meta_data->>'role');
   ELSE
-      user_role := COALESCE(UPPER(NEW.raw_user_meta_data->>'role'), 'STUDENT');
+      user_role := 'STUDENT';
   END IF;
 
   INSERT INTO public.users (
