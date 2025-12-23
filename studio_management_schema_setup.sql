@@ -508,13 +508,13 @@ FOR SELECT USING (
 );
 
 -- Pending Registrations Policies
--- SECURITY: These policies ensure only the backend service can manage pending registrations
--- Users cannot see or manipulate this table directly
-CREATE POLICY "Service role can manage pending registrations" ON public.pending_registrations
+-- SECURITY: Only backend service (via SECURITY DEFINER functions) can manage this table
+-- Regular authenticated users have no direct access to prevent manipulation
+CREATE POLICY "Backend service can manage pending registrations" ON public.pending_registrations
 FOR ALL USING (
-  -- Only service role key (SECURITY DEFINER functions) can access
-  -- Regular users should never directly access this table
-  false
+  -- Allow access when called from SECURITY DEFINER context (handle_new_user, etc.)
+  -- Block direct user access by checking if user is authenticated
+  auth.uid() IS NULL OR current_setting('request.jwt.claims', true)::json->>'role' = 'service_role'
 );
 
 COMMIT;

@@ -110,11 +110,11 @@ export const AuthPage: React.FC = () => {
         // SECURITY FIX: Prepare registration server-side to validate studio_id
         // This prevents clients from self-assigning to arbitrary studios
         try {
-          await UserService.prepareRegistration(
-            email,
-            inviteToken ? undefined : studioSerial,
-            inviteToken || undefined
-          );
+          // Determine parameters based on whether we have an invite token
+          const serialNumber = inviteToken ? undefined : studioSerial;
+          const token = inviteToken || undefined;
+          
+          await UserService.prepareRegistration(email, serialNumber, token);
         } catch (prepError: any) {
           if (prepError.response && prepError.response.status === 404) {
             throw new Error('לא נמצא סטודיו עם המספר הסידורי שהוזן.');

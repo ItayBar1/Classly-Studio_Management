@@ -58,11 +58,16 @@ export class UserService {
     serviceLogger.info({ email, studioId }, 'Creating pending registration with validated studio');
 
     // Delete any existing unused pending registrations for this email
-    await supabaseAdmin
+    const { error: deleteError } = await supabaseAdmin
       .from('pending_registrations')
       .delete()
       .eq('email', email)
       .eq('used', false);
+
+    if (deleteError) {
+      // Log but don't fail - this is just cleanup
+      serviceLogger.warn({ err: deleteError }, 'Failed to delete old pending registrations');
+    }
 
     // Create new pending registration
     const { data, error } = await supabaseAdmin

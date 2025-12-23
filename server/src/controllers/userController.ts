@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserService } from '../services/userService';
+import { InvitationService } from '../services/invitationService';
 import { logger } from '../logger';
 
 export class UserController {
@@ -71,7 +72,6 @@ export class UserController {
 
       // If there's an invitation token, validate it and get studio from there
       if (invitationToken) {
-        const { InvitationService } = await import('../services/invitationService');
         const invitation = await InvitationService.validateInvitation(invitationToken);
         
         if (!invitation || !invitation.valid) {
