@@ -143,7 +143,7 @@ export const Administration: React.FC = () => {
                     </form>
                 </div>
             </div>
-        )
+        );
     }
 
     // View 2: Existing Studio Management

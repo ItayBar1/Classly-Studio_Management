@@ -26,8 +26,6 @@ export const InstructorSchedule: React.FC = () => {
             // וידוא שמות שדות (תמיכה גם ב-snake_case וגם ב-CamelCase)
             const startStr = cls.start_time || cls.startTime || "00:00";
             const endStr = cls.end_time || cls.endTime || "00:00";
-            const day =
-              cls.day_of_week !== undefined ? cls.day_of_week : cls.dayOfWeek;
 
             const start = new Date(`${today}T${startStr}`);
             const end = new Date(`${today}T${endStr}`);

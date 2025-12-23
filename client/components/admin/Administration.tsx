@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserService, InvitationService, StudioService, BranchService, RoomService } from '../../services/api';
-import { Loader2, Copy, Check, Users, UserPlus, Building, Edit, Save, X, MapPin, Plus, Trash2, Mail, Phone } from 'lucide-react';
+import { Loader2, Copy, Check, Users, UserPlus, Building, Edit, MapPin, Plus, Trash2, Mail, Phone } from 'lucide-react';
 import { Studio, Branch, User, Room } from '../../types/types';
 
 import { BranchModal } from './BranchModal';
@@ -31,7 +31,6 @@ export const Administration: React.FC = () => {
     // Branch Management State
     const [isbranchModalOpen, setIsBranchModalOpen] = useState(false);
     const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
-    const [branchForm, setBranchForm] = useState<Partial<Branch>>({ name: '', address: '', city: '', phone_number: '', is_active: true });
 
 
 

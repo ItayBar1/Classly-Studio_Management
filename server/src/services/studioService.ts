@@ -71,43 +71,33 @@ export class StudioService {
 
         // 3. Create Studio
         const { data: studio, error: createError } = await supabaseAdmin
-            .from('studios')
-            .insert({
-                admin_id: adminId,
-                name: data.name,
-                serial_number: serialNumber,
-                description: data.description,
-                contact_email: data.contact_email,
-                contact_phone: data.contact_phone,
-                website_url: data.website_url,
-            })
-            .select()
-            .single();
-
-        if (createError) throw createError;
-
-        // 4. Create Default Branch ("Main Branch")
-        const { error: branchError } = await supabaseAdmin
-            .from('branches')
-            .insert({
-                studio_id: studio.id,
-                name: 'Main Branch', // Default name
-                is_active: true
+        // Use database RPC to handle the entire operation in a single transaction
+        // This ensures atomicity - either all operations succeed or none do
+        const { data: result, error } = await supabaseAdmin
+            .rpc('create_studio_with_transaction', {
+                p_admin_id: adminId,
+                p_name: data.name,
+                p_description: data.description || null,
+                p_contact_email: data.contact_email || null,
+                p_contact_phone: data.contact_phone || null,
+                p_website_url: data.website_url || null,
             });
 
-        if (branchError) {
-            // Cleanup?Ideally we run this in a real transaction but Supabase JS doesn't expose one easily.
-            // For MVP we log error. Database constraints usually prevent partial garbage if setup right.
-            console.error('Failed to create default branch', branchError);
+        if (error) throw error;
+
+        if (!result || result.length === 0) {
+            throw new Error('Studio creation returned no data. The operation may have failed.');
         }
 
-        // 5. Update Admin User to link to this studio
-        const { error: userError } = await supabaseAdmin
-            .from('users')
-            .update({ studio_id: studio.id })
-            .eq('id', adminId);
+        // The RPC function returns studio and branch information
+        // We need to fetch the full studio record to return the expected format
+        const { data: studio, error: fetchError } = await supabaseAdmin
+            .from('studios')
+            .select('*')
+            .eq('id', result[0].studio_id)
+            .single();
 
-        if (userError) console.error('Failed to link user to studio', userError);
+        if (fetchError) throw fetchError;
 
         return studio;
     }
