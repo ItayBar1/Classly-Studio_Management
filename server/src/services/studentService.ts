@@ -72,7 +72,7 @@ export const StudentService = {
   },
 
 async getByInstructor(instructorId: string) {
-    // שליפת כל ה-Enrollments של קורסים שהמדריך מלמד
+    // Retrieve enrollments for courses taught by the instructor
     const { data, error } = await supabaseAdmin
       .from("enrollments")
       .select(
@@ -90,19 +90,19 @@ async getByInstructor(instructorId: string) {
 
     if (error) throw error;
 
-    // עיבוד הנתונים למניעת כפילויות
+    // Consolidate data to remove duplicates
     const studentMap = new Map();
 
-    // תיקון: המרה ל-any[] כדי לעקוף את שגיאת הטיפוסים של Supabase
+    // Convert to any[] to bypass Supabase typing limitations
     (data as any[]).forEach((item) => {
-      // הגנה נוספת: וידוא שיש אובייקט student (במקרה שחזר ריק או כמערך)
+      // Guard to ensure student object exists
       const studentData = Array.isArray(item.student) ? item.student[0] : item.student;
       
       if (!studentData) return;
 
       const existing = studentMap.get(studentData.id);
       
-      // טיפול במקרה ש-class חוזר כמערך או אובייקט
+      // Handle class response as array or object
       const classData = Array.isArray(item.class) ? item.class[0] : item.class;
       const className = classData?.name;
 
@@ -128,7 +128,7 @@ async getByInstructor(instructorId: string) {
 
     const { email, full_name, phone_number, password } = studentData;
 
-    // 1. יצירת יוזר ב-Supabase Auth
+    // 1. Create user in Supabase Auth
     const { data: authData, error: authError } =
       await supabaseAdmin.auth.admin.createUser({
         email,
@@ -141,7 +141,7 @@ async getByInstructor(instructorId: string) {
       throw authError;
     }
 
-    // 2. עדכון פרטים בטבלת users
+    // 2. Update details in users table
     const { data, error } = await supabaseAdmin
       .from("users")
       .update({
@@ -163,14 +163,14 @@ async getByInstructor(instructorId: string) {
   },
 
   /**
-   * ביצוע מחיקה רכה לתלמיד (שינוי סטטוס ל-INACTIVE)
-   * @param studentId המזהה של התלמיד
+   * Soft delete a student (set status to INACTIVE)
+   * @param studentId the student identifier
    */
   async deleteStudent(studentId: string) {
     const serviceLogger = logger.child({ service: "StudentService", method: "deleteStudent" });
     serviceLogger.info({ studentId }, "Soft deleting student");
 
-    // 1. בדיקה שהמשתמש קיים ושהוא אכן תלמיד (למניעת טעויות)
+    // 1. Ensure the user exists and is a student
     const { data: user, error: fetchError } = await supabaseAdmin
       .from("users")
       .select("role")
@@ -188,7 +188,7 @@ async getByInstructor(instructorId: string) {
       );
     }
 
-    // 2. ביצוע Soft Delete - עדכון סטטוס
+    // 2. Soft delete - update status
     const { data, error } = await supabaseAdmin
       .from("users")
       .update({

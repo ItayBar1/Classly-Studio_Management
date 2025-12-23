@@ -4,7 +4,7 @@ import { authenticateUser, requireRole } from '../middleware/authMiddleware';
 
 const router = Router();
 
-// החלת אימות על כל הנתיבים בקובץ זה
+// Apply authentication to all instructor routes
 router.use(authenticateUser);
 
 /**

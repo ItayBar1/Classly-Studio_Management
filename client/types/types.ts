@@ -46,7 +46,7 @@ export interface ClassSession {
   instructor?: {           // Joined data from API
     full_name: string;
     profile_image_url?: string | null;
-  }; 
+  };
   day_of_week: DayOfWeek;
   start_time: string;      // Format: "HH:MM"
   end_time: string;        // Format: "HH:MM"
@@ -100,4 +100,37 @@ export interface InstructorStats {
   myStudentsCount: number;
   todayClassesCount: number;
   nextClass: ClassSession | null;
+}
+
+export interface Studio {
+  id: string;
+  name: string;
+  serial_number: string;
+  description?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  website_url?: string;
+  admin_id: string;
+  created_at: string;
+}
+
+export interface Branch {
+  id: string;
+  studio_id: string;
+  name: string;
+  address?: string;
+  city?: string;
+  phone_number?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface Room {
+  id: string;
+  studio_id: string;
+  branch_id: string;
+  name: string;
+  capacity?: number;
+  is_active: boolean;
+  created_at: string;
 }

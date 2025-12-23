@@ -53,7 +53,7 @@ export const StudentController = {
   },
 
   /**
-   * מחיקת תלמיד (Soft Delete)
+   * Soft delete a student
    */
   async delete(req: Request, res: Response, next: NextFunction) {
     const requestLog = req.logger || logger.child({ controller: "StudentController", method: "delete" });

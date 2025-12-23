@@ -121,6 +121,7 @@ Create `.env` files:
 ```
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_A11Y_WIDGET_ENABLED=true  # Set to true to enable the accessibility widget
 ```
 
 `server/.env`
@@ -145,7 +146,142 @@ npm run dev
 ```
 Visit the client on the Vite dev URL (default `http://localhost:5173`) and ensure the server port matches `CLIENT_URL` CORS configuration.
 
-### Notes & Ambiguities
-- Payments route currently allows `INSTRUCTOR` in `/api/payments`; comments suggest restricting to admins—validate with product requirements.
-- Self-registration flow assumes paid courses; zero-price handling is noted but not fully implemented.
-- Attendance and enrollment ownership checks rely on Supabase data consistency; ensure instructor-class relationships exist.
+## Server Development
+
+The Express API lives in `/server/src` and follows a routes → controllers → services layout:
+- **Entry point:** `src/index.ts` exports the Express app for serverless platforms and starts the listener locally.
+- **App wiring:** `src/app.ts` registers security middleware, request logging, CORS, rate limiting, webhooks, and routes.
+- **Configuration:** `src/config/env.ts` centralizes environment parsing/validation (Supabase, Stripe, JWT, client URL, port).
+- **Logging:** `src/logger.ts` configures Pino and a `requestLogger` middleware that attaches a request ID and duration to every request. Errors are surfaced via `middleware/errorMiddleware.ts` without changing response format.
+- **Authentication:** `middleware/authMiddleware.ts` attaches the authenticated Supabase user and studio metadata to each request; `requireRole` enforces role-based access.
+- **Business logic:** Services under `src/services` encapsulate Supabase/Stripe access and are invoked by controllers in `src/controllers`.
+
+### Server Scripts
+- `npm run dev` — start the API in watch mode.
+- `npm run build` — compile TypeScript to `dist/`.
+- `npm start` — run the compiled server.
+- `npm test`, `npm run test:unit`, `npm run test:integration`, `npm run test:watch` — test commands (see Tests below).
+
+### Environment Validation
+- Required: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+- Common: `CLIENT_URL` (CORS), `FRONTEND_URL` (invitation links), `PORT`, `LOG_LEVEL`.
+- Payments: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
+- Auth/Invites: `JWT_SECRET` (falls back to service role key in non-production).
+
+## Features & Improvements
+
+### Forgot Password Flow
+The application supports a secure password reset flow:
+1.  User requests a password reset link via the login page ("שכחת סיסמה?").
+2.  Supabase sends an email with a redirect link to the application.
+3.  The application routes the user to the Reset Password page (`/reset-password`).
+4.  User sets a new password.
+
+### Accessibility
+-   **Widget:** An accessibility widget can be enabled via `VITE_A11Y_WIDGET_ENABLED=true`.
+-   **Password Toggle:** All password fields include an accessible show/hide toggle.
+-   **Forms:** Inputs are properly labeled for screen readers.
+
+### Testing
+- **Server:** Jest + Supertest (see `/server` package scripts) for unit/integration coverage of controllers, services, and middleware.
+- **Client:** Vitest + React Testing Library.
+
+**Running Server Tests:**
+```bash
+cd server
+npm test             # all tests
+npm run test:unit    # unit only
+npm run test:integration  # integration only
+```
+
+**Running Client Tests:**
+```bash
+cd client
+npm test
+```
+
+### Logging
+
+**Client-side:** A structured logging service is implemented (`client/src/services/logger.ts`) to handle errors and important events securely, masking sensitive data.
+
+**Server-side:** The API uses [Pino](https://getpino.io/) for high-performance structured logging. All logs are JSON-formatted in production and pretty-printed in development.
+
+#### Log Levels
+Set the `LOG_LEVEL` environment variable to control verbosity (default: `info`):
+- `trace` — very detailed debugging (method entry/exit, variable values)
+- `debug` — detailed debugging information
+- `info` — informational messages (request completion, successful operations)
+- `warn` — warnings that don't stop execution
+- `error` — errors that require attention
+- `fatal` — critical errors that terminate the application
+
+Example:
+```bash
+# Development with debug output
+LOG_LEVEL=debug npm run dev
+
+# Production with only errors
+LOG_LEVEL=error npm start
+```
+
+#### How to View Logs
+- **Development:** Logs are pretty-printed with colors via `pino-pretty` (automatically enabled when `NODE_ENV` is not `production` or `test`).
+- **Production:** Logs are JSON-formatted, suitable for log aggregation systems (e.g., CloudWatch, Datadog, Splunk). Each log entry includes:
+  - `level`: numeric log level
+  - `time`: ISO timestamp
+  - `service`: always `"classly-server"`
+  - `requestId`: unique ID per request (from header or auto-generated)
+  - `msg`: human-readable message
+  - Additional context fields (e.g., `userId`, `studioId`, `err`)
+
+#### Using the Logger
+
+**In controllers and services:**
+```typescript
+import { logger } from '../logger';  // Adjust path based on file location
+
+// Simple logging
+logger.info('User registration started');
+logger.error({ err: error }, 'Failed to create user');
+
+// Structured logging with context
+logger.info({ userId: '123', studioId: '456' }, 'User enrolled in class');
+
+// Child loggers for scoped context
+const requestLog = logger.child({ controller: 'StudentController', method: 'getAll' });
+requestLog.info({ params: req.params }, 'Controller entry');
+requestLog.error({ err: error }, 'Error fetching students');
+```
+
+**Request-scoped logging:**
+The `requestLogger` middleware automatically attaches a logger to each request (`req.logger`). This logger includes:
+- `requestId` — unique ID for tracing the request
+- `path` — API endpoint
+- `method` — HTTP method
+- Automatic request duration tracking
+
+```typescript
+export const myController = async (req: Request, res: Response, next: NextFunction) => {
+  // Use req.logger with fallback to child logger
+  const requestLog = req.logger || logger.child({ controller: 'MyController', method: 'myMethod' });
+
+  requestLog.info({ customField: 'value' }, 'Processing request');
+
+  try {
+    const result = await myService.doWork();
+    requestLog.info({ resultId: result.id }, 'Operation successful');
+    res.json(result);
+  } catch (error) {
+    // Use err key for proper error serialization
+    requestLog.error({ err: error }, 'Operation failed');
+    next(error);
+  }
+};
+```
+Visit the client on the Vite dev URL (default `http://localhost:5173`) and ensure the server port matches `CLIENT_URL` CORS configuration.
+
+#### Best Practices
+- Always use structured logging: pass objects as the first argument, message as second.
+- Include relevant context (e.g., `userId`, `studioId`, `classId`) but never log sensitive data (passwords, tokens).
+- Use `req.logger` in controllers to maintain request traceability.
+- Log errors with the `err` key: `logger.error({ err: error }, 'message')` for proper stack trace serialization.

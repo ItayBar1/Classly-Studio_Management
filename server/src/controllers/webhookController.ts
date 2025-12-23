@@ -14,12 +14,12 @@ export class WebhookController {
         }
 
         try {
-            // אימות החתימה והמרת ה-Body לאירוע של Stripe
-            // הערה: req.body כאן חייב להיות Buffer (ראה הסבר ב-app.ts)
+            // Verify signature and parse the body into a Stripe event
+            // Note: req.body must remain a Buffer (see app.ts configuration)
             const event = PaymentService.constructEvent(req.body, signature as string);
             requestLog.info({ eventType: event.type }, 'Stripe webhook event constructed');
 
-            // טיפול בסוגי האירועים השונים
+            // Handle relevant event types
             switch (event.type) {
                 case 'payment_intent.succeeded':
                     // eslint-disable-next-line no-case-declarations
@@ -32,14 +32,14 @@ export class WebhookController {
                     // eslint-disable-next-line no-case-declarations
                     const failedIntent = event.data.object as { id: string };
                     requestLog.warn({ paymentIntentId: failedIntent.id }, 'Payment failed event received');
-                    // כאן אפשר להוסיף לוגיקה לעדכון סטטוס ל-FAILED
+                    // Future: update status to FAILED if needed
                     break;
 
                 default:
                     requestLog.info({ eventType: event.type }, 'Unhandled event type');
             }
 
-            // החזרת תשובה חיובית ל-Stripe כדי שלא ישלח שוב
+            // Return success so Stripe does not resend the webhook
             res.json({ received: true });
 
         } catch (err: any) {

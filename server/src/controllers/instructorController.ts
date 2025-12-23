@@ -4,7 +4,7 @@ import { logger } from '../logger';
 
 export class InstructorController {
     
-    // שליפת כל המדריכים (לאדמין)
+    // Retrieve all instructors (admin)
     static async getAll(req: Request, res: Response, next: NextFunction) {
         const requestLog = req.logger || logger.child({ controller: 'InstructorController', method: 'getAll' });
         requestLog.info({ studioId: req.user.studio_id }, 'Controller entry');
@@ -19,7 +19,7 @@ export class InstructorController {
         }
     }
 
-    // שליפת מדריך לפי ID
+    // Retrieve instructor by ID
     static async getById(req: Request, res: Response, next: NextFunction) {
         const requestLog = req.logger || logger.child({ controller: 'InstructorController', method: 'getById' });
         requestLog.info({ params: req.params, userId: req.user.id }, 'Controller entry');
@@ -27,7 +27,7 @@ export class InstructorController {
             const { id } = req.params;
             const requestingUser = req.user;
 
-            // בדיקת הרשאה: רק אדמין או המדריך עצמו יכולים לצפות בפרטים
+            // Authorization: only admin or the instructor can view the profile
             if (requestingUser.role !== 'ADMIN' && requestingUser.id !== id) {
                 return res.status(403).json({ error: 'Unauthorized access to instructor profile' });
             }
@@ -44,7 +44,7 @@ export class InstructorController {
         }
     }
 
-    // שליפת רווחים/עמלות (למדריך המחובר)
+    // Retrieve earnings/commissions for the authenticated instructor
     static async getMyEarnings(req: Request, res: Response, next: NextFunction) {
         const requestLog = req.logger || logger.child({ controller: 'InstructorController', method: 'getMyEarnings' });
         requestLog.info({ userId: req.user.id }, 'Controller entry');
@@ -59,13 +59,13 @@ export class InstructorController {
         }
     }
 
-    // מחיקה רכה של מדריך
+    // Soft delete instructor
     static async delete(req: Request, res: Response, next: NextFunction) {
         const requestLog = req.logger || logger.child({ controller: 'InstructorController', method: 'delete' });
         requestLog.info({ params: req.params }, 'Controller entry');
         try {
             const { id } = req.params;
-            // כאן נוכל להוסיף בעתיד בדיקה אם למדריך יש שיעורים פעילים לפני מחיקה
+            // Future: ensure instructor has no active classes before deletion
             await InstructorService.softDeleteInstructor(id);
             requestLog.info({ instructorId: id }, 'Instructor deactivated');
             res.json({ message: 'Instructor deactivated successfully' });

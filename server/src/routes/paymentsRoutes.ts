@@ -4,7 +4,7 @@ import { authenticateUser, requireRole } from '../middleware/authMiddleware';
 
 const router = Router();
 
-// החלת אימות משתמש על כל הנתיבים (אופציונלי - תלוי בדרישות האבטחה שלך)
+// Apply authentication to all payment routes
 router.use(authenticateUser);
 
 /**
@@ -12,7 +12,7 @@ router.use(authenticateUser);
  * @desc    Get all payment history
  * @access  Admin
  */
-router.get('/', requireRole(['admin', 'instructor']), PaymentController.getAll); // אפשר להסיר instructor אם זה רק לאדמין
+router.get('/', requireRole(['admin', 'instructor']), PaymentController.getAll);
 
 /**
  * @route   POST /api/payment/create-intent

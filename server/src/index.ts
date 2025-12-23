@@ -1,12 +1,21 @@
-import dotenv from 'dotenv';
 import { app } from './app';
+import { environment } from './config/env';
 import { logger } from './logger';
 
-dotenv.config();
 
-const PORT = process.env.PORT || 5000;
 
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+const PORT = environment.port;
+
+logger.info(
+  {
+    nodeEnv: environment.nodeEnv,
+    vercel: environment.vercel,
+    clientUrl: environment.clientUrl,
+  },
+  'Server configuration loaded'
+);
+
+if (environment.nodeEnv !== 'production' && !environment.vercel) {
   app.listen(PORT, () => {
     logger.info({ port: PORT }, 'Local server started 🚀');
   });

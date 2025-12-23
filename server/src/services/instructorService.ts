@@ -13,7 +13,7 @@ export class InstructorService {
             .from('users')
             .select('id, full_name, email, phone_number, profile_image_url, status, created_at')
             .eq('role', 'INSTRUCTOR')
-            .eq('studio_id', studioId); // סינון לפי סטודיו
+            .eq('studio_id', studioId); // Filter by studio
 
         if (error) {
             serviceLogger.error({ err: error }, 'Failed to fetch instructors');
@@ -52,7 +52,7 @@ export class InstructorService {
             .from('users')
             .update({ status: 'INACTIVE' })
             .eq('id', id)
-            .eq('role', 'INSTRUCTOR'); // הגנה נוספת לוודא שמוחקים רק מדריך
+            .eq('role', 'INSTRUCTOR'); // Additional guard to delete only instructors
 
         if (error) {
             serviceLogger.error({ err: error }, 'Failed to soft delete instructor');
