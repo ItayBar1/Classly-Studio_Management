@@ -538,7 +538,7 @@ RETURNS TRIGGER AS $$
 BEGIN
   -- טיפול בהוספה (INSERT) או עדכון (UPDATE)
   -- מעדכן את הכיתה החדשה/הנוכחית (NEW)
-  IF (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') THEN
+  IF (TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND (NEW.class_id <> OLD.class_id OR NEW.status <> OLD.status))) THEN
     UPDATE public.classes
     SET current_enrollment = (
       SELECT COUNT(*)
@@ -549,9 +549,9 @@ BEGIN
     WHERE id = NEW.class_id;
   END IF;
 
-  -- טיפול במחיקה (DELETE) או מעבר כיתה (UPDATE עם שינוי class_id)
+  -- טיפול במחיקה (DELETE) או מעבר כיתה (UPDATE עם שינוי class_id או status)
   -- מעדכן את הכיתה הישנה (OLD)
-  IF (TG_OP = 'DELETE' OR (TG_OP = 'UPDATE' AND NEW.class_id <> OLD.class_id)) THEN
+  IF (TG_OP = 'DELETE' OR (TG_OP = 'UPDATE' AND (NEW.class_id <> OLD.class_id OR NEW.status <> OLD.status))) THEN
     UPDATE public.classes
     SET current_enrollment = (
       SELECT COUNT(*)
