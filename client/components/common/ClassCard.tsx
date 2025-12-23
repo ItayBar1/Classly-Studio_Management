@@ -42,18 +42,6 @@ export const ClassCard: React.FC<ClassCardProps> = ({
     return () => window.removeEventListener("click", handleClickOutside);
   }, []);
 
-  const getEndTime = (startTime: string, duration: number) => {
-    const [hours, minutes] = startTime.split(":").map(Number);
-    const date = new Date();
-    date.setHours(hours, minutes);
-    date.setMinutes(date.getMinutes() + duration);
-    return date.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-  };
-
   const getLevelBadgeColor = (level: string) => {
     const normalizedLevel = level?.toUpperCase();
     switch (normalizedLevel) {
