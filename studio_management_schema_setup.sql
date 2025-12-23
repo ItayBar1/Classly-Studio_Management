@@ -30,6 +30,14 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- 1. יצירת טבלאות בסיס (USERS & STUDIOS & BRANCHES)
 ----------------------------------------------------------------
 
+-- יצירת sequence לסידורי מספרי סטודיו
+-- Database sequence ensures collision-free serial number generation
+-- This is more robust than random number generation with collision checking
+-- Note: Using DROP CASCADE is safe here as this script is for initial setup
+-- In production migrations, sequence alterations should be handled more carefully
+DROP SEQUENCE IF EXISTS public.studio_serial_sequence CASCADE;
+CREATE SEQUENCE public.studio_serial_sequence START 1;
+
 -- יצירת טבלת STUDIOS
 CREATE TABLE IF NOT EXISTS public.studios (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -430,28 +438,21 @@ DECLARE
   v_serial_number VARCHAR(20);
   v_studio_id UUID;
   v_branch_id UUID;
-  v_attempts INTEGER := 0;
-  v_is_unique BOOLEAN := FALSE;
+  v_sequence_number BIGINT;
+  v_date_prefix TEXT;
 BEGIN
   -- 1. Check if user already has a studio
   IF EXISTS (SELECT 1 FROM public.studios WHERE admin_id = p_admin_id) THEN
     RAISE EXCEPTION 'User already has a studio';
   END IF;
 
-  -- 2. Generate a unique 6-digit serial number
-  WHILE NOT v_is_unique AND v_attempts < 5 LOOP
-    v_serial_number := LPAD(FLOOR(100000 + RANDOM() * 900000)::TEXT, 6, '0');
-    
-    IF NOT EXISTS (SELECT 1 FROM public.studios WHERE public.studios.serial_number = v_serial_number) THEN
-      v_is_unique := TRUE;
-    END IF;
-    
-    v_attempts := v_attempts + 1;
-  END LOOP;
-
-  IF NOT v_is_unique THEN
-    RAISE EXCEPTION 'Failed to generate unique serial number after % attempts', v_attempts;
-  END IF;
+  -- 2. Generate a unique serial number using database sequence
+  -- Format: YYMMDD-NNNNNN where YYMMDD is date-based and NNNNNN is sequence number
+  -- Using a database sequence ensures collision-free generation without retry logic
+  -- 6-digit sequence supports up to 999,999 studios before wrapping
+  v_sequence_number := nextval('public.studio_serial_sequence');
+  v_date_prefix := TO_CHAR(CURRENT_DATE, 'YYMMDD');
+  v_serial_number := v_date_prefix || '-' || LPAD(v_sequence_number::TEXT, 6, '0');
 
   -- 3. Create Studio (all within same transaction)
   INSERT INTO public.studios (
