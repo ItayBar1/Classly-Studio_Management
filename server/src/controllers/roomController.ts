@@ -36,7 +36,7 @@ export class RoomController {
 
     static async create(req: Request, res: Response, next: NextFunction) {
         const requestLog = req.logger || logger.child({ controller: 'RoomController', method: 'create' });
-        requestLog.info({ studioId: req.user.studio_id, roomData: req.body }, 'Controller entry');
+        requestLog.info({ body: req.body, studioId: req.user.studio_id }, 'Controller entry');
         try {
             const studioId = req.user.studio_id;
             const roomData = req.body;
@@ -51,7 +51,7 @@ export class RoomController {
 
     static async update(req: Request, res: Response, next: NextFunction) {
         const requestLog = req.logger || logger.child({ controller: 'RoomController', method: 'update' });
-        requestLog.info({ studioId: req.user.studio_id, roomId: req.params.id }, 'Controller entry');
+        requestLog.info({ params: req.params, body: req.body, studioId: req.user.studio_id }, 'Controller entry');
         try {
             const studioId = req.user.studio_id;
             const { id } = req.params;
