@@ -48,4 +48,39 @@ export class UserService {
     serviceLogger.info({ studioId: data.id }, 'Studio serial validated successfully');
     return data;
   }
+
+  /**
+   * SECURITY: Create a pending registration with validated studio_id
+   * This prevents clients from self-assigning to arbitrary studios via metadata
+   */
+  static async createPendingRegistration(email: string, studioId: string, invitationToken?: string) {
+    const serviceLogger = logger.child({ service: 'UserService', method: 'createPendingRegistration' });
+    serviceLogger.info({ email, studioId }, 'Creating pending registration with validated studio');
+
+    // Delete any existing unused pending registrations for this email
+    await supabaseAdmin
+      .from('pending_registrations')
+      .delete()
+      .eq('email', email)
+      .eq('used', false);
+
+    // Create new pending registration
+    const { data, error } = await supabaseAdmin
+      .from('pending_registrations')
+      .insert({
+        email,
+        studio_id: studioId,
+        invitation_token: invitationToken || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      serviceLogger.error({ err: error }, 'Failed to create pending registration');
+      throw new Error(`Error creating pending registration: ${error.message}`);
+    }
+
+    serviceLogger.info({ email, studioId }, 'Pending registration created successfully');
+    return data;
+  }
 }

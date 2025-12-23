@@ -14,6 +14,14 @@ const router = Router();
 router.get('/validate-studio/:serialNumber', UserController.validateStudio);
 
 /**
+ * @route   POST /api/users/prepare-registration
+ * @desc    Prepare registration by validating and storing studio_id server-side
+ * @access  Public
+ * SECURITY: This endpoint ensures studio_id is validated server-side before signup
+ */
+router.post('/prepare-registration', UserController.prepareRegistration);
+
+/**
  * @route   GET /api/users/invitations/:token
  * @desc    Validate an invitation token
  * @access  Public

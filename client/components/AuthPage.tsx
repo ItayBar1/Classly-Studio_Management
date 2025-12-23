@@ -107,25 +107,23 @@ export const AuthPage: React.FC = () => {
         if (error) throw error;
       } else {
         // Registration
-        let studioId = invitedStudio?.id || null;
-
-        // If regular registration (no token), validate studio serial manually
-        if (!inviteToken) {
-          try {
-            const validation = await UserService.validateStudio(studioSerial);
-            if (!validation.valid || !validation.studio) {
-              throw new Error('מספר סטודיו לא תקין. אנא וודא את המספר מול הסטודיו.');
-            }
-            studioId = validation.studio.id;
-          } catch (validationError: any) {
-            if (validationError.response && validationError.response.status === 404) {
-              throw new Error('לא נמצא סטודיו עם המספר הסידורי שהוזן.');
-            }
-            throw validationError;
+        // SECURITY FIX: Prepare registration server-side to validate studio_id
+        // This prevents clients from self-assigning to arbitrary studios
+        try {
+          await UserService.prepareRegistration(
+            email,
+            inviteToken ? undefined : studioSerial,
+            inviteToken || undefined
+          );
+        } catch (prepError: any) {
+          if (prepError.response && prepError.response.status === 404) {
+            throw new Error('לא נמצא סטודיו עם המספר הסידורי שהוזן.');
           }
+          throw new Error(prepError.response?.data?.error || 'שגיאה באימות הסטודיו.');
         }
 
         // 1. Sign up as STUDENT (Secure Default)
+        // Note: studio_id is no longer sent in metadata - it comes from pending_registrations
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -134,7 +132,7 @@ export const AuthPage: React.FC = () => {
               full_name: fullName,
               phone_number: phone,
               role: 'STUDENT',
-              studio_id: studioId
+              // studio_id is intentionally NOT included here for security
             },
           },
         });

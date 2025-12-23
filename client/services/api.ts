@@ -46,6 +46,14 @@ export const UserService = {
 
   // אימות סטודיו לפי מספר סידורי
   validateStudio: (serialNumber: string) => apiClient.get<{ valid: boolean; studio: { id: string; name: string } }>(`/users/validate-studio/${serialNumber}`).then(res => res.data),
+
+  // הכנת הרשמה עם אימות סטודיו (אבטחה)
+  // SECURITY: This validates studio server-side before signup
+  prepareRegistration: (email: string, serialNumber?: string, invitationToken?: string) => 
+    apiClient.post<{ success: boolean; message: string; pendingRegistrationId: string }>(
+      '/users/prepare-registration', 
+      { email, serialNumber, invitationToken }
+    ).then(res => res.data),
 };
 
 export const StudioService = {

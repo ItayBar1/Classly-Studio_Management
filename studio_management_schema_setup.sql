@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS public.enrollments CASCADE;
 DROP TABLE IF EXISTS public.classes CASCADE;
 DROP TABLE IF EXISTS public.categories CASCADE;
 DROP TABLE IF EXISTS public.users CASCADE;
+DROP TABLE IF EXISTS public.pending_registrations CASCADE;
 DROP TABLE IF EXISTS public.branches CASCADE;
 DROP TABLE IF EXISTS public.studios CASCADE;
 
@@ -62,6 +63,23 @@ CREATE TABLE IF NOT EXISTS public.branches (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- יצירת טבלת PENDING_REGISTRATIONS (אבטחה: אימות studio_id לפני הרשמה)
+-- טבלה זו מאחסנת studio_id מאומת לפני שהמשתמש מסיים הרשמה
+-- זה מונע מהלקוח לשלוח studio_id שרירותי ב-metadata
+CREATE TABLE IF NOT EXISTS public.pending_registrations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email VARCHAR(255) NOT NULL,
+  studio_id UUID NOT NULL REFERENCES public.studios(id) ON DELETE CASCADE,
+  invitation_token VARCHAR(500), -- אם ההרשמה באה מהזמנה
+  validated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  expires_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '1 hour'),
+  used BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- אינדקס לחיפוש מהיר לפי email
+CREATE INDEX IF NOT EXISTS idx_pending_registrations_email ON public.pending_registrations(email) WHERE NOT used;
 
 -- יצירת טבלת USERS
 CREATE TABLE IF NOT EXISTS public.users (
@@ -299,16 +317,43 @@ AS $$
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 -- פונקציה לטיפול בנרשמים חדשים
+-- SECURITY FIX: studio_id now comes from server-validated pending_registrations table
+-- instead of trusting client-supplied metadata, preventing unauthorized studio access
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
+  validated_studio_id UUID;
   default_studio_id UUID;
   user_role VARCHAR;
+  pending_reg_id UUID;
 BEGIN
-  IF NEW.raw_user_meta_data->>'studio_id' IS NULL THEN
-     SELECT id INTO default_studio_id FROM public.studios ORDER BY created_at ASC LIMIT 1;
+  -- SECURITY: Look up validated studio_id from pending_registrations table
+  -- This prevents attackers from self-assigning to arbitrary studios via metadata
+  SELECT id, studio_id INTO pending_reg_id, validated_studio_id
+  FROM public.pending_registrations
+  WHERE email = NEW.email
+    AND NOT used
+    AND expires_at > NOW()
+  ORDER BY created_at DESC
+  LIMIT 1;
+
+  -- If found, mark as used to prevent reuse
+  IF pending_reg_id IS NOT NULL THEN
+    UPDATE public.pending_registrations
+    SET used = true
+    WHERE id = pending_reg_id;
+  ELSE
+    -- Fallback: If no pending registration exists, use the oldest studio
+    -- This should rarely happen in production with proper registration flow
+    SELECT id INTO default_studio_id 
+    FROM public.studios 
+    ORDER BY created_at ASC 
+    LIMIT 1;
+    validated_studio_id := default_studio_id;
   END IF;
 
+  -- Security: Prevent users from self-assigning privileged roles via metadata
+  -- Only allow STUDENT or PARENT. Everything else defaults to STUDENT.
   IF (UPPER(NEW.raw_user_meta_data->>'role') IN ('ADMIN', 'INSTRUCTOR', 'SUPER_ADMIN')) THEN
       user_role := 'STUDENT';
   ELSE
@@ -331,7 +376,7 @@ BEGIN
     user_role,
     COALESCE(NEW.raw_user_meta_data->>'phone_number', NEW.raw_user_meta_data->>'phone', NEW.phone),
     'ACTIVE',
-    COALESCE((NEW.raw_user_meta_data->>'studio_id')::UUID, default_studio_id)
+    validated_studio_id
   );
   
   RETURN NEW;
@@ -375,6 +420,7 @@ ALTER TABLE public.classes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pending_registrations ENABLE ROW LEVEL SECURITY;
 
 
 -- ניקוי מדיניות ישנה
@@ -459,6 +505,16 @@ FOR SELECT USING (
   )
   -- סופר אדמין
   OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'SUPER_ADMIN'
+);
+
+-- Pending Registrations Policies
+-- SECURITY: These policies ensure only the backend service can manage pending registrations
+-- Users cannot see or manipulate this table directly
+CREATE POLICY "Service role can manage pending registrations" ON public.pending_registrations
+FOR ALL USING (
+  -- Only service role key (SECURITY DEFINER functions) can access
+  -- Regular users should never directly access this table
+  false
 );
 
 COMMIT;
