@@ -77,6 +77,10 @@ export class UserController {
         if (!invitation || !invitation.valid) {
           return res.status(400).json({ error: 'Invalid or expired invitation token' });
         }
+
+        if (!invitation.studioId) {
+             return res.status(400).json({ error: 'Invitation token is missing a valid Studio ID' });
+        }
         
         studioId = invitation.studioId;
       } 
