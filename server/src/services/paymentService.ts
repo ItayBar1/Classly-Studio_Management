@@ -70,8 +70,9 @@ export class PaymentService {
         currency: currency,
         payment_method: 'STRIPE',
         stripe_payment_intent_id: stripePaymentIntentId,
-        status: 'PENDING', // Pending approval via webhook or client
-        created_at: new Date()
+        status: 'PENDING',
+        created_at: new Date(),
+        due_date: new Date()
       }])
       .select()
       .single();
