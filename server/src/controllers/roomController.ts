@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { RoomService } from '../services/roomService';
-import { logger } from '../logger';
 
 export class RoomController {
 
