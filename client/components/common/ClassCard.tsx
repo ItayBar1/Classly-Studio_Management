@@ -33,7 +33,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [, setActiveMenuId] = useState<string | null>(null);
 
   // Close menu when clicking outside
   useEffect(() => {
