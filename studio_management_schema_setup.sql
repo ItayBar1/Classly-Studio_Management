@@ -15,8 +15,10 @@ DROP TABLE IF EXISTS public.users CASCADE;
 DROP TABLE IF EXISTS public.branches CASCADE;
 DROP TABLE IF EXISTS public.studios CASCADE;
 
--- ניקוי פונקציות ישנות (מונע שגיאות על שינוי שם פרמטרים)
+-- ניקוי פונקציות ישנות
 DROP FUNCTION IF EXISTS public.increment_enrollment(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.increment_enrollment_count(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.decrement_enrollment_count(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
 DROP FUNCTION IF EXISTS public.get_my_studio_id() CASCADE;
 
@@ -28,11 +30,10 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 ----------------------------------------------------------------
 
 -- יצירת טבלת STUDIOS
--- שינוי: הוספת serial_number, הסרת כתובת/מיקום (עבר ל-Branches)
 CREATE TABLE IF NOT EXISTS public.studios (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
-  serial_number VARCHAR(20) UNIQUE, -- מס' סידורי ייחודי לסטודיו
+  serial_number VARCHAR(20) UNIQUE,
   description TEXT,
   admin_id UUID NOT NULL, -- FK יוגדר בהמשך
   contact_email VARCHAR(255),
@@ -48,7 +49,7 @@ CREATE TABLE IF NOT EXISTS public.studios (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- יצירת טבלת BRANCHES (חדש!)
+-- יצירת טבלת BRANCHES
 CREATE TABLE IF NOT EXISTS public.branches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   studio_id UUID NOT NULL REFERENCES public.studios(id) ON DELETE CASCADE,
@@ -63,7 +64,6 @@ CREATE TABLE IF NOT EXISTS public.branches (
 );
 
 -- יצירת טבלת USERS
--- שינוי: הוספת SUPER_ADMIN ל-role
 CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email VARCHAR(255) NOT NULL UNIQUE,
@@ -106,11 +106,10 @@ CREATE TABLE IF NOT EXISTS public.categories (
 );
 
 -- CLASSES
--- שינוי: הוספת branch_id
 CREATE TABLE IF NOT EXISTS public.classes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   studio_id UUID NOT NULL REFERENCES public.studios(id) ON DELETE CASCADE,
-  branch_id UUID REFERENCES public.branches(id) ON DELETE SET NULL, -- שיוך לסניף
+  branch_id UUID REFERENCES public.branches(id) ON DELETE SET NULL,
   category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
   name VARCHAR(255) NOT NULL,
   description TEXT,
@@ -171,7 +170,7 @@ CREATE TABLE IF NOT EXISTS public.attendance (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- PAYMENTS
+-- PAYMENTS (עודכן עם שדות ל-Stripe)
 CREATE TABLE IF NOT EXISTS public.payments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   studio_id UUID NOT NULL REFERENCES public.studios(id) ON DELETE CASCADE,
@@ -179,10 +178,14 @@ CREATE TABLE IF NOT EXISTS public.payments (
   student_id UUID NOT NULL REFERENCES public.users(id),
   instructor_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
   amount_ils DECIMAL(10, 2) NOT NULL CHECK (amount_ils > 0),
+  amount_cents INTEGER, -- עבור Stripe
   currency VARCHAR(3) DEFAULT 'ILS',
-  payment_method VARCHAR(50) CHECK (payment_method IN ('CREDIT_CARD', 'BANK_TRANSFER', 'CHECK', 'CASH')),
+  -- הוספת STRIPE לרשימת הערכים המותרים
+  payment_method VARCHAR(50) CHECK (payment_method IN ('CREDIT_CARD', 'BANK_TRANSFER', 'CHECK', 'CASH', 'STRIPE')),
   transzilla_transaction_id VARCHAR(100),
-  status VARCHAR(20) CHECK (status IN ('PENDING', 'COMPLETED', 'FAILED', 'REFUNDED')) DEFAULT 'PENDING',
+  stripe_payment_intent_id VARCHAR(255), -- מזהה תשלום מ-Stripe
+  stripe_charge_id VARCHAR(255), -- מזהה חיוב סופי מ-Stripe
+  status VARCHAR(20) CHECK (status IN ('PENDING', 'COMPLETED', 'FAILED', 'REFUNDED', 'SUCCEEDED')) DEFAULT 'PENDING',
   invoice_number VARCHAR(50),
   invoice_url TEXT,
   due_date DATE NOT NULL,
@@ -295,23 +298,17 @@ AS $$
   SELECT studio_id FROM public.users WHERE id = auth.uid();
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
--- פונקציה לטיפול בנרשמים חדשים (הוספה לסטודיו דיפולטי)
+-- פונקציה לטיפול בנרשמים חדשים
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
   default_studio_id UUID;
   user_role VARCHAR;
 BEGIN
-  -- שליפת הסטודיו הדיפולטי (הראשון שנוצר)
-  -- הערה: במערכת מרובת סניפים וסטודיו, המשתמש צריך להירשם עם קוד סטודיו (serial_number).
-  -- כאן אנו משאירים לוגיקה בסיסית: אם יש studio_id במטא-דאטה, השתמש בו.
-  
   IF NEW.raw_user_meta_data->>'studio_id' IS NULL THEN
      SELECT id INTO default_studio_id FROM public.studios ORDER BY created_at ASC LIMIT 1;
   END IF;
 
-  -- Security: Prevent users from self-assigning privileged roles via metadata
-  -- Only allow STUDENT or PARENT. Everything else defaults to STUDENT.
   IF (UPPER(NEW.raw_user_meta_data->>'role') IN ('ADMIN', 'INSTRUCTOR', 'SUPER_ADMIN')) THEN
       user_role := 'STUDENT';
   ELSE
@@ -347,13 +344,23 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
--- פונקציה לעדכון מונה נרשמים
-CREATE OR REPLACE FUNCTION increment_enrollment(class_id_input UUID)
+-- פונקציה לעדכון מונה נרשמים (עודכן שם ופרמטר)
+CREATE OR REPLACE FUNCTION public.increment_enrollment_count(row_id UUID)
 RETURNS VOID AS $$
 BEGIN
   UPDATE public.classes
   SET current_enrollment = COALESCE(current_enrollment, 0) + 1
-  WHERE id = class_id_input;
+  WHERE id = row_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- פונקציה להפחתת מונה נרשמים (חדש!)
+CREATE OR REPLACE FUNCTION public.decrement_enrollment_count(row_id UUID)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE public.classes
+  SET current_enrollment = GREATEST(COALESCE(current_enrollment, 0) - 1, 0)
+  WHERE id = row_id;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -429,6 +436,12 @@ FOR SELECT USING (
   OR class_id IN (SELECT id FROM public.classes WHERE instructor_id = auth.uid())
 );
 
+CREATE POLICY "Students can insert their own enrollments" ON public.enrollments
+FOR INSERT WITH CHECK (
+    student_id = auth.uid()
+    AND studio_id = public.get_my_studio_id()
+);
+
 -- Attendance Policies
 CREATE POLICY "View attendance based on role" ON public.attendance
 FOR SELECT USING (
@@ -447,13 +460,5 @@ FOR SELECT USING (
   -- סופר אדמין
   OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'SUPER_ADMIN'
 );
-
-CREATE POLICY "Students can insert their own enrollments" ON public.enrollments
-FOR INSERT WITH CHECK (
-    student_id = auth.uid()
-    AND studio_id = public.get_my_studio_id()
-);
-
-
 
 COMMIT;
