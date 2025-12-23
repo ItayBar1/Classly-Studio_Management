@@ -69,6 +69,7 @@ export class UserController {
 
     try {
       let studioId: string;
+      let invitationRole: 'ADMIN' | 'INSTRUCTOR' | 'SUPER_ADMIN' | undefined;
 
       // If there's an invitation token, validate it and get studio from there
       if (invitationToken) {
@@ -83,6 +84,7 @@ export class UserController {
         }
         
         studioId = invitation.studioId;
+        invitationRole = invitation.role as 'ADMIN' | 'INSTRUCTOR' | 'SUPER_ADMIN';
       } 
       // Otherwise, validate the studio serial number
       else if (serialNumber) {
@@ -97,8 +99,8 @@ export class UserController {
         return res.status(400).json({ error: 'Either serialNumber or invitationToken is required' });
       }
 
-      // Create pending registration with validated studio_id
-      const pendingReg = await UserService.createPendingRegistration(email, studioId, invitationToken);
+      // Create pending registration with validated studio_id and role (if from invitation)
+      const pendingReg = await UserService.createPendingRegistration(email, studioId, invitationToken, invitationRole);
 
       requestLog.info({ email, studioId }, 'Registration prepared successfully');
       res.status(200).json({ 

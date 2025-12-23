@@ -53,9 +53,14 @@ export class UserService {
    * SECURITY: Create a pending registration with validated studio_id
    * This prevents clients from self-assigning to arbitrary studios via metadata
    */
-  static async createPendingRegistration(email: string, studioId: string, invitationToken?: string) {
+  static async createPendingRegistration(
+    email: string, 
+    studioId: string, 
+    invitationToken?: string, 
+    role?: 'ADMIN' | 'INSTRUCTOR' | 'SUPER_ADMIN'
+  ) {
     const serviceLogger = logger.child({ service: 'UserService', method: 'createPendingRegistration' });
-    serviceLogger.info({ email, studioId }, 'Creating pending registration with validated studio');
+    serviceLogger.info({ email, studioId, role }, 'Creating pending registration with validated studio');
 
     // Delete any existing unused pending registrations for this email
     const { error: deleteError } = await supabaseAdmin
@@ -76,6 +81,7 @@ export class UserService {
         email,
         studio_id: studioId,
         invitation_token: invitationToken || null,
+        role: role || null,
       })
       .select()
       .single();
@@ -85,7 +91,7 @@ export class UserService {
       throw new Error(`Error creating pending registration: ${error.message}`);
     }
 
-    serviceLogger.info({ email, studioId }, 'Pending registration created successfully');
+    serviceLogger.info({ email, studioId, role }, 'Pending registration created successfully');
     return data;
   }
 }
