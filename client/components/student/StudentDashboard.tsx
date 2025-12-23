@@ -70,7 +70,7 @@ export const StudentDashboard: React.FC = () => {
                 <CheckCircle size={12} /> רשום
               </div>
               {/* מעבירים את הקורס המלא לקומפוננטה */}
-              <CourseCard course={course} onRegister={() => {}} />
+              <CourseCard course={course} onRegister={() => {}} hideButton={true} />
             </div>
           ))}
         </div>

@@ -15,13 +15,15 @@ const DAY_MAP: Record<number, string> = {
 interface CourseCardProps {
   course: any;
   onRegister: (course: any) => void;
-  isEnrolled?: boolean; // פרופ אופציונלי חדש
+  isEnrolled?: boolean;
+  hideButton?: boolean;
 }
 
 export const CourseCard: React.FC<CourseCardProps> = ({
   course,
   onRegister,
   isEnrolled = false,
+  hideButton = false,
 }) => {
   // חישוב מקומות פנויים
   const spotsLeft = course.max_capacity - (course.current_enrollment || 0);
@@ -72,7 +74,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           </div>
         </div>
 
-        <button
+        {!hideButton && (<button
           onClick={() => onRegister(course)}
           disabled={isFull || isEnrolled} // נטרול אם מלא או רשום
           className={`w-full py-2.5 rounded-lg font-bold transition-colors ${
@@ -88,7 +90,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             : isFull
             ? "הרשמה נסגרה"
             : "הרשמה ותשלום"}
-        </button>
+        </button>)}
       </div>
     </div>
   );
