@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { InvitationService } from '../../services/api';
-import { Loader2, Copy, Check, Briefcase, UserPlus } from 'lucide-react';
+import { Copy, Check, Briefcase, UserPlus } from 'lucide-react';
 
 export const PlatformAdministration: React.FC = () => {
     const [inviteLink, setInviteLink] = useState<string | null>(null);
