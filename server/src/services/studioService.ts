@@ -11,6 +11,11 @@ export interface CreateStudioDTO {
 
 export class StudioService {
 
+    // Helper method for exponential backoff
+    private static sleep(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     // Create a new studio + default branch + update user
     static async createStudio(adminId: string, data: CreateStudioDTO) {
         // 1. Check if user already has a studio
@@ -24,25 +29,45 @@ export class StudioService {
             throw new Error('User already has a studio');
         }
 
-        // 2. Generate a unique 6-digit serial number
-        // We try a loop to ensure uniqueness, though collision prob is low for 6 digits
+        // 2. Generate a unique serial number with hybrid approach
+        // Format: YYMMDD-XXXX where YYMMDD is date-based and XXXX is random
+        // This reduces collision probability significantly
         let serialNumber = '';
         let isUnique = false;
+        const maxAttempts = 10;
         let attempts = 0;
 
-        while (!isUnique && attempts < 5) {
-            serialNumber = Math.floor(100000 + Math.random() * 900000).toString();
+        while (!isUnique && attempts < maxAttempts) {
+            // Use date-based prefix for better distribution
+            const now = new Date();
+            const datePrefix = now.toISOString().slice(2, 10).replace(/-/g, ''); // YYMMDD format
+            const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit random
+            serialNumber = `${datePrefix}-${randomSuffix}`;
+
             const { data: collision } = await supabaseAdmin
                 .from('studios')
                 .select('id')
                 .eq('serial_number', serialNumber)
                 .single();
 
-            if (!collision) isUnique = true;
-            attempts++;
+            if (!collision) {
+                isUnique = true;
+            } else {
+                attempts++;
+                // Exponential backoff: wait before retry to reduce database load
+                if (attempts < maxAttempts) {
+                    const delay = Math.pow(2, attempts) * 100;
+                    await this.sleep(delay);
+                }
+            }
         }
 
-        if (!isUnique) throw new Error('Failed to generate unique serial number');
+        if (!isUnique) {
+            throw new Error(
+                'Unable to generate a unique studio serial number after multiple attempts. ' +
+                'Please try again in a moment. If the problem persists, contact support.'
+            );
+        }
 
         // 3. Create Studio
         const { data: studio, error: createError } = await supabaseAdmin
