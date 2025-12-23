@@ -62,8 +62,8 @@ export class EnrollmentService {
     }
 
     // --- FREE COURSE LOGIC ---
-    // If price is 0, force status to ACTIVE and PAID regardless of input
-    const isFree = course.price_ils === 0;
+    // If price is 0 or null, force status to ACTIVE and PAID regardless of input
+    const isFree = course.price_ils === 0 || course.price_ils === null;
     const finalStatus = isFree ? "ACTIVE" : status;
     const finalPaymentStatus = isFree ? "PAID" : paymentStatus;
     // -------------------------
