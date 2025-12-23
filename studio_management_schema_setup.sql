@@ -528,7 +528,8 @@ FOR UPDATE USING (
 CREATE POLICY "Users can view relevant enrollments" ON public.enrollments
 FOR SELECT USING (
   student_id = auth.uid()
-  OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('ADMIN', 'SUPER_ADMIN')
+  OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'SUPER_ADMIN'
+  OR ((SELECT role FROM public.users WHERE id = auth.uid()) = 'ADMIN' AND studio_id = public.get_my_studio_id())
   OR class_id IN (SELECT id FROM public.classes WHERE instructor_id = auth.uid())
 );
 
