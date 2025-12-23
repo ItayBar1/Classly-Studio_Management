@@ -31,7 +31,6 @@ export const Administration: React.FC = () => {
     // Branch Management State
     const [isbranchModalOpen, setIsBranchModalOpen] = useState(false);
     const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
-    const [branchForm, setBranchForm] = useState<Partial<Branch>>({ name: '', address: '', city: '', phone_number: '', is_active: true });
 
 
 
