@@ -365,6 +365,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- פונקציה ליצירת סטודיו עם טרנזקציה אטומית
+-- Function to create studio with atomic transaction
 CREATE OR REPLACE FUNCTION public.create_studio_with_transaction(
   p_admin_id UUID,
   p_name VARCHAR(255),

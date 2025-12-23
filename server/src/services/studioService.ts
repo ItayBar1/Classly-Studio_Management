@@ -28,7 +28,7 @@ export class StudioService {
         if (error) throw error;
 
         if (!result || result.length === 0) {
-            throw new Error('Failed to create studio');
+            throw new Error('Studio creation returned no data. The operation may have failed.');
         }
 
         // The RPC function returns studio and branch information
