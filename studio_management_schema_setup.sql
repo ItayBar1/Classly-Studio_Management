@@ -354,10 +354,10 @@ BEGIN
 
   -- Security: Prevent users from self-assigning privileged roles via metadata
   -- Only allow STUDENT or PARENT. Everything else defaults to STUDENT.
-  IF (UPPER(NEW.raw_user_meta_data->>'role') IN ('ADMIN', 'INSTRUCTOR', 'SUPER_ADMIN')) THEN
-      user_role := 'STUDENT';
+  IF (UPPER(NEW.raw_user_meta_data->>'role') IN ('STUDENT', 'PARENT')) THEN
+      user_role := UPPER(NEW.raw_user_meta_data->>'role');
   ELSE
-      user_role := COALESCE(UPPER(NEW.raw_user_meta_data->>'role'), 'STUDENT');
+      user_role := 'STUDENT';
   END IF;
 
   INSERT INTO public.users (
@@ -406,6 +406,100 @@ BEGIN
   UPDATE public.classes
   SET current_enrollment = GREATEST(COALESCE(current_enrollment, 0) - 1, 0)
   WHERE id = row_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- פונקציה ליצירת סטודיו עם טרנזקציה אטומית
+-- Function to create studio with atomic transaction
+CREATE OR REPLACE FUNCTION public.create_studio_with_transaction(
+  p_admin_id UUID,
+  p_name VARCHAR(255),
+  p_description TEXT DEFAULT NULL,
+  p_contact_email VARCHAR(255) DEFAULT NULL,
+  p_contact_phone VARCHAR(20) DEFAULT NULL,
+  p_website_url TEXT DEFAULT NULL
+)
+RETURNS TABLE(
+  studio_id UUID,
+  studio_name VARCHAR(255),
+  serial_number VARCHAR(20),
+  branch_id UUID,
+  branch_name VARCHAR(255)
+) AS $$
+DECLARE
+  v_serial_number VARCHAR(20);
+  v_studio_id UUID;
+  v_branch_id UUID;
+  v_attempts INTEGER := 0;
+  v_is_unique BOOLEAN := FALSE;
+BEGIN
+  -- 1. Check if user already has a studio
+  IF EXISTS (SELECT 1 FROM public.studios WHERE admin_id = p_admin_id) THEN
+    RAISE EXCEPTION 'User already has a studio';
+  END IF;
+
+  -- 2. Generate a unique 6-digit serial number
+  WHILE NOT v_is_unique AND v_attempts < 5 LOOP
+    v_serial_number := LPAD(FLOOR(100000 + RANDOM() * 900000)::TEXT, 6, '0');
+    
+    IF NOT EXISTS (SELECT 1 FROM public.studios WHERE public.studios.serial_number = v_serial_number) THEN
+      v_is_unique := TRUE;
+    END IF;
+    
+    v_attempts := v_attempts + 1;
+  END LOOP;
+
+  IF NOT v_is_unique THEN
+    RAISE EXCEPTION 'Failed to generate unique serial number after % attempts', v_attempts;
+  END IF;
+
+  -- 3. Create Studio (all within same transaction)
+  INSERT INTO public.studios (
+    admin_id,
+    name,
+    serial_number,
+    description,
+    contact_email,
+    contact_phone,
+    website_url
+  )
+  VALUES (
+    p_admin_id,
+    p_name,
+    v_serial_number,
+    p_description,
+    p_contact_email,
+    p_contact_phone,
+    p_website_url
+  )
+  RETURNING id INTO v_studio_id;
+
+  -- 4. Create Default Branch
+  INSERT INTO public.branches (
+    studio_id,
+    name,
+    is_active
+  )
+  VALUES (
+    v_studio_id,
+    'Main Branch',
+    true
+  )
+  RETURNING id INTO v_branch_id;
+
+  -- 5. Update Admin User to link to this studio
+  UPDATE public.users
+  SET studio_id = v_studio_id
+  WHERE id = p_admin_id;
+
+  -- 6. Return the created studio and branch information
+  RETURN QUERY
+  SELECT 
+    v_studio_id,
+    p_name,
+    v_serial_number,
+    v_branch_id,
+    'Main Branch'::VARCHAR(255);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -478,7 +572,8 @@ FOR UPDATE USING (
 CREATE POLICY "Users can view relevant enrollments" ON public.enrollments
 FOR SELECT USING (
   student_id = auth.uid()
-  OR (SELECT role FROM public.users WHERE id = auth.uid()) IN ('ADMIN', 'SUPER_ADMIN')
+  OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'SUPER_ADMIN'
+  OR ((SELECT role FROM public.users WHERE id = auth.uid()) = 'ADMIN' AND studio_id = public.get_my_studio_id())
   OR class_id IN (SELECT id FROM public.classes WHERE instructor_id = auth.uid())
 );
 
