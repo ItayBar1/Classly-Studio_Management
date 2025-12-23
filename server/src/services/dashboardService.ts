@@ -5,7 +5,22 @@ import { logger } from "../logger";
 const getNextClassDate = (dayOfWeek: number, startTime: string): Date => {
   const now = new Date();
   const currentDay = now.getDay(); // 0 = Sunday
-  const [hours, minutes] = startTime.split(":").map(Number);
+  const timeMatch = /^(\d{1,2}):(\d{2})$/.exec(startTime.trim());
+  if (!timeMatch) {
+    throw new Error(`Invalid startTime format (expected HH:MM): "${startTime}"`);
+  }
+  const hours = Number(timeMatch[1]);
+  const minutes = Number(timeMatch[2]);
+  if (
+    Number.isNaN(hours) ||
+    Number.isNaN(minutes) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    throw new Error(`Invalid startTime value (out of range): "${startTime}"`);
+  }
 
   let daysUntil = dayOfWeek - currentDay;
 
