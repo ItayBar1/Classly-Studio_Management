@@ -46,6 +46,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   // אפקט חדש לרענון נתונים בעת מעבר ללשונית זו
   useEffect(() => {
     if (activeTab === "dashboard") {
+      setLoading(true);
       fetchEnrolled();
     }
   }, [activeTab]);
