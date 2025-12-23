@@ -164,6 +164,20 @@ export class EnrollmentController {
             { err: rollbackError, enrollmentId: createdEnrollmentId },
             "CRITICAL: Failed to rollback enrollment after error"
           );
+
+          // Attach rollback failure information to the original error
+          if (error && typeof error === "object") {
+            (error as any).rollbackFailed = true;
+            (error as any).rollbackError = rollbackError;
+            (error as any).rollbackEnrollmentId = createdEnrollmentId;
+          } else {
+            error = {
+              originalError: error,
+              rollbackFailed: true,
+              rollbackError,
+              rollbackEnrollmentId: createdEnrollmentId,
+            };
+          }
         }
       }
       // ----------------------
