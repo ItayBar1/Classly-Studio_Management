@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS public.pending_registrations (
   email VARCHAR(255) NOT NULL,
   studio_id UUID NOT NULL REFERENCES public.studios(id) ON DELETE CASCADE,
   invitation_token VARCHAR(500), -- אם ההרשמה באה מהזמנה
+  role VARCHAR(20), -- תפקיד מהזמנה (ADMIN, INSTRUCTOR) - NULL for regular registrations
   validated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   expires_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '1 hour'),
   used BOOLEAN DEFAULT false,
@@ -326,10 +327,11 @@ DECLARE
   default_studio_id UUID;
   user_role VARCHAR;
   pending_reg_id UUID;
+  pending_reg_role VARCHAR;
 BEGIN
-  -- SECURITY: Look up validated studio_id from pending_registrations table
+  -- SECURITY: Look up validated studio_id and role from pending_registrations table
   -- This prevents attackers from self-assigning to arbitrary studios via metadata
-  SELECT id, studio_id INTO pending_reg_id, validated_studio_id
+  SELECT id, studio_id, role INTO pending_reg_id, validated_studio_id, pending_reg_role
   FROM public.pending_registrations
   WHERE email = NEW.email
     AND NOT used
@@ -352,12 +354,16 @@ BEGIN
     validated_studio_id := default_studio_id;
   END IF;
 
-  -- Security: Prevent users from self-assigning privileged roles via metadata
+  -- Security: Determine user role based on invitation or metadata
+  -- If user registered via invitation token, use the role from pending_registrations
+  IF pending_reg_role IS NOT NULL AND pending_reg_role IN ('ADMIN', 'INSTRUCTOR', 'SUPER_ADMIN') THEN
+    user_role := pending_reg_role;
+  -- Otherwise, prevent users from self-assigning privileged roles via metadata
   -- Only allow STUDENT or PARENT. Everything else defaults to STUDENT.
-  IF (UPPER(NEW.raw_user_meta_data->>'role') IN ('STUDENT', 'PARENT')) THEN
-      user_role := UPPER(NEW.raw_user_meta_data->>'role');
+  ELSIF (UPPER(NEW.raw_user_meta_data->>'role') IN ('STUDENT', 'PARENT')) THEN
+    user_role := UPPER(NEW.raw_user_meta_data->>'role');
   ELSE
-      user_role := 'STUDENT';
+    user_role := 'STUDENT';
   END IF;
 
   INSERT INTO public.users (
