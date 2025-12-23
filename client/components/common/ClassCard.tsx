@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from "react";
 import {
   Clock,
-  Users,
+  Calendar,
   MapPin,
-  MoreHorizontal,
-  Edit,
-  Trash2,
 } from "lucide-react";
 
 interface ClassSession {
@@ -93,13 +90,20 @@ export const ClassCard: React.FC<ClassCardProps> = ({
       ></div>
 
       <div className="flex flex-col gap-4">
-        {/* שורה עליונה: זמן וכותרת */}
+        {/* שורה עליונה: זמן, כותרת ויום */}
         <div className="flex justify-between items-start gap-2">
           <div className="min-w-0">
+            {/* הצגת היום בשבוע - חדש! */}
+            <div className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 uppercase tracking-wider mb-1">
+              <Calendar size={12} />
+              {/* @ts-ignore - נניח שהעברנו dayName מהאבא */}
+              <span>יום {session.dayName}</span>
+            </div>
+
             <h3 className="text-lg font-bold text-slate-800 truncate">
               {session.name}
             </h3>
-            <div className="flex items-center gap-2 text-indigo-600 font-semibold text-sm mt-1">
+            <div className="flex items-center gap-2 text-slate-500 font-semibold text-sm mt-1">
               <Clock size={14} />
               <span>{session.startTime}</span>
               <span className="text-slate-400 font-normal">

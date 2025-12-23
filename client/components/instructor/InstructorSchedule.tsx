@@ -32,17 +32,19 @@ export const InstructorSchedule: React.FC = () => {
             const start = new Date(`${today}T${startStr}`);
             const end = new Date(`${today}T${endStr}`);
             const duration = (end.getTime() - start.getTime()) / 60000;
-            const instructorName = cls.instructor?.full_name || "אני";
+            const dayOfWeekIndex = cls.day_of_week;
 
             return {
               id: cls.id,
               name: cls.name,
-              instructor: instructorName,
-              // הוספת האות הראשונה לעיגול הפרופיל
-              instructorAvatar: instructorName.charAt(0).toUpperCase(),
+              instructor: cls.instructor?.full_name || "אני",
+              instructorAvatar: (cls.instructor?.full_name || "א")
+                .charAt(0)
+                .toUpperCase(),
               startTime: startStr.substring(0, 5),
               duration: duration,
-              dayOfWeek: cls.day_of_week,
+              dayOfWeek: dayOfWeekIndex,
+              dayName: days[dayOfWeekIndex],
               students: cls.current_enrollment || 0,
               capacity: cls.max_capacity,
               level: cls.level,
