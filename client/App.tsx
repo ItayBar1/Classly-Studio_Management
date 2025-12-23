@@ -206,7 +206,7 @@ function App() {
       />
 
       <main className="flex-1 md:mr-64 p-4 sm:p-8">
-        <header className="flex justify-between items-center mb-8">
+        <header className="flex justify-end items-center mb-8">
           {/* Hamburger Menu - visible only on small screens */}
           <button onClick={() => setIsDrawerOpen(true)} className="md:hidden p-2 text-slate-600 hover:text-indigo-600">
             <Menu size={24} />
