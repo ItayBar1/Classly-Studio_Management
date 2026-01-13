@@ -21,7 +21,7 @@ const ISSUER = 'classly-backend';
 const AUDIENCE = 'classly-users';
 
 const JWT_OPTIONS: jwt.SignOptions = {
-    expiresIn: '7d',
+    expiresIn: '3d',
     issuer: ISSUER,
     audience: AUDIENCE
 };
@@ -35,8 +35,11 @@ export class InvitationService {
     ) {
         logger.info({ creatorId, role, studioId }, 'Creating invitation token');
 
+        // Generic logic: studioId is strictly for INSTRUCTOR invites in this flow
+        const payloadStudioId = role === 'INSTRUCTOR' ? studioId : null;
+
         // Simple, clean payload object
-        const claims: InvitationClaims = { role, studioId, creatorId };
+        const claims: InvitationClaims = { role, studioId: payloadStudioId, creatorId };
 
         // Sign the token
         const token = jwt.sign(claims, JWT_SECRET, JWT_OPTIONS);
@@ -44,7 +47,7 @@ export class InvitationService {
         return {
             token,
             ...claims,
-            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+            expires_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) // 3 days
         };
     }
 
@@ -60,7 +63,7 @@ export class InvitationService {
             }) as InvitationClaims & jwt.JwtPayload;
 
             let studio = null;
-            if (decoded.studioId) {
+            if (decoded.studioId && decoded.role == 'INSTRUCTOR') {
                 const { data } = await supabaseAdmin
                     .from('studios')
                     .select('name, serial_number')
@@ -87,10 +90,18 @@ export class InvitationService {
 
         const { role, studioId } = invitation;
 
+        // Prepare user updates
+        const userUpdates: any = { role };
+
+        // Only update studio_id if it is part of the invitation (e.g. for INSTRUCTORS)
+        if (studioId) {
+            userUpdates.studio_id = studioId;
+        }
+
         // 1. Update public.users
         const { error: publicError } = await supabaseAdmin
             .from('users')
-            .update({ role, studio_id: studioId })
+            .update(userUpdates)
             .eq('id', userId);
 
         if (publicError) {
@@ -99,9 +110,14 @@ export class InvitationService {
         }
 
         // 2. Update auth.users metadata (for session consistency)
+        const metadataUpdates: any = { role };
+        if (studioId) {
+            metadataUpdates.studio_id = studioId;
+        }
+
         const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
             userId,
-            { user_metadata: { role, studio_id: studioId } }
+            { user_metadata: metadataUpdates }
         );
 
         if (authError) {

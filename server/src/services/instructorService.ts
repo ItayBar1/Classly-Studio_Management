@@ -1,8 +1,8 @@
-import { supabaseAdmin as supabase} from '../config/supabase';
+import { supabaseAdmin as supabase } from '../config/supabase';
 import { logger } from '../logger';
 
 export class InstructorService {
-    
+
     /**
      * Get all instructors for a specific studio
      */
@@ -12,7 +12,7 @@ export class InstructorService {
         const { data, error } = await supabase
             .from('users')
             .select('id, full_name, email, phone_number, profile_image_url, status, created_at')
-            .eq('role', 'INSTRUCTOR')
+            .in('role', ['INSTRUCTOR', 'ADMIN'])
             .eq('studio_id', studioId); // Filter by studio
 
         if (error) {

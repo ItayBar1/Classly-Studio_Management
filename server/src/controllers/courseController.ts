@@ -3,7 +3,7 @@ import { CourseService } from '../services/courseService';
 import { logger } from '../logger';
 
 export class CourseController {
-  
+
   // Get all courses (optional filters)
   static async getAll(req: Request, res: Response, next: NextFunction) {
     const requestLog = req.logger || logger.child({ controller: 'CourseController', method: 'getAll' });
@@ -11,9 +11,10 @@ export class CourseController {
     try {
       // Students see only active courses; admins see all
       const userRole = req.user?.role;
+      const studioId = req.user?.studio_id;
       const filters = req.query;
 
-      const courses = await CourseService.getAllCourses(userRole, filters);
+      const courses = await CourseService.getAllCourses(studioId, userRole, filters);
       requestLog.info({ count: courses?.length }, 'Fetched courses successfully');
       res.json(courses);
     } catch (error: any) {
@@ -120,17 +121,17 @@ export class CourseController {
   // Enrollment-related functions can move to Student/Enrollment controllers if needed
   // Enrollment currently handled via studentRoutes or dedicated routes; kept for backward compatibility
   static async getEnrolledCourses(req: Request, res: Response, next: NextFunction) {
-      const requestLog = req.logger || logger.child({ controller: 'CourseController', method: 'getEnrolledCourses' });
-      requestLog.info({ userId: req.user.id }, 'Controller entry');
-      // Placeholder until StudentController handles this per PRD
-      try {
-          const studentId = req.user.id;
-          // Redirect to StudentController logic when implemented
-          requestLog.info({ studentId }, 'Redirecting to StudentController behavior');
-          res.json({ message: "Moved to StudentController" });
-      } catch (error: any) {
-          requestLog.error({ err: error }, 'Error fetching enrolled courses');
-          next(error);
-      }
+    const requestLog = req.logger || logger.child({ controller: 'CourseController', method: 'getEnrolledCourses' });
+    requestLog.info({ userId: req.user.id }, 'Controller entry');
+    // Placeholder until StudentController handles this per PRD
+    try {
+      const studentId = req.user.id;
+      // Redirect to StudentController logic when implemented
+      requestLog.info({ studentId }, 'Redirecting to StudentController behavior');
+      res.json({ message: "Moved to StudentController" });
+    } catch (error: any) {
+      requestLog.error({ err: error }, 'Error fetching enrolled courses');
+      next(error);
+    }
   }
 }

@@ -10,16 +10,17 @@ export class CourseService {
   /**
    * Get all courses with optional filters
    */
-  static async getAllCourses(userRole?: string, filters: CourseFilters = {}) {
+  static async getAllCourses(studioId: string, userRole?: string, filters: CourseFilters = {}) {
     const serviceLogger = logger.child({
       service: "CourseService",
       method: "getAllCourses",
     });
-    serviceLogger.info({ userRole, filters }, "Fetching all courses");
+    serviceLogger.info({ studioId, userRole, filters }, "Fetching all courses");
 
     let query = supabaseAdmin
       .from("classes")
-      .select("*, instructor:users(full_name)");
+      .select("*, instructor:users(full_name)")
+      .eq("studio_id", studioId);
 
     // If student, only show active courses
     if (userRole === "STUDENT") {
@@ -50,12 +51,24 @@ export class CourseService {
       method: "getAvailableForStudent",
     });
     serviceLogger.info({ studentId }, "Fetching available courses for student");
-    // Fetch active courses.
-    // Future improvement: filter out courses the student is already enrolled in
+    // 1. Get student's studio_id
+    const { data: student, error: studentError } = await supabaseAdmin
+      .from("users")
+      .select("studio_id")
+      .eq("id", studentId)
+      .single();
+
+    if (studentError || !student) {
+      serviceLogger.error({ err: studentError }, "Failed to fetch student for available courses");
+      throw new Error("Student not found");
+    }
+
+    // 2. Fetch active courses for that studio
     const { data, error } = await supabaseAdmin
       .from("classes")
       .select("*, instructor:users(full_name)")
-      .eq("is_active", true); // תביא את כל הפעילים
+      .eq("studio_id", student.studio_id)
+      .eq("is_active", true);
 
     if (error) throw error;
 
