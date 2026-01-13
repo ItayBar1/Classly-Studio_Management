@@ -1,63 +1,58 @@
-import React, { useState, useEffect } from 'react';
-import { UserService, StudioService, BranchService, RoomService } from '../../../services/api';
+import React, { useState } from 'react';
 import { Loader2, Building, MapPin } from 'lucide-react';
-import { Studio, Branch, User, Room } from '../../../types/types';
 
 import { StudioDetailsTab } from './tabs/StudioDetailsTab';
 import { BranchManagementTab } from './tabs/BranchManagementTab';
 import { TeamManagementTab } from './tabs/TeamManagementTab';
 
+import { useGetMyStudioQuery, useCreateStudioMutation } from '@/store/api/studioApi';
+import { useGetBranchesQuery, useGetRoomsQuery } from '@/store/api/branchApi';
+import { useGetInstructorsQuery } from '@/store/api/userApi';
+
 export const Administration: React.FC = () => {
-    const [loading, setLoading] = useState(true);
-    const [studio, setStudio] = useState<Studio | null>(null);
-    const [branches, setBranches] = useState<Branch[]>([]);
-    const [rooms, setRooms] = useState<Room[]>([]);
-    const [instructors, setInstructors] = useState<User[]>([]);
+    // Redux Queries
+    const {
+        data: studio,
+        isLoading: isStudioLoading,
+        error: studioError,
+        refetch: refetchStudio
+    } = useGetMyStudioQuery();
+
+    const hasStudio = !!studio;
+
+    // Only fetch related data if studio exists
+    const {
+        data: branches = [],
+        refetch: refetchBranches
+    } = useGetBranchesQuery(undefined, { skip: !hasStudio });
+
+    const {
+        data: rooms = [],
+        refetch: refetchRooms
+    } = useGetRoomsQuery(undefined, { skip: !hasStudio });
+
+    const {
+        data: instructors = [],
+        refetch: refetchInstructors
+    } = useGetInstructorsQuery(undefined, { skip: !hasStudio });
+
+    const [createStudio, { isLoading: isCreating }] = useCreateStudioMutation();
 
     const [activeTab, setActiveTab] = useState<'details' | 'team' | 'branches'>('details');
 
-    // Create Mode (New Studio Onboarding)
+    // Create Mode State
     const [createForm, setCreateForm] = useState({
         name: '', description: '', contact_email: '', contact_phone: '', website_url: '',
         branchName: 'Main Branch', branchAddress: '', branchCity: '', branchPhone: ''
     });
     const [createError, setCreateError] = useState<string | null>(null);
 
-    const fetchData = async () => {
-        try {
-            const studioData = await StudioService.getMyStudio();
-            setStudio(studioData);
-
-            // Load branches
-            const branchesData = await BranchService.getAll();
-            setBranches(branchesData);
-
-            // Load Rooms
-            const roomsData = await RoomService.getAll();
-            setRooms(roomsData);
-
-            // Load Instructors
-            const instructorsData = await UserService.getInstructors();
-            setInstructors(instructorsData);
-
-        } catch (err: any) {
-            if (err.response && err.response.status === 404) {
-                setStudio(null); // Show create form
-            } else {
-                console.error('Failed to load data', err);
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, []);
+    // Initial Loading State
+    if (isStudioLoading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin text-indigo-600" /></div>;
 
     const handleCreateStudio = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
+        setCreateError(null);
         try {
             const payload = {
                 name: createForm.name,
@@ -72,19 +67,18 @@ export const Administration: React.FC = () => {
                     phone_number: createForm.branchPhone
                 }
             };
-            await StudioService.create(payload);
-            await fetchData();
+            await createStudio(payload).unwrap();
+            // Automatically refetches due to 'Studio' tag invalidation
         } catch (err: any) {
-            setCreateError(err.response?.data?.error || err.message || 'שגיאה ביצירת הסטודיו');
-        } finally {
-            setLoading(false);
+            setCreateError(err.data?.error || err.message || 'שגיאה ביצירת הסטודיו');
         }
     };
 
-    if (loading && !studio && !createForm.name) return <div className="flex justify-center p-8"><Loader2 className="animate-spin text-indigo-600" /></div>;
+    // Check if 404 error (Studio not found)
+    const isNotFound = studioError && 'status' in studioError && studioError.status === 404;
 
     // View 1: Create Studio Form (Onboarding)
-    if (!studio) {
+    if (!studio && isNotFound) {
         return (
             <div className="max-w-3xl mx-auto py-8">
                 <div className="bg-white p-8 rounded-xl shadow-lg border border-indigo-100">
@@ -139,12 +133,17 @@ export const Administration: React.FC = () => {
 
                         {createError && <div className="text-red-500 text-sm">{createError}</div>}
 
-                        <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition">צור את הסטודיו שלי</button>
+                        <button type="submit" disabled={isCreating} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition flex justify-center">
+                            {isCreating ? <Loader2 className="animate-spin" /> : 'צור את הסטודיו שלי'}
+                        </button>
                     </form>
                 </div>
             </div>
         );
     }
+
+    if (studioError) return <div className="text-red-500 text-center p-8">שגיאה בטעינת הנתונים. נסה לרענן.</div>;
+    if (!studio) return null; // Should be handled by isStudioLoading or isNotFound
 
     // View 2: Existing Studio Management
     return (
@@ -167,11 +166,11 @@ export const Administration: React.FC = () => {
 
             {/* Tabs Content */}
             {activeTab === 'details' && (
-                <StudioDetailsTab studio={studio} onUpdate={fetchData} />
+                <StudioDetailsTab studio={studio} onUpdate={refetchStudio} />
             )}
 
             {activeTab === 'branches' && (
-                <BranchManagementTab branches={branches} rooms={rooms} onRefresh={fetchData} />
+                <BranchManagementTab branches={branches} rooms={rooms} onRefresh={() => { refetchBranches(); refetchRooms(); }} />
             )}
 
             {activeTab === 'team' && (

@@ -113,10 +113,8 @@ export const Administration: React.FC = () => {
     const openBranchModal = (branch?: Branch) => {
         if (branch) {
             setEditingBranch(branch);
-            setBranchForm(branch);
         } else {
             setEditingBranch(null);
-            setBranchForm({ name: '', address: '', city: '', phone_number: '', is_active: true });
         }
         setIsBranchModalOpen(true);
     };
