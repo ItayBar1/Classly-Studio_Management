@@ -5,22 +5,22 @@ services:
     container_name: classly-db
     restart: always
     environment:
+      # Docker Compose מושך את המשתנים האלו מה-env. של השרת/shell
       POSTGRES_USER: itay
-      POSTGRES_PASSWORD: your_password
+      POSTGRES_PASSWORD: ${DB_PASSWORD} # נגדיר ב-env הראשי
       POSTGRES_DB: classly_db
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # טעינה אוטומטית של הסכימה שלך
       - ./studio_management_schema_setup.sql:/docker-entrypoint-initdb.d/setup.sql
 
   backend:
     build: ./server
     container_name: classly-api
     restart: always
-    environment:
-      DATABASE_URL: postgres://itay:your_password@db:5432/classly_db
-      JWT_SECRET: your_jwt_secret
-      # תצטרך לעדכן את הקוד בשרת שישתמש ב-DB במקום ב-Supabase
+    env_file:
+      - ./server/.env # טוען את כל הקובץ לתוך הקונטיינר
     depends_on:
       - db
 
@@ -28,6 +28,8 @@ services:
     build: ./client
     container_name: classly-web
     restart: always
+    env_file:
+      - ./client/.env
     depends_on:
       - backend
 
