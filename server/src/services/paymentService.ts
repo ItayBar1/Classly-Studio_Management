@@ -4,7 +4,7 @@ import { logger } from "../logger";
 import { environment } from "../config/env";
 
 const stripe = new Stripe(environment.stripe.secretKey || "", {
-  apiVersion: "2025-12-15.clover",
+  apiVersion: "2026-02-25.clover",
 });
 
 export class PaymentService {

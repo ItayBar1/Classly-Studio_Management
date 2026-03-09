@@ -40,6 +40,7 @@ export interface Instructor extends User {
 export interface ClassSession {
   id: string;
   studio_id: string;
+  branch_id: string;
   name: string;
   description?: string | null;
   instructor_id: string;

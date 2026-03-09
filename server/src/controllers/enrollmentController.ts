@@ -94,7 +94,7 @@ export class EnrollmentController {
 
       // --- FREE COURSE HANDLING ---
       // If the course is free, we skip payment processing entirely
-      if (courseDetails.price === 0) {
+      if (courseDetails.price.toNumber() === 0) {
         requestLog.info(
           { enrollmentId: enrollment.id },
           "Free course registration completed automatically"
@@ -110,7 +110,7 @@ export class EnrollmentController {
 
       // 2. Create a Stripe Payment Intent (ONLY if price > 0)
       const paymentIntent = await PaymentService.createIntent(
-        courseDetails.price,
+        courseDetails.price.toNumber(),
         "ils",
         `Registration for ${courseDetails.name}`,
         {
@@ -126,7 +126,7 @@ export class EnrollmentController {
         studioId: studioId,
         studentId: studentId,
         enrollmentId: enrollment.id,
-        amount: courseDetails.price,
+        amount: courseDetails.price.toNumber(),
         stripePaymentIntentId: paymentIntent.id,
       });
 

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Loader2, Save } from "lucide-react";
 import { CourseService, UserService, BranchService, RoomService } from "../../services/api";
-import { ClassSession, User, Branch, Room } from "../../types/types";
+import { ClassSession, User, Branch, Room, ClassLevel } from "../../types/types";
 import { BaseModal } from "../common/BaseModal";
 import { FormInput, FormSelect } from "../common/FormFields";
 
 // --- Constants ---
 const DAY_MAP: Record<number, string> = {
-    0: "ראשון",
+    0: "ראשון", 
     1: "שני",
     2: "שלישי",
     3: "רביעי",
@@ -37,7 +37,7 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, o
         start_time: '09:00',
         end_time: '10:00',
         max_capacity: 20,
-        level: 'ALL_LEVELS' as const,
+        level: 'ALL_LEVELS'as ClassLevel,
         price_ils: 0,
         location_room: 'אולם ראשי'
     });
