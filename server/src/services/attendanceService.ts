@@ -1,139 +1,159 @@
-import { supabaseAdmin as supabase} from '../config/supabase';
-import { logger } from '../logger';
+import { prisma } from "../config/supabase";
+import { logger } from "../logger";
 
 interface AttendanceRecord {
-    studentId: string;
-    status: 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'LATE';
-    notes?: string;
+  studentId: string;
+  status: "PRESENT" | "ABSENT" | "EXCUSED" | "LATE";
+  notes?: string;
 }
 
 export class AttendanceService {
+  /**
+   * Record attendance (Upsert).
+   * Automatically fetches enrollment_id for each student to satisfy DB constraints.
+   */
+  static async recordAttendance(
+    classId: string,
+    date: string,
+    instructorId: string,
+    records: AttendanceRecord[],
+  ) {
+    const serviceLogger = logger.child({
+      service: "AttendanceService",
+      method: "recordAttendance",
+    });
+    serviceLogger.info(
+      { classId, date, instructorId, recordCount: records.length },
+      "Recording attendance",
+    );
 
-    /**
-     * Record attendance (Upsert).
-     * Automatically fetches enrollment_id for each student to satisfy DB constraints.
-     */
-    static async recordAttendance(classId: string, date: string, instructorId: string, records: AttendanceRecord[]) {
-        const serviceLogger = logger.child({ service: 'AttendanceService', method: 'recordAttendance' });
-        serviceLogger.info({ classId, date, instructorId, recordCount: records.length }, 'Recording attendance');
-        // 1. Fetch enrollment_id values for the students in this class
-        const studentIds = records.map(r => r.studentId);
-        
-        const { data: enrollments, error: enrollError } = await supabase
-            .from('enrollments')
-            .select('id, student_id')
-            .eq('class_id', classId)
-            .in('student_id', studentIds);
+    // 1. Fetch enrollment_id values for the students in this class
+    const studentIds = records.map((r) => r.studentId);
 
-        if (enrollError) {
-            serviceLogger.error({ err: enrollError }, 'Error fetching enrollments for attendance');
-            throw new Error(`Error fetching enrollments: ${enrollError.message}`);
-        }
+    const enrollments = await prisma.enrollments.findMany({
+      where: {
+        class_id: classId,
+        student_id: { in: studentIds },
+      },
+      select: { id: true, student_id: true },
+    });
 
-        // Create a map for quick lookups: studentId -> enrollmentId
-        const enrollmentMap = new Map<string, string>(
-            (enrollments ?? []).map(({ student_id, id }: { student_id: string; id: string }) => [student_id, id])
+    // Create a map for quick lookups: studentId -> enrollmentId
+    const enrollmentMap = new Map<string, string>(
+      enrollments.map(({ student_id, id }) => [student_id, id]),
+    );
+
+    // Preliminary step: fetch studio_id
+    const classData = await prisma.classes.findUnique({
+      where: { id: classId },
+      select: { studio_id: true },
+    });
+
+    if (!classData) {
+      throw new Error("Class not found");
+    }
+
+    // 2. Prepare upsert operations
+    const results = [];
+    for (const record of records) {
+      const enrollmentId = enrollmentMap.get(record.studentId);
+
+      if (!enrollmentId) {
+        serviceLogger.warn(
+          { studentId: record.studentId, classId },
+          "Skipping attendance: enrollment not found",
         );
+        continue;
+      }
 
-        // 2. Prepare the upsert payload
-        const upsertData = records.map(record => {
-            const enrollmentId = enrollmentMap.get(record.studentId);
-
-            // Attendance cannot be recorded without an enrollment
-            if (!enrollmentId) {
-                serviceLogger.warn({ studentId: record.studentId, classId }, 'Skipping attendance: enrollment not found');
-                return null;
-            }
-
-            return {
-                studio_id: undefined, // Updated later after fetching class studio_id
-                class_id: classId,
-                instructor_id: instructorId,
-                enrollment_id: enrollmentId,
-                student_id: record.studentId,
-                session_date: date,
-                status: record.status,
-                notes: record.notes,
-                recorded_by: instructorId,
-                recorded_at: new Date().toISOString()
-            };
-        }).filter(item => item !== null); // Remove entries without enrollment
-
-        // Preliminary step: fetch studio_id to populate the required field
-        if (upsertData.length > 0) {
-            const { data: classData, error: classError } = await supabase.from('classes').select('studio_id').eq('id', classId).single();
-            if (classError) {
-                serviceLogger.error({ err: classError }, 'Failed to fetch class for studio assignment');
-                throw new Error(classError.message);
-            }
-            if (classData) {
-                upsertData.forEach(item => item!.studio_id = classData.studio_id);
-            }
-        }
-
-        // 3. Perform upsert
-        const { data, error } = await supabase
-            .from('attendance')
-            .upsert(upsertData, { onConflict: 'enrollment_id, session_date' }) // Uses the composite index
-            .select();
-
-        if (error) {
-            serviceLogger.error({ err: error }, 'Failed to upsert attendance');
-            throw new Error(error.message);
-        }
-        return data;
+      const result = await prisma.attendance.upsert({
+        where: {
+          enrollment_id_session_date: {
+            enrollment_id: enrollmentId,
+            session_date: new Date(date),
+          },
+        },
+        update: {
+          status: record.status,
+          notes: record.notes,
+          recorded_at: new Date(),
+          recorded_by: instructorId,
+        },
+        create: {
+          studio_id: classData.studio_id,
+          class_id: classId,
+          instructor_id: instructorId,
+          enrollment_id: enrollmentId,
+          student_id: record.studentId,
+          session_date: new Date(date),
+          status: record.status,
+          notes: record.notes,
+          recorded_by: instructorId,
+          recorded_at: new Date(),
+        },
+      });
+      results.push(result);
     }
 
-    /**
-     * Get attendance for a specific class
-     */
-    static async getClassAttendance(classId: string, date?: string) {
-        const serviceLogger = logger.child({ service: 'AttendanceService', method: 'getClassAttendance' });
-        serviceLogger.info({ classId, date }, 'Fetching class attendance');
-        let query = supabase
-            .from('attendance')
-            .select(`
-                *,
-                student:users!student_id(full_name, profile_image_url)
-            `)
-            .eq('class_id', classId)
-            .order('session_date', { ascending: false });
+    return results;
+  }
 
-        if (date) {
-            query = query.eq('session_date', date);
-        }
+  /**
+   * Get attendance for a specific class
+   */
+  static async getClassAttendance(classId: string, date?: string) {
+    const serviceLogger = logger.child({
+      service: "AttendanceService",
+      method: "getClassAttendance",
+    });
+    serviceLogger.info({ classId, date }, "Fetching class attendance");
 
-        const { data, error } = await query;
-        if (error) {
-            serviceLogger.error({ err: error }, 'Failed to fetch class attendance');
-            throw new Error(error.message);
-        }
-        serviceLogger.info({ count: data?.length }, 'Class attendance fetched');
-        return data;
+    const where: any = { class_id: classId };
+    if (date) {
+      where.session_date = new Date(date);
     }
 
-    /**
-     * Get attendance history for a student
-     */
-    static async getStudentHistory(studentId: string) {
-        const serviceLogger = logger.child({ service: 'AttendanceService', method: 'getStudentHistory' });
-        serviceLogger.info({ studentId }, 'Fetching student attendance history');
-        const { data, error } = await supabase
-            .from('attendance')
-            .select(`
-                session_date,
-                status,
-                notes,
-                class:classes(name, start_time, end_time)
-            `)
-            .eq('student_id', studentId)
-            .order('session_date', { ascending: false });
+    const data = await prisma.attendance.findMany({
+      where,
+      include: {
+        student: {
+          select: { full_name: true, profile_image_url: true },
+        },
+      },
+      orderBy: { session_date: "desc" },
+    });
 
-        if (error) {
-            serviceLogger.error({ err: error }, 'Failed to fetch student attendance history');
-            throw new Error(error.message);
-        }
-        serviceLogger.info({ count: data?.length }, 'Student attendance history fetched');
-        return data;
-    }
+    serviceLogger.info({ count: data?.length }, "Class attendance fetched");
+    return data;
+  }
+
+  /**
+   * Get attendance history for a student
+   */
+  static async getStudentHistory(studentId: string) {
+    const serviceLogger = logger.child({
+      service: "AttendanceService",
+      method: "getStudentHistory",
+    });
+    serviceLogger.info({ studentId }, "Fetching student attendance history");
+
+    const data = await prisma.attendance.findMany({
+      where: { student_id: studentId },
+      select: {
+        session_date: true,
+        status: true,
+        notes: true,
+        class: {
+          select: { name: true, start_time: true, end_time: true },
+        },
+      },
+      orderBy: { session_date: "desc" },
+    });
+
+    serviceLogger.info(
+      { count: data?.length },
+      "Student attendance history fetched",
+    );
+    return data;
+  }
 }

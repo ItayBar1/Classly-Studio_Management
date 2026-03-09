@@ -1,71 +1,63 @@
-import { supabaseAdmin } from '../config/supabase';
+import { prisma } from "../config/supabase";
 
 export interface RoomDTO {
-    branch_id: string;
-    name: string;
-    capacity: number;
-    is_active?: boolean;
+  branch_id: string;
+  name: string;
+  capacity: number;
+  is_active?: boolean;
 }
 
 export class RoomService {
+  static async getAll(studioId: string) {
+    const data = await prisma.studio_rooms.findMany({
+      where: { studio_id: studioId },
+      include: {
+        branch: {
+          select: { name: true },
+        },
+      },
+      orderBy: { name: "asc" },
+    });
+    return data;
+  }
 
-    static async getAll(studioId: string) {
-        const { data, error } = await supabaseAdmin
-            .from('studio_rooms')
-            .select('*, branch:branches(name)') // Join branch to show branch name if needed
-            .eq('studio_id', studioId)
-            .order('name', { ascending: true });
+  static async getByBranch(branchId: string) {
+    const data = await prisma.studio_rooms.findMany({
+      where: { branch_id: branchId },
+      orderBy: { name: "asc" },
+    });
+    return data;
+  }
 
-        if (error) throw error;
-        return data;
-    }
+  static async create(studioId: string, data: RoomDTO) {
+    const room = await prisma.studio_rooms.create({
+      data: {
+        studio_id: studioId,
+        ...data,
+      },
+    });
+    return room;
+  }
 
-    static async getByBranch(branchId: string) {
-        const { data, error } = await supabaseAdmin
-            .from('studio_rooms')
-            .select('*')
-            .eq('branch_id', branchId)
-            .order('name', { ascending: true });
+  static async update(
+    roomId: string,
+    studioId: string,
+    data: Partial<RoomDTO>,
+  ) {
+    const room = await prisma.studio_rooms.update({
+      where: { id: roomId },
+      data: data as any,
+    });
+    return room;
+  }
 
-        if (error) throw error;
-        return data;
-    }
-
-    static async create(studioId: string, data: RoomDTO) {
-        const { data: room, error } = await supabaseAdmin
-            .from('studio_rooms')
-            .insert({
-                studio_id: studioId,
-                ...data
-            })
-            .select()
-            .single();
-
-        if (error) throw error;
-        return room;
-    }
-
-    static async update(roomId: string, studioId: string, data: Partial<RoomDTO>) {
-        const { data: room, error } = await supabaseAdmin
-            .from('studio_rooms')
-            .update(data)
-            .eq('id', roomId)
-            .eq('studio_id', studioId)
-            .select()
-            .single();
-
-        if (error) throw error;
-        return room;
-    }
-
-    static async delete(roomId: string, studioId: string) {
-        const { error } = await supabaseAdmin
-            .from('studio_rooms')
-            .delete()
-            .eq('id', roomId)
-            .eq('studio_id', studioId);
-
-        if (error) throw error;
-        return true;
-    }
+  static async delete(roomId: string, studioId: string) {
+    await prisma.studio_rooms.deleteMany({
+      where: {
+        id: roomId,
+        studio_id: studioId,
+      },
+    });
+    return true;
+  }
 }

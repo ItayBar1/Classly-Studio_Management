@@ -1,5 +1,4 @@
 import axios from "axios";
-import { supabase } from "./supabaseClient";
 import {
   User,
   Student,
@@ -15,24 +14,111 @@ import {
 // הגדרת כתובת ה-API
 const API_URL = import.meta.env.VITE_API_URL;
 
+// Token management utilities
+const TOKEN_KEY = 'classly_auth_token';
+
+export const getStoredToken = (): string | null => {
+  return localStorage.getItem(TOKEN_KEY);
+};
+
+export const setStoredToken = (token: string): void => {
+  localStorage.setItem(TOKEN_KEY, token);
+};
+
+export const removeStoredToken = (): void => {
+  localStorage.removeItem(TOKEN_KEY);
+};
+
+// User data stored alongside token for quick access
+const USER_KEY = 'classly_user';
+
+export const getStoredUser = (): User | null => {
+  const userStr = localStorage.getItem(USER_KEY);
+  if (!userStr) return null;
+  try {
+    return JSON.parse(userStr);
+  } catch {
+    return null;
+  }
+};
+
+export const setStoredUser = (user: User): void => {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+};
+
+export const removeStoredUser = (): void => {
+  localStorage.removeItem(USER_KEY);
+};
+
 // יצירת מופע Axios
 export const apiClient = axios.create({
-  baseURL: API_URL, // וודא ש-VITE_API_URL כולל את ה-suffix '/api' אם צריך (למשל http://localhost:5000/api)
+  baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Interceptor: הוספת טוקן Auth של Supabase לכל בקשה
-apiClient.interceptors.request.use(async (config) => {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.access_token) {
-    config.headers.Authorization = `Bearer ${session.access_token}`;
+// Interceptor: הוספת טוקן JWT מ-localStorage לכל בקשה
+apiClient.interceptors.request.use((config) => {
+  const token = getStoredToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 }, (error) => {
   return Promise.reject(error);
 });
+
+// Interceptor: Handle 401 responses (expired/invalid token)
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      removeStoredToken();
+      removeStoredUser();
+      // Optionally trigger a page reload to show login
+      window.location.reload();
+    }
+    return Promise.reject(error);
+  }
+);
+
+// --- Auth Service ---
+export const AuthService = {
+  login: async (email: string, password: string) => {
+    const res = await apiClient.post<{ token: string; user: User }>('/auth/login', { email, password });
+    setStoredToken(res.data.token);
+    setStoredUser(res.data.user);
+    return res.data;
+  },
+
+  register: async (data: {
+    email: string;
+    password: string;
+    full_name?: string;
+    phone_number?: string;
+    studio_serial?: string;
+    invitationToken?: string;
+  }) => {
+    const res = await apiClient.post<{ token: string; user: User; message: string }>('/auth/register', data);
+    setStoredToken(res.data.token);
+    setStoredUser(res.data.user);
+    return res.data;
+  },
+
+  logout: () => {
+    removeStoredToken();
+    removeStoredUser();
+  },
+
+  isAuthenticated: (): boolean => {
+    return !!getStoredToken();
+  },
+
+  getCurrentUser: (): User | null => {
+    return getStoredUser();
+  },
+};
 
 // --- Services ---
 
@@ -41,14 +127,12 @@ export const UserService = {
   getMe: () => apiClient.get<User>('/users/me').then(res => res.data),
 
   // שליפת כל המדריכים
-  // שליפת כל המדריכים
   getInstructors: () => apiClient.get<User[]>('/instructors').then(res => res.data),
 
   // אימות סטודיו לפי מספר סידורי
   validateStudio: (serialNumber: string) => apiClient.get<{ valid: boolean; studio: { id: string; name: string } }>(`/users/validate-studio/${serialNumber}`).then(res => res.data),
 
   // הכנת הרשמה עם אימות סטודיו (אבטחה)
-  // SECURITY: This validates studio server-side before signup
   prepareRegistration: (email: string, serialNumber?: string, invitationToken?: string) => 
     apiClient.post<{ success: boolean; message: string; pendingRegistrationId: string }>(
       '/users/prepare-registration', 
@@ -57,13 +141,8 @@ export const UserService = {
 };
 
 export const StudioService = {
-  // יצירת סטודיו חדש (Admin בלבד) - כולל פרטי סניף ראשי
   create: (data: Partial<Studio> & { branchData: Partial<Branch> }) => apiClient.post<{ message: string; studio: Studio }>('/studios', data).then(res => res.data),
-
-  // קבלת פרטי הסטודיו של המנהל המחובר
   getMyStudio: () => apiClient.get<Studio>('/studios/my-studio').then(res => res.data),
-
-  // עדכון פרטי סטודיו
   update: (id: string, data: Partial<Studio>) => apiClient.put<Studio>(`/studios/${id}`, data).then(res => res.data),
 };
 
@@ -89,60 +168,32 @@ export const InvitationService = {
 };
 
 
-// --- NEW: Student Service (נוסף כדי לתמוך במחיקה וניהול תלמידים) ---
+// --- NEW: Student Service ---
 export const StudentService = {
-  // שליפת כל התלמידים (Admin) - תומך בפילטור ופגינציה
   getAll: (params?: { page?: number; limit?: number; search?: string; ascending?: boolean }) =>
     apiClient.get<{ data: Student[]; count: number }>('/students', { params }).then(res => ({ students: res.data.data || [], count: res.data.count })),
-
-  // שליפת התלמידים של המדריך המחובר
   getByInstructor: () => apiClient.get<Student[]>('/students/my-students').then(res => res.data),
-
-  // הוספת תלמיד ידנית
   create: (data: Partial<Student>) => apiClient.post('/students', data).then(res => res.data),
-
-  // מחיקת תלמיד (Soft Delete)
   delete: (id: string) => apiClient.delete(`/students/${id}`).then(res => res.data),
 };
 
 export const CourseService = {
-  // שליפת כל הקורסים
   getAll: (params?: { status?: string }) => apiClient.get<ClassSession[]>('/courses', { params }).then(res => res.data),
-
-  // יצירת קורס חדש
   create: (data: Partial<ClassSession>) => apiClient.post<ClassSession>('/courses', data).then(res => res.data),
-
-  // עדכון קורס - תוקן ל-PATCH
   update: (id: string, data: Partial<ClassSession>) => apiClient.patch<ClassSession>(`/courses/${id}`, data).then(res => res.data),
-
-  // מחיקת קורס
   delete: (id: string) => apiClient.delete(`/courses/${id}`).then(res => res.data),
-
-  // שליפת הקורסים של המדריך המחובר
   getInstructorCourses: () => apiClient.get<ClassSession[]>('/courses/my-courses').then(res => res.data),
-
-  // שליפת הקורסים הפנויים להרשמה (עבור ה-Browse Courses)
   getAvailableCourses: () => apiClient.get<ClassSession[]>('/courses/available').then(res => res.data),
 };
 
 export const EnrollmentService = {
-  // --- תוקן: שימוש בנתיבים הנכונים מול השרת ---
-
-  // הרשמה לקורס (Student Action) - תוקן מ-/courses/enroll
   register: (courseId: string) => apiClient.post('/enrollments/register', { classId: courseId }).then(res => res.data),
-
-  // שליפת הקורסים שהתלמיד רשום אליהם - תוקן מ-/courses/enrolled
   getMyEnrollments: () => apiClient.get<ClassSession[]>('/enrollments/my-enrollments').then(res => res.data),
-
-  // שליפת נרשמים לקורס ספציפי (עבור מדריך/אדמין)
   getClassEnrollments: (classId: string) => apiClient.get<any[]>(`/enrollments/class/${classId}`).then(res => res.data),
 };
 
 export const PaymentService = {
-  // הערה: נתיב זה חסר בשרת כרגע, יש לוודא מימוש ב-payments.ts
   getAll: () => apiClient.get<PaymentRecord[]>('/payments').then(res => res.data),
-
-  // יצירת כוונת תשלום
   createIntent: (data: { amount: number; currency?: string; description?: string }) =>
     apiClient.post<{ clientSecret: string }>('/payments/create-intent', data).then(res => res.data),
 };

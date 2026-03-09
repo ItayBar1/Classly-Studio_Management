@@ -1,10 +1,9 @@
-import { supabaseAdmin } from "../config/supabase";
+import { prisma } from "../config/supabase";
 import { logger } from "../logger";
 
 export class EnrollmentService {
   /**
    * Enroll a student to a class.
-   * Returns the enrollment object AND the course price for payment processing.
    */
   static async enrollStudent(
     studioId: string,
@@ -12,7 +11,7 @@ export class EnrollmentService {
     classId: string,
     status: "ACTIVE" | "PENDING" = "ACTIVE",
     paymentStatus: "PAID" | "PENDING" | "OVERDUE" = "PAID",
-    notes?: string
+    notes?: string,
   ) {
     const serviceLogger = logger.child({
       service: "EnrollmentService",
@@ -20,78 +19,70 @@ export class EnrollmentService {
     });
     serviceLogger.info(
       { studioId, studentId, classId, status, paymentStatus },
-      "Enrolling student to class"
+      "Enrolling student to class",
     );
 
     // 1. Fetch course details (capacity and pricing)
-    const { data: course, error: courseError } = await supabaseAdmin
-      .from("classes")
-      .select("max_capacity, current_enrollment, price_ils, start_time, name")
-      .eq("id", classId)
-      .single();
+    const course = await prisma.classes.findUnique({
+      where: { id: classId },
+      select: {
+        max_capacity: true,
+        current_enrollment: true,
+        price_ils: true,
+        start_time: true,
+        name: true,
+      },
+    });
 
-    if (courseError || !course) {
-      serviceLogger.error(
-        { err: courseError },
-        "Course not found during enrollment"
-      );
+    if (!course) {
+      serviceLogger.error({ classId }, "Course not found during enrollment");
       throw new Error("Course not found");
     }
 
     // 2. Validate capacity
-    if (course.current_enrollment >= course.max_capacity) {
+    if ((course.current_enrollment || 0) >= course.max_capacity) {
       serviceLogger.warn({ classId }, "Course is full");
       throw new Error("Course is full");
     }
 
     // 3. Prevent duplicate enrollment
-    const { data: existing } = await supabaseAdmin
-      .from("enrollments")
-      .select("id")
-      .eq("student_id", studentId)
-      .eq("class_id", classId)
-      .neq("status", "CANCELLED")
-      .single();
+    const existing = await prisma.enrollments.findFirst({
+      where: {
+        student_id: studentId,
+        class_id: classId,
+        status: { not: "CANCELLED" },
+      },
+      select: { id: true },
+    });
 
     if (existing) {
       serviceLogger.warn(
         { studentId, classId },
-        "Student already enrolled in course"
+        "Student already enrolled in course",
       );
       throw new Error("Student is already enrolled in this course");
     }
 
     // --- FREE COURSE LOGIC ---
-    // If price is 0 or null, force status to ACTIVE and PAID regardless of input
-    const isFree = course.price_ils === 0 || course.price_ils === null;
+    const priceIls = Number(course.price_ils);
+    const isFree = priceIls === 0 || course.price_ils === null;
     const finalStatus = isFree ? "ACTIVE" : status;
     const finalPaymentStatus = isFree ? "PAID" : paymentStatus;
-    // -------------------------
 
     // 4. Create enrollment
-    const { data: enrollment, error: enrollError } = await supabaseAdmin
-      .from("enrollments")
-      .insert([
-        {
-          studio_id: studioId,
-          student_id: studentId,
-          class_id: classId,
-          status: finalStatus,
-          payment_status: finalPaymentStatus,
-          start_date: new Date(),
-          total_amount_due: course.price_ils,
-          notes: notes,
-        },
-      ])
-      .select()
-      .single();
+    const enrollment = await prisma.enrollments.create({
+      data: {
+        studio_id: studioId,
+        student_id: studentId,
+        class_id: classId,
+        status: finalStatus,
+        payment_status: finalPaymentStatus,
+        start_date: new Date(),
+        total_amount_due: course.price_ils,
+        notes: notes,
+      },
+    });
 
-    if (enrollError) {
-      serviceLogger.error({ err: enrollError }, "Failed to insert enrollment");
-      throw new Error(enrollError.message);
-    }
-
-    // Return enrollment alongside pricing details for payment
     return {
       enrollment,
       courseDetails: {
@@ -111,31 +102,23 @@ export class EnrollmentService {
     });
     serviceLogger.info({ studentId }, "Fetching student enrollments");
 
-    const { data, error } = await supabaseAdmin
-      .from("enrollments")
-      .select(
-        `
-          *,
-          class:classes (
-            *,
-            instructor:users (
-              full_name,
-              profile_image_url
-            )
-          )
-        `
-      )
-      .eq("student_id", studentId)
-      .neq("status", "CANCELLED")
-      .order("created_at", { ascending: false });
+    const data = await prisma.enrollments.findMany({
+      where: {
+        student_id: studentId,
+        status: { not: "CANCELLED" },
+      },
+      include: {
+        class: {
+          include: {
+            instructor: {
+              select: { full_name: true, profile_image_url: true },
+            },
+          },
+        },
+      },
+      orderBy: { created_at: "desc" },
+    });
 
-    if (error) {
-      serviceLogger.error(
-        { err: error },
-        "Failed to fetch student enrollments"
-      );
-      throw new Error(error.message);
-    }
     return data;
   }
 
@@ -148,24 +131,29 @@ export class EnrollmentService {
       method: "getClassEnrollments",
     });
     serviceLogger.info({ classId }, "Fetching class enrollments");
-    const { data, error } = await supabaseAdmin
-      .from("enrollments")
-      .select(
-        `
-                id,
-                status,
-                payment_status,
-                student:users(id, full_name, email, phone_number, profile_image_url)
-            `
-      )
-      .eq("class_id", classId)
-      .neq("status", "CANCELLED")
-      .order("created_at", { ascending: true });
 
-    if (error) {
-      serviceLogger.error({ err: error }, "Failed to fetch class enrollments");
-      throw new Error(error.message);
-    }
+    const data = await prisma.enrollments.findMany({
+      where: {
+        class_id: classId,
+        status: { not: "CANCELLED" },
+      },
+      select: {
+        id: true,
+        status: true,
+        payment_status: true,
+        student: {
+          select: {
+            id: true,
+            full_name: true,
+            email: true,
+            phone_number: true,
+            profile_image_url: true,
+          },
+        },
+      },
+      orderBy: { created_at: "asc" },
+    });
+
     return data;
   }
 
@@ -178,28 +166,21 @@ export class EnrollmentService {
       method: "cancelEnrollment",
     });
     serviceLogger.info({ enrollmentId }, "Cancelling enrollment");
-    // 1. Retrieve class_id prior to cancellation to update counters
-    const { data: enrollment } = await supabaseAdmin
-      .from("enrollments")
-      .select("class_id, status")
-      .eq("id", enrollmentId)
-      .single();
+
+    const enrollment = await prisma.enrollments.findUnique({
+      where: { id: enrollmentId },
+      select: { class_id: true, status: true },
+    });
 
     if (!enrollment) {
       serviceLogger.warn({ enrollmentId }, "Enrollment not found");
       throw new Error("Enrollment not found");
     }
 
-    // 2. Update status to CANCELLED
-    const { error } = await supabaseAdmin
-      .from("enrollments")
-      .update({ status: "CANCELLED" })
-      .eq("id", enrollmentId);
-
-    if (error) {
-      serviceLogger.error({ err: error }, "Failed to cancel enrollment");
-      throw new Error(error.message);
-    }
+    await prisma.enrollments.update({
+      where: { id: enrollmentId },
+      data: { status: "CANCELLED" },
+    });
   }
 
   /**
@@ -207,7 +188,7 @@ export class EnrollmentService {
    */
   static async verifyInstructorClass(
     instructorId: string,
-    classId: string
+    classId: string,
   ): Promise<boolean> {
     const serviceLogger = logger.child({
       service: "EnrollmentService",
@@ -215,13 +196,13 @@ export class EnrollmentService {
     });
     serviceLogger.info(
       { instructorId, classId },
-      "Verifying instructor ownership of class"
+      "Verifying instructor ownership of class",
     );
-    const { data } = await supabaseAdmin
-      .from("classes")
-      .select("instructor_id")
-      .eq("id", classId)
-      .single();
+
+    const data = await prisma.classes.findUnique({
+      where: { id: classId },
+      select: { instructor_id: true },
+    });
 
     return data?.instructor_id === instructorId;
   }

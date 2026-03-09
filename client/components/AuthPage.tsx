@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../services/supabaseClient';
 import { Mail, Lock, User, Phone, Loader2, ArrowRight, Building, AlertTriangle, Eye, EyeOff, ArrowLeft } from 'lucide-react';
-import { UserService, InvitationService } from '../services/api';
+import { AuthService, UserService, InvitationService } from '../services/api';
 import { logger } from '../services/logger';
 
 type AuthView = 'login' | 'register' | 'forgot';
 
-export const AuthPage: React.FC = () => {
+interface AuthPageProps {
+  onAuthSuccess?: () => void;
+}
+
+export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
   const [view, setView] = useState<AuthView>('login');
   const [loading, setLoading] = useState(false);
   const [validationLoading, setValidationLoading] = useState(false);
@@ -73,14 +76,10 @@ export const AuthPage: React.FC = () => {
     setMessage(null);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (error) throw error;
+      // TODO: Implement password reset endpoint on backend
       setMessage('אם קיים משתמש עם כתובת המייל הזו, נשלח קישור לאיפוס סיסמה.');
     } catch (err: any) {
       logger.error('Reset password error:', err);
-      // Always show generic success message
       setMessage('אם קיים משתמש עם כתובת המייל הזו, נשלח קישור לאיפוס סיסמה.');
     } finally {
       setLoading(false);
@@ -99,71 +98,40 @@ export const AuthPage: React.FC = () => {
 
     try {
       if (view === 'login') {
-        // Login
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
+        // Login via backend API
+        await AuthService.login(email, password);
+        // Notify parent component of successful auth
+        onAuthSuccess?.();
       } else {
         // Registration
-        // SECURITY FIX: Prepare registration server-side to validate studio_id
-        // This prevents clients from self-assigning to arbitrary studios
-        try {
-          // Determine parameters based on whether we have an invite token
-          const serialNumber = inviteToken ? undefined : studioSerial;
-          const token = inviteToken || undefined;
-          
-          await UserService.prepareRegistration(email, serialNumber, token);
-        } catch (prepError: any) {
-          if (prepError.response && prepError.response.status === 404) {
-            throw new Error('לא נמצא סטודיו עם המספר הסידורי שהוזן.');
-          }
-          throw new Error(prepError.response?.data?.error || 'שגיאה באימות הסטודיו.');
-        }
-
-        // 1. Sign up as STUDENT (Secure Default)
-        // Note: studio_id is no longer sent in metadata - it comes from pending_registrations
-        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        await AuthService.register({
           email,
           password,
-          options: {
-            data: {
-              full_name: fullName,
-              phone_number: phone,
-              role: 'STUDENT',
-              // studio_id is intentionally NOT included here for security
-            },
-          },
+          full_name: fullName,
+          phone_number: phone,
+          studio_serial: inviteToken ? undefined : studioSerial,
+          invitationToken: inviteToken || undefined,
         });
 
-        if (signUpError) throw signUpError;
-
-        // 2. If there's an invite token, claim it to upgrade role
-        if (inviteToken && authData.user) {
+        // If there's an invite token, accept it
+        if (inviteToken) {
           try {
-            if (authData.session) {
-              await InvitationService.accept(inviteToken);
-              // REFRESH SESSION to get the new role (Admin/Instructor)
-              const { error: refreshError } = await supabase.auth.refreshSession();
-              if (refreshError) {
-                logger.error('Session refresh failed:', refreshError);
-              }
-              setMessage('ההרשמה הסתיימה בהצלחה! חשבונך שודרג בהתאם להזמנה.');
-            } else {
-              setMessage('ההרשמה בוצעה. נא לאמת את המייל. ההזמנה תופעל לאחר הכניסה הראשונה.');
-            }
-
+            await InvitationService.accept(inviteToken);
+            setMessage('ההרשמה הסתיימה בהצלחה! חשבונך שודרג בהתאם להזמנה.');
           } catch (acceptError) {
             logger.error('Failed to accept invite', acceptError);
             setError('ההרשמה בוצעה אך הייתה שגיאה בקבלת ההזמנה. אנא פנה למנהל המערכת.');
           }
         } else {
-          setMessage('נשלח מייל לאימות החשבון. יש לאשר את הכתובת לפני הכניסה.');
+          setMessage('ההרשמה בוצעה בהצלחה!');
         }
+
+        // Notify parent component
+        onAuthSuccess?.();
       }
     } catch (err: any) {
-      setError(err.message || 'אירעה שגיאה בתהליך האימות');
+      const errorMsg = err.response?.data?.error || err.message || 'אירעה שגיאה בתהליך האימות';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

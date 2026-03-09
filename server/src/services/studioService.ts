@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "../config/supabase";
+import { prisma } from "../config/supabase";
 
 export interface CreateStudioDTO {
   name: string;
@@ -9,85 +9,89 @@ export interface CreateStudioDTO {
 }
 
 export class StudioService {
-  // Create a new studio + default branch + update user
+  // Create a new studio + default branch + update user (in a transaction)
   static async createStudio(adminId: string, data: CreateStudioDTO) {
     // 1. Check if user already has a studio
-    const { data: existingStudio } = await supabaseAdmin
-      .from("studios")
-      .select("id")
-      .eq("admin_id", adminId)
-      .single();
+    const existingStudio = await prisma.studios.findFirst({
+      where: { admin_id: adminId },
+      select: { id: true },
+    });
 
     if (existingStudio) {
       throw new Error("User already has a studio");
     }
 
-    // 2. Use database RPC to handle the entire operation in a single transaction
-    // The database function uses a sequence to generate collision-free serial numbers
-    // Format: YYMMDD-NNNNNN where YYMMDD is date-based and NNNNNN is from a database sequence
-    // This is more robust than random number generation with retry logic
-    const { data: result, error } = await supabaseAdmin.rpc(
-      "create_studio_with_transaction",
-      {
-        p_admin_id: adminId,
-        p_name: data.name,
-        p_description: data.description || null,
-        p_contact_email: data.contact_email || null,
-        p_contact_phone: data.contact_phone || null,
-        p_website_url: data.website_url || null,
-      }
-    );
+    // 2. Use a Prisma transaction to handle the entire operation atomically
+    const result = await prisma.$transaction(async (tx) => {
+      // Generate serial number
+      const seqResult = await tx.$queryRaw<
+        [{ nextval: bigint }]
+      >`SELECT nextval('public.studio_serial_sequence')`;
+      const seqNum = seqResult[0].nextval;
+      const datePrefix = new Date()
+        .toISOString()
+        .slice(2, 10)
+        .replace(/-/g, "")
+        .slice(0, 6);
+      const serialNumber = `${datePrefix}-${String(seqNum).padStart(6, "0")}`;
 
-    if (error) throw error;
+      // Create Studio
+      const studio = await tx.studios.create({
+        data: {
+          admin_id: adminId,
+          name: data.name,
+          serial_number: serialNumber,
+          description: data.description || null,
+          contact_email: data.contact_email || null,
+          contact_phone: data.contact_phone || null,
+          website_url: data.website_url || null,
+        },
+      });
 
-    if (!result || result.length === 0) {
-      throw new Error(
-        "Studio creation returned no data. The operation may have failed."
-      );
-    }
+      // Create Default Branch
+      await tx.branches.create({
+        data: {
+          studio_id: studio.id,
+          name: "Main Branch",
+          is_active: true,
+        },
+      });
 
-    // The RPC function returns studio and branch information
-    // We need to fetch the full studio record to return the expected format
-    const { data: studio, error: fetchError } = await supabaseAdmin
-      .from("studios")
-      .select("*")
-      .eq("id", result[0].studio_id)
-      .single();
+      // Update Admin User to link to this studio
+      await tx.users.update({
+        where: { id: adminId },
+        data: { studio_id: studio.id },
+      });
 
-    if (fetchError) throw fetchError;
+      return studio;
+    });
+
+    // Fetch the full studio record
+    const studio = await prisma.studios.findUnique({
+      where: { id: result.id },
+    });
 
     return studio;
   }
 
   // Get Studio by Admin ID
   static async getStudioByAdmin(adminId: string) {
-    const { data, error } = await supabaseAdmin
-      .from("studios")
-      .select("*")
-      .eq("admin_id", adminId)
-      .single();
+    const data = await prisma.studios.findFirst({
+      where: { admin_id: adminId },
+    });
 
-    // It's okay if not found (returns null) - means user hasn't created one yet
-    if (error && error.code !== "PGRST116") {
-      // PGRST116 is "Row not found"
-      throw error;
-    }
-    return data;
+    return data; // Returns null if not found
   }
 
   // Update Studio
   static async updateStudio(
     studioId: string,
-    updates: Partial<CreateStudioDTO>
+    updates: Partial<CreateStudioDTO>,
   ) {
-    const { data, error } = await supabaseAdmin
-      .from("studios")
-      .update(updates)
-      .eq("id", studioId)
-      .select()
-      .single();
-
-    if (error) throw error;
+    const data = await prisma.studios.update({
+      where: { id: studioId },
+      data: updates as any,
+    });
     return data;
   }
 }

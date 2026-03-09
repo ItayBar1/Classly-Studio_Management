@@ -7,7 +7,7 @@ const parseNumber = (value: string | undefined, fallback: number) => {
   return Number.isNaN(parsed) ? fallback : parsed;
 };
 
-const requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET'];
 const missing = requiredEnvVars.filter((key) => !process.env[key]);
 
 if (missing.length > 0 && process.env.NODE_ENV !== 'test') {
@@ -24,15 +24,12 @@ export const environment = {
     process.env.CLIENT_URL ||
     'http://localhost:3000',
   logLevel: process.env.LOG_LEVEL || 'info',
-  supabase: {
-    url: process.env.SUPABASE_URL || '',
-    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-  },
+  databaseUrl: process.env.DATABASE_URL || '',
+  jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
   stripe: {
     secretKey: process.env.STRIPE_SECRET_KEY || '',
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   },
-  jwtSecret: process.env.JWT_SECRET || '',
 };
 
 export const allowedCorsOrigins = Array.from(

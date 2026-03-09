@@ -1,0 +1,344 @@
+// Prisma Schema for Classly Studio Management
+// Mirrors the existing PostgreSQL schema from studio_management_schema_setup.sql
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model users {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email             String    @unique @db.VarChar(255)
+  password_hash     String
+  full_name         String?   @db.VarChar(255)
+  phone_number      String?   @db.VarChar(20)
+  profile_image_url String?
+  role              String?   @default("STUDENT") @db.VarChar(20)
+  studio_id         String?   @db.Uuid
+  status            String?   @default("ACTIVE") @db.VarChar(20)
+  last_login_at     DateTime? @db.Timestamptz
+  login_count       Int?      @default(0)
+  preferences       Json?     @default("{}")
+  created_at        DateTime? @default(now()) @db.Timestamptz
+  updated_at        DateTime? @default(now()) @db.Timestamptz
+
+  // Relations
+  studio                     studios?                  @relation("UserStudio", fields: [studio_id], references: [id], onDelete: SetNull)
+  administered_studios       studios[]                 @relation("StudioAdmin")
+  instructed_classes         classes[]                 @relation("ClassInstructor")
+  enrollments_as_student     enrollments[]             @relation("EnrollmentStudent")
+  enrollments_as_parent      enrollments[]             @relation("EnrollmentParent")
+  attendance_as_student      attendance[]              @relation("AttendanceStudent")
+  attendance_as_instructor   attendance[]              @relation("AttendanceInstructor")
+  attendance_as_recorder     attendance[]              @relation("AttendanceRecorder")
+  payments_as_student        payments[]                @relation("PaymentStudent")
+  payments_as_instructor     payments[]                @relation("PaymentInstructor")
+  instructor_commissions     instructor_commissions[]
+  notifications              notifications[]
+  audit_logs                 audit_logs[]
+}
+
+model studios {
+  id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                      String    @db.VarChar(255)
+  serial_number             String?   @unique @db.VarChar(20)
+  description               String?
+  admin_id                  String    @db.Uuid
+  contact_email             String?   @db.VarChar(255)
+  contact_phone             String?   @db.VarChar(20)
+  website_url               String?
+  bank_account_holder       String?   @db.VarChar(255)
+  bank_account_number       String?   @db.VarChar(50)
+  bank_code                 String?   @db.VarChar(10)
+  cancellation_deadline_hours Int?    @default(24)
+  refund_percentage         Decimal?  @default(0) @db.Decimal(5, 2)
+  is_active                 Boolean?  @default(true)
+  created_at                DateTime? @default(now()) @db.Timestamptz
+  updated_at                DateTime? @default(now()) @db.Timestamptz
+
+  // Relations
+  admin                     users     @relation("StudioAdmin", fields: [admin_id], references: [id])
+  users                     users[]   @relation("UserStudio")
+  branches                  branches[]
+  studio_rooms              studio_rooms[]
+  categories                categories[]
+  classes                   classes[]
+  enrollments               enrollments[]
+  attendance                attendance[]
+  payments                  payments[]
+  instructor_commissions    instructor_commissions[]
+  schedule_sessions         schedule_sessions[]
+  notifications             notifications[]
+  audit_logs                audit_logs[]
+  pending_registrations     pending_registrations[]
+}
+
+model branches {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studio_id    String    @db.Uuid
+  name         String    @default("Main Branch") @db.VarChar(255)
+  address      String?   @db.VarChar(255)
+  city         String?   @db.VarChar(100)
+  phone_number String?   @db.VarChar(20)
+  is_active    Boolean?  @default(true)
+  created_at   DateTime? @default(now()) @db.Timestamptz
+  updated_at   DateTime? @default(now()) @db.Timestamptz
+
+  // Relations
+  studio       studios   @relation(fields: [studio_id], references: [id], onDelete: Cascade)
+  classes      classes[]
+  studio_rooms studio_rooms[]
+}
+
+model studio_rooms {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studio_id  String    @db.Uuid
+  branch_id  String    @db.Uuid
+  name       String    @db.VarChar(255)
+  capacity   Int?
+  is_active  Boolean?  @default(true)
+  created_at DateTime? @default(now()) @db.Timestamptz
+  updated_at DateTime? @default(now()) @db.Timestamptz
+
+  // Relations
+  studio     studios   @relation(fields: [studio_id], references: [id], onDelete: Cascade)
+  branch     branches  @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+  classes    classes[]
+}
+
+model categories {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studio_id   String    @db.Uuid
+  name        String    @db.VarChar(255)
+  description String?
+  color       String?   @db.VarChar(7)
+  icon        String?   @db.VarChar(50)
+  type        String?   @db.VarChar(20)
+  sort_order  Int?      @default(0)
+  is_active   Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamptz
+  updated_at  DateTime? @default(now()) @db.Timestamptz
+
+  // Relations
+  studio      studios   @relation(fields: [studio_id], references: [id], onDelete: Cascade)
+  classes     classes[]
+}
+
+model classes {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studio_id           String    @db.Uuid
+  branch_id           String?   @db.Uuid
+  category_id         String?   @db.Uuid
+  name                String    @db.VarChar(255)
+  description         String?
+  instructor_id       String    @db.Uuid
+  day_of_week         Int?
+  start_time          DateTime  @db.Time
+  end_time            DateTime  @db.Time
+  timezone            String?   @default("Asia/Jerusalem") @db.VarChar(50)
+  location_room       String?   @db.VarChar(100)
+  location_building   String?   @db.VarChar(100)
+  max_capacity        Int
+  current_enrollment  Int?      @default(0)
+  age_range_min       Int?
+  age_range_max       Int?
+  level               String?   @db.VarChar(20)
+  price_ils           Decimal   @db.Decimal(10, 2)
+  billing_cycle       String?   @db.VarChar(20)
+  is_active           Boolean?  @default(true)
+  created_at          DateTime? @default(now()) @db.Timestamptz
+  updated_at          DateTime? @default(now()) @db.Timestamptz
+  room_id             String?   @db.Uuid
+
+  // Relations
+  studio              studios        @relation(fields: [studio_id], references: [id], onDelete: Cascade)
+  branch              branches?      @relation(fields: [branch_id], references: [id], onDelete: SetNull)
+  category            categories?    @relation(fields: [category_id], references: [id], onDelete: SetNull)
+  instructor          users          @relation("ClassInstructor", fields: [instructor_id], references: [id])
+  room                studio_rooms?  @relation(fields: [room_id], references: [id], onDelete: SetNull)
+  enrollments         enrollments[]
+  attendance          attendance[]
+  instructor_commissions instructor_commissions[]
+  schedule_sessions   schedule_sessions[]
+}
+
+model enrollments {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studio_id        String    @db.Uuid
+  student_id       String    @db.Uuid
+  class_id         String    @db.Uuid
+  parent_id        String?   @db.Uuid
+  enrollment_date  DateTime? @default(now()) @db.Timestamptz
+  status           String?   @default("ACTIVE") @db.VarChar(20)
+  payment_status   String?   @default("PENDING") @db.VarChar(20)
+  total_amount_due Decimal   @default(0) @db.Decimal(10, 2)
+  total_amount_paid Decimal  @default(0) @db.Decimal(10, 2)
+  start_date       DateTime  @db.Date
+  end_date         DateTime? @db.Date
+  cancellation_reason String?
+  notes            String?
+  created_at       DateTime? @default(now()) @db.Timestamptz
+  updated_at       DateTime? @default(now()) @db.Timestamptz
+
+  // Relations
+  studio           studios   @relation(fields: [studio_id], references: [id], onDelete: Cascade)
+  student          users     @relation("EnrollmentStudent", fields: [student_id], references: [id], onDelete: Cascade)
+  class            classes   @relation(fields: [class_id], references: [id], onDelete: Cascade)
+  parent           users?    @relation("EnrollmentParent", fields: [parent_id], references: [id], onDelete: SetNull)
+  attendance       attendance[]
+  payments         payments[]
+}
+
+model attendance {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studio_id     String    @db.Uuid
+  class_id      String    @db.Uuid
+  instructor_id String    @db.Uuid
+  enrollment_id String?   @db.Uuid
+  student_id    String    @db.Uuid
+  session_date  DateTime  @db.Date
+  status        String?   @default("ABSENT") @db.VarChar(20)
+  notes         String?
+  recorded_at   DateTime? @default(now()) @db.Timestamptz
+  recorded_by   String    @db.Uuid
+  created_at    DateTime? @default(now()) @db.Timestamptz
+  updated_at    DateTime? @default(now()) @db.Timestamptz
+
+  // Relations
+  studio        studios       @relation(fields: [studio_id], references: [id], onDelete: Cascade)
+  class         classes       @relation(fields: [class_id], references: [id], onDelete: Cascade)
+  instructor    users         @relation("AttendanceInstructor", fields: [instructor_id], references: [id])
+  enrollment    enrollments?  @relation(fields: [enrollment_id], references: [id], onDelete: SetNull)
+  student       users         @relation("AttendanceStudent", fields: [student_id], references: [id])
+  recorder      users         @relation("AttendanceRecorder", fields: [recorded_by], references: [id])
+
+  @@unique([enrollment_id, session_date])
+}
+
+model payments {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studio_id                String    @db.Uuid
+  enrollment_id            String?   @db.Uuid
+  student_id               String    @db.Uuid
+  instructor_id            String?   @db.Uuid
+  amount_ils               Decimal   @db.Decimal(10, 2)
+  amount_cents             Int?
+  currency                 String?   @default("ILS") @db.VarChar(3)
+  payment_method           String?   @db.VarChar(50)
+  transzilla_transaction_id String?  @db.VarChar(100)
+  stripe_payment_intent_id String?   @db.VarChar(255)
+  stripe_charge_id         String?   @db.VarChar(255)
+  status                   String?   @default("PENDING") @db.VarChar(20)
+  invoice_number           String?   @db.VarChar(50)
+  invoice_url              String?
+  due_date                 DateTime  @db.Date
+  paid_date                DateTime? @db.Timestamptz
+  refund_date              DateTime? @db.Timestamptz
+  refund_reason            String?
+  notes                    String?
+  created_at               DateTime? @default(now()) @db.Timestamptz
+  updated_at               DateTime? @default(now()) @db.Timestamptz
+
+  // Relations
+  studio                   studios       @relation(fields: [studio_id], references: [id], onDelete: Cascade)
+  enrollment               enrollments?  @relation(fields: [enrollment_id], references: [id], onDelete: SetNull)
+  student                  users         @relation("PaymentStudent", fields: [student_id], references: [id])
+  instructor               users?        @relation("PaymentInstructor", fields: [instructor_id], references: [id], onDelete: SetNull)
+}
+
+model instructor_commissions {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studio_id             String    @db.Uuid
+  instructor_id         String    @db.Uuid
+  class_id              String    @db.Uuid
+  commission_percentage Decimal?  @db.Decimal(5, 2)
+  commission_fixed      Decimal?  @db.Decimal(10, 2)
+  billing_cycle         String?   @db.VarChar(20)
+  payment_status        String?   @default("PENDING") @db.VarChar(20)
+  total_earned          Decimal?  @default(0) @db.Decimal(10, 2)
+  total_paid            Decimal?  @default(0) @db.Decimal(10, 2)
+  last_payment_date     DateTime? @db.Timestamptz
+  created_at            DateTime? @default(now()) @db.Timestamptz
+  updated_at            DateTime? @default(now()) @db.Timestamptz
+
+  // Relations
+  studio                studios   @relation(fields: [studio_id], references: [id], onDelete: Cascade)
+  instructor            users     @relation(fields: [instructor_id], references: [id])
+  class                 classes   @relation(fields: [class_id], references: [id])
+}
+
+model schedule_sessions {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studio_id        String    @db.Uuid
+  class_id         String    @db.Uuid
+  session_date     DateTime  @db.Date
+  start_time       DateTime  @db.Time
+  end_time         DateTime  @db.Time
+  location_room    String?   @db.VarChar(100)
+  capacity         Int?
+  enrollment_count Int?      @default(0)
+  status           String?   @default("SCHEDULED") @db.VarChar(20)
+  notes            String?
+  created_at       DateTime? @default(now()) @db.Timestamptz
+  updated_at       DateTime? @default(now()) @db.Timestamptz
+
+  // Relations
+  studio           studios   @relation(fields: [studio_id], references: [id], onDelete: Cascade)
+  class            classes   @relation(fields: [class_id], references: [id], onDelete: Cascade)
+}
+
+model notifications {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id            String    @db.Uuid
+  studio_id          String    @db.Uuid
+  type               String?   @db.VarChar(50)
+  title              String    @db.VarChar(255)
+  message            String
+  related_entity_id  String?   @db.Uuid
+  is_read            Boolean?  @default(false)
+  read_at            DateTime? @db.Timestamptz
+  created_at         DateTime? @default(now()) @db.Timestamptz
+
+  // Relations
+  user               users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  studio             studios   @relation(fields: [studio_id], references: [id], onDelete: Cascade)
+}
+
+model audit_logs {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studio_id   String    @db.Uuid
+  user_id     String    @db.Uuid
+  action      String    @db.VarChar(100)
+  table_name  String?   @db.VarChar(100)
+  record_id   String?   @db.Uuid
+  changes     Json?
+  ip_address  String?   @db.Inet
+  user_agent  String?
+  created_at  DateTime? @default(now()) @db.Timestamptz
+
+  // Relations
+  studio      studios   @relation(fields: [studio_id], references: [id], onDelete: Cascade)
+  user        users     @relation(fields: [user_id], references: [id])
+}
+
+model pending_registrations {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email            String    @db.VarChar(255)
+  studio_id        String    @db.Uuid
+  invitation_token String?   @db.VarChar(500)
+  role             String?   @db.VarChar(20)
+  validated_at     DateTime? @default(now()) @db.Timestamptz
+  expires_at       DateTime? @default(dbgenerated("(NOW() + '01:00:00'::interval)")) @db.Timestamptz
+  used             Boolean?  @default(false)
+  created_at       DateTime? @default(now()) @db.Timestamptz
+
+  // Relations
+  studio           studios   @relation(fields: [studio_id], references: [id], onDelete: Cascade)
+
+  @@index([email], map: "idx_pending_registrations_email")
+}

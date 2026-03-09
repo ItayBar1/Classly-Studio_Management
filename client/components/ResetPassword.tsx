@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase } from '../services/supabaseClient';
+import { apiClient } from '../services/api';
 import { Lock, Loader2, Eye, EyeOff } from 'lucide-react';
 
 interface ResetPasswordProps {
@@ -32,11 +32,15 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess }) => {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
+      // Extract reset token from URL
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      
+      // TODO: Implement /api/auth/reset-password endpoint on the backend
+      await apiClient.post('/auth/reset-password', { token, password });
       onSuccess();
     } catch (err: any) {
-      setError(err.message || 'אירעה שגיאה בעדכון הסיסמה');
+      setError(err.response?.data?.error || err.message || 'אירעה שגיאה בעדכון הסיסמה');
     } finally {
       setLoading(false);
     }

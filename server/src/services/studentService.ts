@@ -1,18 +1,6 @@
-import { supabaseAdmin } from "../config/supabase";
+import { prisma } from "../config/supabase";
 import { logger } from "../logger";
-
-interface InstructorStudent {
-  student?: {
-    id: string;
-    full_name: string;
-    email: string;
-    phone_number: string;
-    profile_image_url?: string | null;
-  };
-  class?: {
-    name?: string | null;
-  };
-}
+import bcrypt from "bcryptjs";
 
 interface StudentPayload {
   email: string;
@@ -26,7 +14,7 @@ export const StudentService = {
     studioId: string,
     page: number = 1,
     limit: number = 50,
-    search: string = ""
+    search: string = "",
   ) {
     const serviceLogger = logger.child({
       service: "StudentService",
@@ -34,27 +22,31 @@ export const StudentService = {
     });
     serviceLogger.info(
       { studioId, page, limit, search },
-      "Fetching students list"
+      "Fetching students list",
     );
 
-    const offset = (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
-    let query = supabaseAdmin
-      .from("users")
-      .select("*", { count: "exact" })
-      .eq("role", "STUDENT")
-      .eq("studio_id", studioId)
-      .range(offset, offset + limit - 1);
+    const where: any = {
+      role: "STUDENT",
+      studio_id: studioId,
+    };
 
     if (search) {
-      query = query.ilike("full_name", `%${search}%`);
+      where.full_name = {
+        contains: search,
+        mode: "insensitive",
+      };
     }
 
-    const { data, count, error } = await query;
-    if (error) {
-      serviceLogger.error({ err: error }, "Failed to fetch students");
-      throw error;
-    }
+    const [data, count] = await Promise.all([
+      prisma.users.findMany({
+        where,
+        skip,
+        take: limit,
+      }),
+      prisma.users.count({ where }),
+    ]);
 
     serviceLogger.info({ count }, "Students fetched successfully");
     return { data, count };
@@ -67,64 +59,59 @@ export const StudentService = {
     });
     serviceLogger.info({ id }, "Fetching student by id");
 
-    const { data, error } = await supabaseAdmin
-      .from("users")
-      .select("*")
-      .eq("id", id)
-      .single();
+    const data = await prisma.users.findUnique({
+      where: { id },
+    });
 
-    if (error) {
-      serviceLogger.error({ err: error }, "Failed to fetch student");
-      throw error;
+    if (!data) {
+      serviceLogger.error({ id }, "Student not found");
+      throw new Error("Student not found");
     }
     return data;
   },
 
   async getByInstructor(instructorId: string) {
     // Retrieve enrollments for courses taught by the instructor
-    // Fixed: Explicitly selecting instructor_id in the inner join ensures filter context is valid
-    const { data, error } = await supabaseAdmin
-      .from("enrollments")
-      .select(
-        `
-        student:users!enrollments_student_id_fkey (
-          id, full_name, email, phone_number, profile_image_url
-        ),
-        class:classes!inner (
-          name,
-          instructor_id
-        )
-      `
-      )
-      .eq("class.instructor_id", instructorId)
-      .in("status", ["ACTIVE", "PENDING"]);
-
-    if (error) throw error;
+    const enrollments = await prisma.enrollments.findMany({
+      where: {
+        status: { in: ["ACTIVE", "PENDING"] },
+        class: {
+          instructor_id: instructorId,
+        },
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            full_name: true,
+            email: true,
+            phone_number: true,
+            profile_image_url: true,
+          },
+        },
+        class: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
 
     // Consolidate data to remove duplicates
     const studentMap = new Map();
 
-    // Convert to any[] to bypass Supabase typing limitations
-    (data as any[]).forEach((item) => {
-      // Guard to ensure student object exists
-      const studentData = Array.isArray(item.student)
-        ? item.student[0]
-        : item.student;
-
-      if (!studentData || !studentData.id) return; // Add check for ID
+    enrollments.forEach((item) => {
+      const studentData = item.student;
+      if (!studentData || !studentData.id) return;
 
       const existing = studentMap.get(studentData.id);
-
-      // Handle class response as array or object
-      const classData = Array.isArray(item.class) ? item.class[0] : item.class;
-      const className = classData?.name;
+      const className = item.class?.name;
 
       if (existing) {
         if (className && !existing.enrolledClass.includes(className)) {
           existing.enrolledClass += `, ${className}`;
         }
       } else {
-        // Create new entry using a spread to detach from reference issues
         studentMap.set(studentData.id, {
           ...studentData,
           enrolledClass: className || "",
@@ -143,48 +130,33 @@ export const StudentService = {
     });
     serviceLogger.info(
       { studioId, email: studentData.email },
-      "Creating student"
+      "Creating student",
     );
 
     const { email, full_name, phone_number, password } = studentData;
 
-    // 1. Create user in Supabase Auth
-    const { data: authData, error: authError } =
-      await supabaseAdmin.auth.admin.createUser({
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password || "123456", salt);
+
+    // Create user directly in DB with student role
+    const data = await prisma.users.create({
+      data: {
         email,
-        password: password || "123456",
-        email_confirm: true,
-      });
-
-    if (authError) {
-      serviceLogger.error({ err: authError }, "Failed to create auth user");
-      throw authError;
-    }
-
-    // 2. Update details in users table
-    const { data, error } = await supabaseAdmin
-      .from("users")
-      .update({
+        password_hash,
         full_name,
-        phone_number,
+        phone_number: phone_number || null,
         role: "STUDENT",
         studio_id: studioId,
         status: "ACTIVE",
-      })
-      .eq("id", authData.user.id)
-      .select()
-      .single();
+      },
+    });
 
-    if (error) {
-      serviceLogger.error({ err: error }, "Failed to update student record");
-      throw error;
-    }
     return data;
   },
 
   /**
    * Soft delete a student (set status to INACTIVE)
-   * @param studentId the student identifier
    */
   async deleteStudent(studentId: string) {
     const serviceLogger = logger.child({
@@ -194,41 +166,30 @@ export const StudentService = {
     serviceLogger.info({ studentId }, "Soft deleting student");
 
     // 1. Ensure the user exists and is a student
-    const { data: user, error: fetchError } = await supabaseAdmin
-      .from("users")
-      .select("role")
-      .eq("id", studentId)
-      .single();
+    const user = await prisma.users.findUnique({
+      where: { id: studentId },
+      select: { role: true },
+    });
 
-    if (fetchError || !user) {
-      serviceLogger.error(
-        { err: fetchError },
-        "Student not found during delete"
-      );
+    if (!user) {
+      serviceLogger.error({ studentId }, "Student not found during delete");
       throw new Error("Student not found");
     }
 
     if (user.role !== "STUDENT") {
       throw new Error(
-        "Cannot delete a user who is not a student via this endpoint"
+        "Cannot delete a user who is not a student via this endpoint",
       );
     }
 
     // 2. Soft delete - update status
-    const { data, error } = await supabaseAdmin
-      .from("users")
-      .update({
+    const data = await prisma.users.update({
+      where: { id: studentId },
+      data: {
         status: "INACTIVE",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", studentId)
-      .select()
-      .single();
-
-    if (error) {
-      serviceLogger.error({ err: error }, "Failed to soft delete student");
-      throw new Error(`Failed to delete student: ${error.message}`);
-    }
+        updated_at: new Date(),
+      },
+    });
 
     serviceLogger.info({ studentId }, "Student soft deleted successfully");
     return data;

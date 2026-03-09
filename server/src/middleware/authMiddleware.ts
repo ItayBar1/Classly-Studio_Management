@@ -1,5 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-import { supabaseAdmin } from '../config/supabase';
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { prisma } from "../config/supabase";
+import { environment } from "../config/env";
 
 // Extend Request typing to include user context
 declare global {
@@ -11,41 +13,59 @@ declare global {
   }
 }
 
-export const authenticateUser = async (req: Request, res: Response, next: NextFunction) => {
+interface JwtPayload {
+  userId: string;
+  email: string;
+  role: string;
+}
+
+export const authenticateUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
-    return res.status(401).json({ error: 'Missing Authorization header' });
+    return res.status(401).json({ error: "Missing Authorization header" });
   }
 
-  const token = authHeader.split(' ')[1];
+  const token = authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ error: "Invalid token format" });
+  }
 
   try {
-    // 1. Validate the token with Supabase Auth
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+    // 1. Verify the JWT token locally
+    const decoded = jwt.verify(token, environment.jwtSecret) as JwtPayload;
 
-    if (error || !user) {
-      return res.status(401).json({ error: 'Invalid token' });
+    // 2. Fetch user profile from database
+    const userData = await prisma.users.findUnique({
+      where: { id: decoded.userId },
+    });
+
+    if (!userData) {
+      return res.status(403).json({ error: "User profile not found" });
     }
 
-    // 2. Fetch user profile and role from the public table
-    const { data: userData, error: dbError } = await supabaseAdmin
-      .from('users')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    if (dbError || !userData) {
-      return res.status(403).json({ error: 'User profile not found' });
+    if (userData.status === "SUSPENDED") {
+      return res.status(403).json({ error: "Account is suspended" });
     }
 
     // 3. Attach user to the Request for downstream handlers
     req.user = userData;
-    req.studioId = userData.studio_id;
+    req.studioId = userData.studio_id || undefined;
 
     next();
-  } catch (err) {
-    return res.status(500).json({ error: 'Internal Server Error during auth' });
+  } catch (err: any) {
+    if (err.name === "TokenExpiredError") {
+      return res.status(401).json({ error: "Token expired" });
+    }
+    if (err.name === "JsonWebTokenError") {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+    return res.status(500).json({ error: "Internal Server Error during auth" });
   }
 };
 
@@ -53,7 +73,7 @@ export const authenticateUser = async (req: Request, res: Response, next: NextFu
 export const requireRole = (allowedRoles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user || !allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
+      return res.status(403).json({ error: "Insufficient permissions" });
     }
     next();
   };

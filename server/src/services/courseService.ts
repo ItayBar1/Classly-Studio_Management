@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "../config/supabase";
+import { prisma } from "../config/supabase";
 import { logger } from "../logger";
 
 type CourseFilters = {
@@ -17,32 +17,33 @@ export class CourseService {
     });
     serviceLogger.info({ userRole, filters }, "Fetching all courses");
 
-    let query = supabaseAdmin
-      .from("classes")
-      .select("*, instructor:users(full_name)");
+    const where: any = {};
 
     // If student, only show active courses
     if (userRole === "STUDENT") {
-      query = query.eq("is_active", true);
+      where.is_active = true;
     }
 
-    // Apply generic filters if provided (e.g., category_id)
+    // Apply category filter
     if (filters.category_id) {
-      query = query.eq("category_id", filters.category_id);
+      where.category_id = String(filters.category_id);
     }
 
-    const { data, error } = await query;
-    if (error) {
-      serviceLogger.error({ err: error }, "Failed to fetch courses");
-      throw new Error(error.message);
-    }
+    const data = await prisma.classes.findMany({
+      where,
+      include: {
+        instructor: {
+          select: { full_name: true },
+        },
+      },
+    });
+
     serviceLogger.info({ count: data?.length }, "Courses fetched successfully");
     return data;
   }
 
   /**
    * Get available courses for student (active & not fully booked)
-   * Note: Need to verify student isn't already enrolled in logic later
    */
   static async getAvailableForStudent(studentId: string) {
     const serviceLogger = logger.child({
@@ -50,18 +51,19 @@ export class CourseService {
       method: "getAvailableForStudent",
     });
     serviceLogger.info({ studentId }, "Fetching available courses for student");
-    // Fetch active courses.
-    // Future improvement: filter out courses the student is already enrolled in
-    const { data, error } = await supabaseAdmin
-      .from("classes")
-      .select("*, instructor:users(full_name)")
-      .eq("is_active", true); // תביא את כל הפעילים
 
-    if (error) throw error;
+    const data = await prisma.classes.findMany({
+      where: { is_active: true },
+      include: {
+        instructor: {
+          select: { full_name: true },
+        },
+      },
+    });
 
-    // סנן ב-JS קורסים מלאים
+    // Filter out full courses in JS
     const availableCourses = data.filter(
-      (course) => course.current_enrollment < course.max_capacity
+      (course) => (course.current_enrollment || 0) < course.max_capacity,
     );
 
     return availableCourses;
@@ -73,17 +75,22 @@ export class CourseService {
       method: "getCourseById",
     });
     serviceLogger.info({ id }, "Fetching course by id");
-    const { data, error } = await supabaseAdmin
-      .from("classes")
-      .select(
-        "*, instructor:users(full_name, profile_image_url), studio:studios(name)"
-      )
-      .eq("id", id)
-      .single();
 
-    if (error) {
-      serviceLogger.error({ err: error }, "Failed to fetch course by id");
-      throw new Error(error.message);
+    const data = await prisma.classes.findUnique({
+      where: { id },
+      include: {
+        instructor: {
+          select: { full_name: true, profile_image_url: true },
+        },
+        studio: {
+          select: { name: true },
+        },
+      },
+    });
+
+    if (!data) {
+      serviceLogger.error({ id }, "Course not found");
+      throw new Error("Course not found");
     }
     return data;
   }
@@ -94,16 +101,12 @@ export class CourseService {
       method: "getCoursesByInstructor",
     });
     serviceLogger.info({ instructorId }, "Fetching courses by instructor");
-    const { data, error } = await supabaseAdmin
-      .from("classes")
-      .select("*")
-      .eq("instructor_id", instructorId)
-      .order("day_of_week", { ascending: true });
 
-    if (error) {
-      serviceLogger.error({ err: error }, "Failed to fetch instructor courses");
-      throw new Error(error.message);
-    }
+    const data = await prisma.classes.findMany({
+      where: { instructor_id: instructorId },
+      orderBy: { day_of_week: "asc" },
+    });
+
     return data;
   }
 
@@ -113,16 +116,11 @@ export class CourseService {
       method: "createCourse",
     });
     serviceLogger.info({ courseData }, "Creating course");
-    const { data, error } = await supabaseAdmin
-      .from("classes")
-      .insert([courseData])
-      .select()
-      .single();
 
-    if (error) {
-      serviceLogger.error({ err: error }, "Failed to create course");
-      throw new Error(error.message);
-    }
+    const data = await prisma.classes.create({
+      data: courseData as any,
+    });
+
     return data;
   }
 
@@ -132,17 +130,12 @@ export class CourseService {
       method: "updateCourse",
     });
     serviceLogger.info({ id, updates }, "Updating course");
-    const { data, error } = await supabaseAdmin
-      .from("classes")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
 
-    if (error) {
-      serviceLogger.error({ err: error }, "Failed to update course");
-      throw new Error(error.message);
-    }
+    const data = await prisma.classes.update({
+      where: { id },
+      data: updates as any,
+    });
+
     return data;
   }
 
@@ -152,16 +145,12 @@ export class CourseService {
       method: "softDeleteCourse",
     });
     serviceLogger.info({ id }, "Soft deleting course");
-    // Soft delete: set is_active to false
-    const { error } = await supabaseAdmin
-      .from("classes")
-      .update({ is_active: false })
-      .eq("id", id);
 
-    if (error) {
-      serviceLogger.error({ err: error }, "Failed to soft delete course");
-      throw new Error(error.message);
-    }
+    await prisma.classes.update({
+      where: { id },
+      data: { is_active: false },
+    });
+
     serviceLogger.info({ id }, "Course deactivated");
     return true;
   }

@@ -1,10 +1,14 @@
-import { createClient } from '@supabase/supabase-js';
-import { environment } from './env';
+import { PrismaClient } from '@prisma/client';
 
-const { url, serviceRoleKey } = environment.supabase;
+// Singleton pattern for PrismaClient to prevent multiple instances in development
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
-if (!url || !serviceRoleKey) {
-  throw new Error('Missing Supabase credentials in environment variables');
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  });
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
 }
-
-export const supabaseAdmin = createClient(url, serviceRoleKey);

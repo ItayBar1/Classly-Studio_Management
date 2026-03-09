@@ -1,10 +1,9 @@
 import React, { useState, useEffect, Suspense, lazy } from "react";
-import { supabase } from "./services/supabaseClient";
-import { Session } from "@supabase/supabase-js";
 import { Sidebar } from "./components/Sidebar";
 import { MobileDrawer } from "./components/MobileDrawer";
 import { Loader2, Menu } from "lucide-react";
-import { UserService } from "./services/api";
+import { AuthService, UserService, getStoredUser } from "./services/api";
+import type { User } from "./types/types";
 
 // --- Lazy Load Components (Code Splitting) ---
 
@@ -97,7 +96,8 @@ const BrowseCourses = lazy(() =>
 );
 
 function App() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [userRole, setUserRole] = useState<string>("STUDENT");
@@ -136,45 +136,36 @@ function App() {
       const user = await UserService.getMe();
       if (user?.role) {
         setUserRole(user.role);
+        setCurrentUser(user);
         console.info("Role updated from backend", { role: user.role });
       }
     } catch (err) {
       console.error("Failed to fetch user role from backend", err);
+      // If we can't fetch the user, the token might be invalid
+      AuthService.logout();
+      setIsAuthenticated(false);
+      setCurrentUser(null);
     }
   };
 
+  // Initial auth check
   useEffect(() => {
     console.info("App initialization started");
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        // Optimistically set from metadata first (fast)
-        if (session.user.user_metadata?.role) {
-          setUserRole(session.user.user_metadata.role);
-        }
-        // Then fetch authoritative role from DB (reliable)
-        fetchUserRole();
+    
+    if (AuthService.isAuthenticated()) {
+      setIsAuthenticated(true);
+      // Load cached user data immediately
+      const cachedUser = getStoredUser();
+      if (cachedUser) {
+        setCurrentUser(cachedUser);
+        setUserRole(cachedUser.role || "STUDENT");
       }
+      // Then fetch authoritative role from DB
+      fetchUserRole().finally(() => setLoading(false));
+    } else {
       setLoading(false);
-      console.info("Initial session check completed");
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.user) {
-        if (session.user.user_metadata?.role) {
-          setUserRole(session.user.user_metadata.role);
-        }
-        fetchUserRole();
-      }
-    });
-
-    return () => {
-      console.info("Cleaning up auth subscription");
-      subscription.unsubscribe();
-    };
+    }
+    console.info("Initial auth check completed");
   }, []);
 
   useEffect(() => {
@@ -185,13 +176,26 @@ function App() {
     });
   }, [activeTab]);
 
-  const handleLogout = async () => {
+  const handleAuthSuccess = () => {
+    setIsAuthenticated(true);
+    const cachedUser = getStoredUser();
+    if (cachedUser) {
+      setCurrentUser(cachedUser);
+      setUserRole(cachedUser.role || "STUDENT");
+    }
+    fetchUserRole();
+  };
+
+  const handleLogout = () => {
     try {
       console.info("User requested logout");
-      await supabase.auth.signOut();
+      AuthService.logout();
+      setIsAuthenticated(false);
+      setCurrentUser(null);
       setUserRole("STUDENT");
       setVisitedTabs(new Set(["dashboard"]));
       setActiveTab("dashboard");
+      setShowLogin(false);
       console.info("User signed out successfully");
     } catch (error) {
       console.error("Failed to sign out user", error);
@@ -260,8 +264,8 @@ function App() {
     );
   }
 
-  // If there's no session, decide whether to show the LandingPage or the AuthPage
-  if (!session) {
+  // If not authenticated, decide whether to show the LandingPage or the AuthPage
+  if (!isAuthenticated) {
     return (
       <Suspense
         fallback={
@@ -271,7 +275,7 @@ function App() {
         }
       >
         {showLogin ? (
-          <AuthPage />
+          <AuthPage onAuthSuccess={handleAuthSuccess} />
         ) : (
           <LandingPage onLoginClick={() => setShowLogin(true)} />
         )}
@@ -322,11 +326,11 @@ function App() {
             <Menu size={24} />
           </button>
 
-          {/* User header reused from previous version */}
+          {/* User header */}
           <div className="flex items-center gap-4">
             <div className="text-left">
               <p className="text-sm font-bold text-slate-700">
-                {session.user.user_metadata.full_name || "משתמש"}
+                {currentUser?.full_name || "משתמש"}
               </p>
               <p className="text-xs text-slate-500 uppercase">
                 {userRole === "SUPER_ADMIN"
@@ -339,7 +343,7 @@ function App() {
               </p>
             </div>
             <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold border-2 border-white shadow-sm">
-              {session.user.email?.[0].toUpperCase()}
+              {currentUser?.email?.[0]?.toUpperCase() || "?"}
             </div>
           </div>
         </header>

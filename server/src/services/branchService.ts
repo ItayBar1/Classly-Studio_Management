@@ -1,78 +1,65 @@
-
-import { supabaseAdmin } from '../config/supabase';
+import { prisma } from "../config/supabase";
 
 export interface BranchDTO {
-    name: string;
-    address: string;
-    city: string;
-    phone_number: string;
-    is_active?: boolean;
+  name: string;
+  address: string;
+  city: string;
+  phone_number: string;
+  is_active?: boolean;
 }
 
 export class BranchService {
+  static async getAll(studioId: string) {
+    const data = await prisma.branches.findMany({
+      where: { studio_id: studioId },
+      orderBy: { created_at: "asc" },
+    });
+    return data;
+  }
 
-    static async getAll(studioId: string) {
-        const { data, error } = await supabaseAdmin
-            .from('branches')
-            .select('*')
-            .eq('studio_id', studioId)
-            .order('created_at', { ascending: true });
+  static async create(studioId: string, data: BranchDTO) {
+    const branch = await prisma.branches.create({
+      data: {
+        studio_id: studioId,
+        ...data,
+      },
+    });
 
-        if (error) throw error;
-        return data;
+    // Auto-create default room
+    if (branch) {
+      await prisma.studio_rooms.create({
+        data: {
+          studio_id: studioId,
+          branch_id: branch.id,
+          name: "אולם ראשי",
+          capacity: 20,
+          is_active: true,
+        },
+      });
     }
 
-    static async create(studioId: string, data: BranchDTO) {
-        const { data: branch, error } = await supabaseAdmin
-            .from('branches')
-            .insert({
-                studio_id: studioId,
-                ...data
-            })
-            .select()
-            .single();
+    return branch;
+  }
 
-        if (error) throw error;
+  static async update(
+    branchId: string,
+    studioId: string,
+    data: Partial<BranchDTO>,
+  ) {
+    const branch = await prisma.branches.update({
+      where: { id: branchId },
+      data: data as any,
+    });
+    return branch;
+  }
 
-        // Auto-create default room
-        if (branch) {
-            await supabaseAdmin.from('studio_rooms').insert({
-                studio_id: studioId,
-                branch_id: branch.id,
-                name: 'אולם ראשי',
-                capacity: 20,
-                is_active: true
-            });
-        }
-
-        return branch;
-    }
-
-    static async update(branchId: string, studioId: string, data: Partial<BranchDTO>) {
-        const { data: branch, error } = await supabaseAdmin
-            .from('branches')
-            .update(data)
-            .eq('id', branchId)
-            .eq('studio_id', studioId)
-            .select()
-            .single();
-
-        if (error) throw error;
-        return branch;
-    }
-
-    static async delete(branchId: string, studioId: string) {
-        // Soft delete (set inactive) or hard delete?
-        // User asked to 'remove', but usually hard delete is risky with dependencies.
-        // We will do hard delete but let FK constraints fail if used.
-        // Or better: check usage first. For now, simple Delete.
-        const { error } = await supabaseAdmin
-            .from('branches')
-            .delete()
-            .eq('id', branchId)
-            .eq('studio_id', studioId);
-
-        if (error) throw error;
-        return true;
-    }
+  static async delete(branchId: string, studioId: string) {
+    await prisma.branches.deleteMany({
+      where: {
+        id: branchId,
+        studio_id: studioId,
+      },
+    });
+    return true;
+  }
 }
