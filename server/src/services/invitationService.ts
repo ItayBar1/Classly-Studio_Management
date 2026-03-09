@@ -54,7 +54,7 @@ export class InvitationService {
         audience: AUDIENCE,
       }) as InvitationClaims & jwt.JwtPayload;
 
-      let studio = null;
+      let studio: any = null;
       if (decoded.studioId) {
         studio = await prisma.studios.findUnique({
           where: { id: decoded.studioId },

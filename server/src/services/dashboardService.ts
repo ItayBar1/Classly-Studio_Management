@@ -135,7 +135,7 @@ export const DashboardService = {
       ).length;
 
       // Calculate Next Class
-      let nextClass = null;
+      let nextClass: any = null;
       if (myCourses.length > 0) {
         const coursesWithNextDate = myCourses.map((course) => ({
           ...course,

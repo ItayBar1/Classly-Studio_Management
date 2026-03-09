@@ -12,7 +12,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
       - ./studio_management_schema_setup.sql:/docker-entrypoint-initdb.d/setup.sql
 
   backend:
@@ -20,14 +20,21 @@ services:
     container_name: classly-api
     restart: always
     env_file:
-      - ./server/.env # טוען את כל הקובץ לתוך הקונטיינר
+      - ./server/.env
+    ports:
+      - "5000:5000"
     depends_on:
       - db
 
   frontend:
-    build: ./client
+    build: 
+      context: ./client
+      args:
+        - VITE_API_URL=https://www.classly-studio-management.uk/api
     container_name: classly-web
     restart: always
+    ports:
+      - "80:80"
     env_file:
       - ./client/.env
     depends_on:

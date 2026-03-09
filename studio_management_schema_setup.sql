@@ -60,18 +60,6 @@ CREATE TABLE IF NOT EXISTS public.studios (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- STUDIO ROOMS
-CREATE TABLE IF NOT EXISTS public.studio_rooms (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  studio_id UUID NOT NULL REFERENCES public.studios(id) ON DELETE CASCADE,
-  branch_id UUID NOT NULL REFERENCES public.branches(id) ON DELETE CASCADE,
-  name VARCHAR(255) NOT NULL,
-  capacity INTEGER,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
 -- יצירת טבלת BRANCHES
 CREATE TABLE IF NOT EXISTS public.branches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -81,6 +69,18 @@ CREATE TABLE IF NOT EXISTS public.branches (
   city VARCHAR(100),
   coordinates POINT,
   phone_number VARCHAR(20),
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- STUDIO ROOMS
+CREATE TABLE IF NOT EXISTS public.studio_rooms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  studio_id UUID NOT NULL REFERENCES public.studios(id) ON DELETE CASCADE,
+  branch_id UUID NOT NULL REFERENCES public.branches(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  capacity INTEGER,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

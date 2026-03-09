@@ -54,7 +54,7 @@ export class AttendanceService {
     }
 
     // 2. Prepare upsert operations
-    const results = [];
+    const results: any[] = [];
     for (const record of records) {
       const enrollmentId = enrollmentMap.get(record.studentId);
 
