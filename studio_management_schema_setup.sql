@@ -38,6 +38,15 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 DROP SEQUENCE IF EXISTS public.studio_serial_sequence CASCADE;
 CREATE SEQUENCE public.studio_serial_sequence START 1;
 
+-- יצירת טבלת USERS
+CREATE TABLE IF NOT EXISTS public.users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL, -- כאן נשמור את הסיסמה המוצפנת (Bcrypt)
+  role TEXT DEFAULT 'student',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- יצירת טבלת STUDIOS
 CREATE TABLE IF NOT EXISTS public.studios (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

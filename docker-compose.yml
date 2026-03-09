@@ -1,0 +1,35 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:latest
+    container_name: classly-db
+    restart: always
+    environment:
+      POSTGRES_USER: itay
+      POSTGRES_PASSWORD: your_password
+      POSTGRES_DB: classly_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # טעינה אוטומטית של הסכימה שלך
+      - ./studio_management_schema_setup.sql:/docker-entrypoint-initdb.d/setup.sql
+
+  backend:
+    build: ./server
+    container_name: classly-api
+    restart: always
+    environment:
+      DATABASE_URL: postgres://itay:your_password@db:5432/classly_db
+      JWT_SECRET: your_jwt_secret
+      # תצטרך לעדכן את הקוד בשרת שישתמש ב-DB במקום ב-Supabase
+    depends_on:
+      - db
+
+  frontend:
+    build: ./client
+    container_name: classly-web
+    restart: always
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
