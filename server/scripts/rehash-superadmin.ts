@@ -72,12 +72,12 @@ async function main() {
     // Verify it works
     const verify = await bcrypt.compare(SUPERADMIN_PASSWORD, hashedPassword);
     console.log(`🔐 Verification: ${verify ? 'PASS' : 'FAIL'}`);
-  } catch (error) {
-    console.error('❌ Error:', error);
-    process.exit(1);
   } finally {
     await prisma.$disconnect();
   }
 }
 
-main();
+main().catch((error) => {
+  console.error('❌ Error:', error);
+  process.exit(1);
+});
