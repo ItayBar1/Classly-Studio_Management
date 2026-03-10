@@ -204,6 +204,7 @@ export const EnrollmentService = {
   register: (courseId: string) => apiClient.post('/enrollments/register', { classId: courseId }).then(res => res.data),
   getMyEnrollments: () => apiClient.get<ClassSession[]>('/enrollments/my-enrollments').then(res => res.data),
   getClassEnrollments: (classId: string) => apiClient.get<any[]>(`/enrollments/class/${classId}`).then(res => res.data),
+  cancelEnrollment: (id: string) => apiClient.delete(`/enrollments/${id}`).then(res => res.data),
 };
 
 export const PaymentService = {

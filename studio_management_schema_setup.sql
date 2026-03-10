@@ -185,7 +185,7 @@ CREATE TABLE IF NOT EXISTS public.enrollments (
   class_id UUID NOT NULL REFERENCES public.classes(id) ON DELETE CASCADE,
   parent_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
   enrollment_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  status VARCHAR(20) CHECK (status IN ('ACTIVE', 'PAUSED', 'COMPLETED', 'CANCELLED')) DEFAULT 'ACTIVE',
+  status VARCHAR(20) CHECK (status IN ('ACTIVE', 'PAUSED', 'COMPLETED', 'CANCELLED', 'PENDING')) DEFAULT 'ACTIVE',
   payment_status VARCHAR(20) CHECK (payment_status IN ('PENDING', 'PAID', 'PARTIAL', 'OVERDUE')) DEFAULT 'PENDING',
   total_amount_due DECIMAL(10, 2) NOT NULL DEFAULT 0,
   total_amount_paid DECIMAL(10, 2) NOT NULL DEFAULT 0,

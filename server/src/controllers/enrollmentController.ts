@@ -93,7 +93,7 @@ export class EnrollmentController {
           studioId,
           studentId,
           classId,
-          "ACTIVE", // <-- תוקן מ-PENDING כדי לעבור את ה-Check Constraint של ה-DB
+          "PENDING", // Enrollment status awaiting confirmation
           "PENDING" // Payment status awaiting payment
         );
 

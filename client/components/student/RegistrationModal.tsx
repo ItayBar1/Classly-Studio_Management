@@ -78,10 +78,11 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  // ניהול שלבי הרשמה בצורה מסודרת
   const [step, setStep] = useState<'initial' | 'payment' | 'success'>('initial');
+  
+  // שמירת מזהה ההרשמה למקרה של ביטול
+  const [pendingEnrollmentId, setPendingEnrollmentId] = useState<string | null>(null);
 
-  // בדיקה אם הקורס חינם
   const isFree = course && (course.price_ils === 0 || course.price_ils === null);
 
   useEffect(() => {
@@ -89,6 +90,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
       setStep('initial');
       setClientSecret(null);
       setError(null);
+      setPendingEnrollmentId(null);
     }
   }, [isOpen, course]);
 
@@ -98,14 +100,17 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
     setError(null);
     
     try {
-      // הקריאה לראוט הזה מייצרת מאחורי הקלעים את ההרשמה במצב "ממתין" ויוצרת כוונת תשלום
       const res = await EnrollmentService.register(course.id);
+
+      // שמירת מזהה ההרשמה שהשרת יצר
+      if (res.enrollmentId) {
+        setPendingEnrollmentId(res.enrollmentId);
+      }
 
       if (res.clientSecret) {
         setClientSecret(res.clientSecret);
         setStep('payment');
       } else {
-        // אם אין סוד לקוח, או שהמחיר 0, מעבירים ישירות להצלחה
         handlePaymentSuccess();
       }
     } catch (err: any) {
@@ -124,6 +129,18 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
     }, 2000); 
   };
 
+  // פונקציית סגירה חכמה - מוחקת הרשמה אם ברחנו באמצע
+  const handleCloseModal = async () => {
+    if (step === 'payment' && pendingEnrollmentId) {
+      try {
+        await EnrollmentService.cancelEnrollment(pendingEnrollmentId);
+      } catch (err) {
+        console.error("Failed to cleanup incomplete enrollment", err);
+      }
+    }
+    onClose();
+  };
+
   if (!isOpen || !course) return null;
 
   return (
@@ -134,7 +151,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
         <div className="bg-slate-900 p-4 flex justify-between items-center text-white">
           <h3 className="font-bold">הרשמה ל{course.name}</h3>
-          <button onClick={onClose} disabled={loading || step === 'success'}>
+          <button onClick={handleCloseModal} disabled={loading || step === 'success'}>
             <X size={20} className={loading || step === 'success' ? "opacity-50" : ""} />
           </button>
         </div>
@@ -165,7 +182,6 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                 </div>
               )}
 
-              {/* שלב ראשוני: כפתור תחילת הרשמה מונע יצירת רשומות "ממתין" זבל במסד הנתונים מכל צפייה במודל */}
               {step === 'initial' && (
                 <button
                   onClick={handleInitiateRegistration}
@@ -184,7 +200,6 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                 </button>
               )}
 
-              {/* שלב התשלום: הצגת טופס Stripe כשיש Secret חוקי מהשרת */}
               {step === 'payment' && clientSecret && (
                 <div className="animate-fadeIn">
                   <Elements
