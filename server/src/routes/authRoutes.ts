@@ -17,4 +17,19 @@ router.post('/register', AuthController.register);
  */
 router.post('/login', AuthController.login);
 
+/**
+ * @route   POST /api/auth/forgot-password
+ * @desc    Request a password reset email
+ * @access  Public
+ */
+router.post('/forgot-password', AuthController.forgotPassword);
+
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    Reset password with a valid token
+ * @access  Public
+ */
+router.post('/reset-password', AuthController.resetPassword);
+
 export default router;
+

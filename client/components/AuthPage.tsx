@@ -76,10 +76,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
     setMessage(null);
 
     try {
-      // TODO: Implement password reset endpoint on backend
+      await AuthService.forgotPassword(email);
       setMessage('אם קיים משתמש עם כתובת המייל הזו, נשלח קישור לאיפוס סיסמה.');
     } catch (err: any) {
       logger.error('Reset password error:', err);
+      // Always show generic message for security (don't reveal if email exists)
       setMessage('אם קיים משתמש עם כתובת המייל הזו, נשלח קישור לאיפוס סיסמה.');
     } finally {
       setLoading(false);

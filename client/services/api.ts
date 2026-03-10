@@ -69,15 +69,24 @@ apiClient.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
+// Auth endpoints that should NOT trigger auto-logout on 401
+const AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password'];
+
 // Interceptor: Handle 401 responses (expired/invalid token)
+// Skip auto-logout for auth endpoints — let the calling code handle the error
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      removeStoredToken();
-      removeStoredUser();
-      // Optionally trigger a page reload to show login
-      window.location.reload();
+      const requestUrl = error.config?.url || '';
+      const isAuthRequest = AUTH_PATHS.some((path) => requestUrl.includes(path));
+
+      if (!isAuthRequest) {
+        // Token expired on a protected route — logout and reload
+        removeStoredToken();
+        removeStoredUser();
+        window.location.reload();
+      }
     }
     return Promise.reject(error);
   }
@@ -103,6 +112,11 @@ export const AuthService = {
     const res = await apiClient.post<{ token: string; user: User; message: string }>('/auth/register', data);
     setStoredToken(res.data.token);
     setStoredUser(res.data.user);
+    return res.data;
+  },
+
+  forgotPassword: async (email: string) => {
+    const res = await apiClient.post<{ message: string }>('/auth/forgot-password', { email });
     return res.data;
   },
 
