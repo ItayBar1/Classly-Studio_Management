@@ -6,6 +6,14 @@ type CourseFilters = {
   [key: string]: unknown;
 };
 
+// פונקציית עזר להמרת שעות לפורמט ISO ש-Prisma דורש
+const formatTimeForPrisma = (timeStr: string) => {
+  if (/^\d{2}:\d{2}$/.test(timeStr)) {
+    return `1970-01-01T${timeStr}:00.000Z`;
+  }
+  return timeStr;
+};
+
 export class CourseService {
   /**
    * Get all courses with optional filters
@@ -117,8 +125,18 @@ export class CourseService {
     });
     serviceLogger.info({ courseData }, "Creating course");
 
+    const dataToSave = {
+      ...courseData,
+      start_time: typeof courseData.start_time === 'string' 
+        ? formatTimeForPrisma(courseData.start_time) 
+        : courseData.start_time,
+      end_time: typeof courseData.end_time === 'string' 
+        ? formatTimeForPrisma(courseData.end_time) 
+        : courseData.end_time,
+    };
+
     const data = await prisma.classes.create({
-      data: courseData as any,
+      data: dataToSave as any,
     });
 
     return data;
@@ -131,9 +149,19 @@ export class CourseService {
     });
     serviceLogger.info({ id, updates }, "Updating course");
 
+    const dataToUpdate = {
+      ...updates,
+      start_time: typeof updates.start_time === 'string' 
+        ? formatTimeForPrisma(updates.start_time) 
+        : updates.start_time,
+      end_time: typeof updates.end_time === 'string' 
+        ? formatTimeForPrisma(updates.end_time) 
+        : updates.end_time,
+    };
+
     const data = await prisma.classes.update({
       where: { id },
-      data: updates as any,
+      data: dataToUpdate as any,
     });
 
     return data;
