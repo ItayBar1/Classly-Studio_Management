@@ -105,8 +105,11 @@ function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false); // mobile drawer
   // If an invitation token is present in the URL, skip the LandingPage and go straight to AuthPage
   const [showLogin, setShowLogin] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.has('token');
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.has('token') || !!sessionStorage.getItem('pendingInviteToken');
+    }
+    return false;
   });
 
   // Keep track of which tabs have been visited to lazy-load them
@@ -156,15 +159,34 @@ function App() {
   useEffect(() => {
     console.info("App initialization started");
     
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+
+    // שאיבת הטוקן וניקוי שורת הכתובת באופן גלובלי
+    if (token) {
+      sessionStorage.setItem('pendingInviteToken', token);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // כפיית ניתוק של סשן קיים כדי להבטיח מעבר למסך ההרשמה של המדריך/מנהל
+      if (AuthService.isAuthenticated()) {
+        console.info("Logging out existing user to process new invite token");
+        AuthService.logout();
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+        setUserRole("STUDENT");
+        setShowLogin(true);
+        setLoading(false);
+        return; 
+      }
+    }
+
     if (AuthService.isAuthenticated()) {
       setIsAuthenticated(true);
-      // Load cached user data immediately
       const cachedUser = getStoredUser();
       if (cachedUser) {
         setCurrentUser(cachedUser);
         setUserRole(cachedUser.role || "STUDENT");
       }
-      // Then fetch authoritative role from DB
       fetchUserRole().finally(() => setLoading(false));
     } else {
       setLoading(false);
