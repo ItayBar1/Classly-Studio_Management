@@ -190,6 +190,13 @@ export class EnrollmentController {
       }
       // ----------------------
 
+      // המרת שגיאות 401 מצד שלישי (כמו Stripe) לשגיאות שרת (500)
+      // כדי למנוע מהקליינט לנתק את המשתמש
+      if (error && error.statusCode === 401) {
+        error.statusCode = 500;
+        error.message = "שגיאה בהתחברות לשירות התשלומים. אנא פנה להנהלה.";
+      }
+
       next(error);
     }
   }
