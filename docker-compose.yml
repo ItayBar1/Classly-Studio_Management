@@ -1,13 +1,11 @@
-version: '3.8'
 services:
   db:
     image: postgres:latest
     container_name: classly-db
     restart: always
     environment:
-      # Docker Compose מושך את המשתנים האלו מה-env. של השרת/shell
       POSTGRES_USER: itay
-      POSTGRES_PASSWORD: ${DB_PASSWORD} # נגדיר ב-env הראשי
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: classly_db
     ports:
       - "5432:5432"
@@ -25,6 +23,19 @@ services:
       - "5000:5000"
     depends_on:
       - db
+
+  # השירות החדש להרצת סקריפטים ותחזוקה
+  backend-tools:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: builder  # <--- זה גורם לדוקר לעצור בשלב ה-node:20-alpine AS builder
+    container_name: classly-tools
+    env_file:
+      - ./server/.env
+    depends_on:
+      - db
+    # אנחנו לא צריכים ports או restart לכלים זמניים
 
   frontend:
     build: 
