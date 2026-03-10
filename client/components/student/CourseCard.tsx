@@ -12,6 +12,15 @@ const DAY_MAP: Record<number, string> = {
   6: "שבת",
 };
 
+// פונקציית עזר לחילוץ השעה מתוך מחרוזת ה-ISO
+const extractTime = (timeValue: string) => {
+  if (!timeValue) return "00:00";
+  if (timeValue.includes("T")) {
+    return new Date(timeValue).toISOString().substring(11, 16);
+  }
+  return timeValue.substring(0, 5);
+};
+
 interface CourseCardProps {
   course: any;
   onRegister: (course: any) => void;
@@ -58,8 +67,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             <Calendar size={16} className="text-slate-400" />
             <span>
               יום {DAY_MAP[course.day_of_week]} •{" "}
-              {course.start_time.substring(0, 5)} -{" "}
-              {course.end_time.substring(0, 5)}
+              {extractTime(course.start_time)} - {extractTime(course.end_time)}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -74,23 +82,25 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           </div>
         </div>
 
-        {!hideButton && (<button
-          onClick={() => onRegister(course)}
-          disabled={isFull || isEnrolled} // נטרול אם מלא או רשום
-          className={`w-full py-2.5 rounded-lg font-bold transition-colors ${
-            isEnrolled
-              ? "bg-green-100 text-green-700 cursor-not-allowed border border-green-200" // עיצוב למצב רשום
+        {!hideButton && (
+          <button
+            onClick={() => onRegister(course)}
+            disabled={isFull || isEnrolled} // נטרול אם מלא או רשום
+            className={`w-full py-2.5 rounded-lg font-bold transition-colors ${
+              isEnrolled
+                ? "bg-green-100 text-green-700 cursor-not-allowed border border-green-200" // עיצוב למצב רשום
+                : isFull
+                ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-lg"
+            }`}
+          >
+            {isEnrolled
+              ? "אתה כבר רשום לקורס"
               : isFull
-              ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-              : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-lg"
-          }`}
-        >
-          {isEnrolled
-            ? "אתה כבר רשום לקורס"
-            : isFull
-            ? "הרשמה נסגרה"
-            : "הרשמה ותשלום"}
-        </button>)}
+              ? "הרשמה נסגרה"
+              : "הרשמה ותשלום"}
+          </button>
+        )}
       </div>
     </div>
   );
