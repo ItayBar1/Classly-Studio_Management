@@ -37,6 +37,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
       setInviteToken(token);
       validateToken(token);
       setView('register'); // Auto switch to register
+
+      // Security: Remove the token from the URL bar immediately so it doesn't
+      // linger after logout or if another user accesses the same browser session.
+      // NOTE: This is a frontend-only cleanup. The backend MUST also enforce
+      // single-use by marking the token as consumed in InvitationService.accept().
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
 

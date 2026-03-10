@@ -103,7 +103,11 @@ function App() {
   const [userRole, setUserRole] = useState<string>("STUDENT");
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false); // mobile drawer
-  const [showLogin, setShowLogin] = useState(false); // LandingPage vs AuthPage
+  // If an invitation token is present in the URL, skip the LandingPage and go straight to AuthPage
+  const [showLogin, setShowLogin] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.has('token');
+  });
 
   // Keep track of which tabs have been visited to lazy-load them
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(
