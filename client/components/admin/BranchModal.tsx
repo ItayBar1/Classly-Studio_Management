@@ -127,18 +127,20 @@ export const BranchModal: React.FC<BranchModalProps> = ({ isOpen, onClose, onSuc
 
         try {
             if (editingRoom) {
-                await RoomService.update(editingRoom.id, { name: roomName, capacity: roomCapacity });
+                const updatedRoom = await RoomService.update(editingRoom.id, { name: roomName, capacity: roomCapacity });
+                // עדכון ה-State המקומי כך שיראה את השינוי מיד
+                setBranchRooms(prev => prev.map(r => r.id === editingRoom.id ? { ...r, name: roomName, capacity: roomCapacity } : r));
             } else {
-                await RoomService.create({
+                const newRoom = await RoomService.create({
                     branch_id: branch.id,
                     name: roomName,
                     capacity: roomCapacity,
                     is_active: true
                 });
+                // הוספת החדר החדש ל-State המקומי כדי שיוצג מיד ברשימה
+                setBranchRooms(prev => [...prev, newRoom]);
             }
-            onSuccess(); // Refresh parent data
-            // Optimistic update or wait for re-fetch? onSuccess triggers re-fetch. 
-            // We can locally update too for smoothness but props update will come shortly.
+            onSuccess(); // עדכון האבא (ברקע)
             cancelEdit();
         } catch (err: any) {
             setError(err.message);
@@ -149,6 +151,8 @@ export const BranchModal: React.FC<BranchModalProps> = ({ isOpen, onClose, onSuc
         if (!confirm('למחוק חדר זה?')) return;
         try {
             await RoomService.delete(id);
+            // הסרת החדר מהתצוגה מיד
+            setBranchRooms(prev => prev.filter(r => r.id !== id));
             onSuccess();
         } catch (err: any) {
             setError(err.message);
