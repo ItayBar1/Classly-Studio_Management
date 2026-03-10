@@ -2,7 +2,7 @@
  * One-time script to re-hash the superadmin's password using bcrypt.
  *
  * Usage:
- *   npx ts-node scripts/rehash-superadmin.ts
+ * npx ts-node scripts/rehash-superadmin.ts
  *
  * This is needed because the user was likely inserted with a plaintext
  * password_hash, causing bcrypt.compare() to fail on login.
@@ -10,11 +10,24 @@
 
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import 'dotenv/config';
 
-const SUPERADMIN_EMAIL = 'superadmin@superadmin.com';
-const SUPERADMIN_PASSWORD = 'superadmin@superadmin.com';
+// Guard: prevent accidental execution in production
+if (process.env.NODE_ENV === 'production') {
+  console.error('❌ This script must not be run in production.');
+  process.exit(1);
+}
 
 async function main() {
+  // Move env variables validation inside the function so TS narrows their types correctly to 'string'
+  const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL;
+  const SUPERADMIN_PASSWORD = process.env.SUPERADMIN_PASSWORD;
+
+  if (!SUPERADMIN_EMAIL || !SUPERADMIN_PASSWORD) {
+    console.error('❌ SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD environment variables are required.');
+    process.exit(1);
+  }
+
   const prisma = new PrismaClient();
 
   try {

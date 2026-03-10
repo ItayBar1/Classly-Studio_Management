@@ -33,7 +33,6 @@ export class AuthController {
         full_name,
         phone_number,
         studio_serial,
-        role,
         invitationToken,
       } = req.body;
 
@@ -53,7 +52,8 @@ export class AuthController {
 
       // Determine studio_id
       let studioId: string | null = null;
-      let userRole = role || "STUDENT";
+      // SECURITY: Default to STUDENT. Only invitation tokens may grant elevated roles.
+      let userRole = "STUDENT";
 
       // If invitation token provided, validate it
       if (invitationToken) {

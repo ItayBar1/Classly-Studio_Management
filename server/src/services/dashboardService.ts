@@ -66,7 +66,7 @@ export const DashboardService = {
         }),
         prisma.payments.findMany({
           where: {
-            status: "COMPLETED",
+            status: { in: ["COMPLETED", "SUCCEEDED"] },
             studio_id: studioId,
             created_at: { gte: startOfMonth },
           },

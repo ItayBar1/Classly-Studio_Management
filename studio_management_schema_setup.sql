@@ -2,6 +2,7 @@
 BEGIN;
 
 -- ניקוי טבלאות ישנות (מאפס את הדאטה-בייס כדי למנוע התנגשויות)
+DROP TABLE IF EXISTS public.password_reset_tokens CASCADE;
 DROP TABLE IF EXISTS public.audit_logs CASCADE;
 DROP TABLE IF EXISTS public.notifications CASCADE;
 DROP TABLE IF EXISTS public.schedule_sessions CASCADE;
@@ -302,6 +303,16 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- PASSWORD RESET TOKENS
+CREATE TABLE IF NOT EXISTS public.password_reset_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  token_hash VARCHAR(255) NOT NULL,
+  used BOOLEAN DEFAULT false,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 ----------------------------------------------------------------
 -- 3. יצירת אינדקסים
 ----------------------------------------------------------------
@@ -327,6 +338,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_enrollments_unique ON public.enrollments(s
 CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON public.attendance(student_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_class_id ON public.attendance(class_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_attendance_unique ON public.attendance(enrollment_id, session_date);
+
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON public.password_reset_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_hash ON public.password_reset_tokens(token_hash) WHERE NOT used;
 
 
 

@@ -46,11 +46,14 @@ export class BranchService {
     studioId: string,
     data: Partial<BranchDTO>,
   ) {
-    const branch = await prisma.branches.update({
-      where: { id: branchId },
+    const result = await prisma.branches.updateMany({
+      where: { id: branchId, studio_id: studioId },
       data: data as any,
     });
-    return branch;
+    if (result.count === 0) {
+      throw new Error("Branch not found or access denied");
+    }
+    return prisma.branches.findUnique({ where: { id: branchId } });
   }
 
   static async delete(branchId: string, studioId: string) {

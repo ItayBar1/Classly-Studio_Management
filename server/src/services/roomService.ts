@@ -44,11 +44,14 @@ export class RoomService {
     studioId: string,
     data: Partial<RoomDTO>,
   ) {
-    const room = await prisma.studio_rooms.update({
-      where: { id: roomId },
+    const result = await prisma.studio_rooms.updateMany({
+      where: { id: roomId, studio_id: studioId },
       data: data as any,
     });
-    return room;
+    if (result.count === 0) {
+      throw new Error("Room not found or access denied");
+    }
+    return prisma.studio_rooms.findUnique({ where: { id: roomId } });
   }
 
   static async delete(roomId: string, studioId: string) {

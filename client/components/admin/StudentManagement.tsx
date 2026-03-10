@@ -223,7 +223,6 @@ export const StudentManagement: React.FC = () => {
               ) : displayedStudents.length > 0 ? (
                 displayedStudents.map((student) => (
                   <tr key={student.id} className="hover:bg-slate-50 transition-colors">
-// ... (inside map)
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-10 w-10 flex-shrink-0 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">

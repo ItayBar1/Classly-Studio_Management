@@ -35,8 +35,13 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess }) => {
       // Extract reset token from URL
       const params = new URLSearchParams(window.location.search);
       const token = params.get('token');
+
+      if (!token) {
+        setError('קישור האיפוס אינו תקין — חסר טוקן בכתובת.');
+        setLoading(false);
+        return;
+      }
       
-      // TODO: Implement /api/auth/reset-password endpoint on the backend
       await apiClient.post('/auth/reset-password', { token, password });
       onSuccess();
     } catch (err: any) {

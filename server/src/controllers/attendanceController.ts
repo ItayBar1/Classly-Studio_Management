@@ -17,11 +17,11 @@ export class AttendanceController {
         method: "recordAttendance",
       });
     requestLog.info(
-      { body: req.body, userId: req.user.id },
+      { body: req.body, userId: req.user!.id },
       "Controller entry",
     );
     try {
-      const instructorId = req.user.id;
+      const instructorId = req.user!.id;
       const { classId, date, records } = req.body;
       // records format: [{ studentId: '...', status: 'PRESENT', notes: '...' }]
 
@@ -37,7 +37,7 @@ export class AttendanceController {
         instructorId,
         classId,
       );
-      if (!isAuthorized && req.user.role !== "ADMIN") {
+      if (!isAuthorized && req.user!.role !== "ADMIN") {
         requestLog.warn(
           { instructorId, classId },
           "Unauthorized attendance attempt",
@@ -80,16 +80,16 @@ export class AttendanceController {
         method: "getClassAttendance",
       });
     requestLog.info(
-      { params: req.params, query: req.query, userId: req.user.id },
+      { params: req.params, query: req.query, userId: req.user!.id },
       "Controller entry",
     );
     try {
       const { classId } = req.params;
       const { date } = req.query; // Optional: date filter
-      const instructorId = req.user.id;
+      const instructorId = req.user!.id;
 
       // Authorization check
-      if (req.user.role === "INSTRUCTOR") {
+      if (req.user!.role === "INSTRUCTOR") {
         const isAuthorized =
           await AttendanceController.verifyInstructorForClass(
             instructorId,
@@ -126,9 +126,9 @@ export class AttendanceController {
         controller: "AttendanceController",
         method: "getStudentHistory",
       });
-    requestLog.info({ userId: req.user.id }, "Controller entry");
+    requestLog.info({ userId: req.user!.id }, "Controller entry");
     try {
-      const studentId = req.user.id;
+      const studentId = req.user!.id;
       const history = await AttendanceService.getStudentHistory(studentId);
       requestLog.info(
         { count: history?.length },

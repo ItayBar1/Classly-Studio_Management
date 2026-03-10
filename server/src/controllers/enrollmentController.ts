@@ -17,12 +17,16 @@ export class EnrollmentController {
         method: "adminEnrollStudent",
       });
     requestLog.info(
-      { body: req.body, studioId: req.user.studio_id },
+      { body: req.body, studioId: req.user!.studio_id },
       "Controller entry"
     );
     try {
       const { studentId, classId, notes } = req.body;
-      const studioId = req.user.studio_id;
+      const studioId = req.user!.studio_id;
+
+      if (!studioId) {
+        return res.status(400).json({ error: "Studio ID is missing from user profile" });
+      }
 
       if (!studentId || !classId) {
         return res
@@ -63,7 +67,7 @@ export class EnrollmentController {
         method: "studentSelfRegister",
       });
     requestLog.info(
-      { userId: req.user.id, body: req.body },
+      { userId: req.user!.id, body: req.body },
       "Controller entry"
     );
 
@@ -71,8 +75,12 @@ export class EnrollmentController {
     let createdEnrollmentId: string | null = null;
 
     try {
-      const studentId = req.user.id;
-      const studioId = req.user.studio_id;
+      const studentId = req.user!.id;
+      const studioId = req.user!.studio_id;
+
+      if (!studioId) {
+        return res.status(400).json({ error: "Studio ID is missing from user profile" });
+      }
       const { classId } = req.body;
 
       if (!classId) {
@@ -198,9 +206,9 @@ export class EnrollmentController {
         controller: "EnrollmentController",
         method: "getMyEnrollments",
       });
-    requestLog.info({ userId: req.user.id }, "Controller entry");
+    requestLog.info({ userId: req.user!.id }, "Controller entry");
     try {
-      const studentId = req.user.id;
+      const studentId = req.user!.id;
       const enrollments = await EnrollmentService.getStudentEnrollments(
         studentId
       );
@@ -228,15 +236,15 @@ export class EnrollmentController {
         method: "getClassEnrollments",
       });
     requestLog.info(
-      { params: req.params, userId: req.user.id },
+      { params: req.params, userId: req.user!.id },
       "Controller entry"
     );
     try {
       const { classId } = req.params;
-      const userId = req.user.id;
+      const userId = req.user!.id;
 
       // For instructors: ensure the class belongs to them
-      if (req.user.role === "INSTRUCTOR") {
+      if (req.user!.role === "INSTRUCTOR") {
         const isOwner = await EnrollmentService.verifyInstructorClass(
           userId,
           classId

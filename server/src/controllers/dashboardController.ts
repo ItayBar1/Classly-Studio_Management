@@ -36,9 +36,9 @@ export const DashboardController = {
         controller: "DashboardController",
         method: "getInstructorStats",
       });
-    requestLog.info({ userId: req.user.id }, "Controller entry");
+    requestLog.info({ userId: req.user!.id }, "Controller entry");
     try {
-      const stats = await DashboardService.getInstructorStats(req.user.id);
+      const stats = await DashboardService.getInstructorStats(req.user!.id);
       requestLog.info("Instructor stats fetched successfully");
       res.json(stats);
     } catch (error) {

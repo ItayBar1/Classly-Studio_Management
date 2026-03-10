@@ -3,15 +3,7 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../config/supabase";
 import { environment } from "../config/env";
 
-// Extend Request typing to include user context
-declare global {
-  namespace Express {
-    interface Request {
-      user?: any;
-      studioId?: string;
-    }
-  }
-}
+// Note: Request.user and Request.studioId types are defined in src/types/express.d.ts
 
 interface JwtPayload {
   userId: string;
@@ -72,7 +64,7 @@ export const authenticateUser = async (
 // Middleware to enforce required roles
 export const requireRole = (allowedRoles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
+    if (!req.user || !req.user.role || !allowedRoles.includes(req.user.role)) {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
     next();
