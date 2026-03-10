@@ -27,12 +27,23 @@ export const ClassSchedule: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<ClassSession | null>(null);
 
-  const formatClassForDisplay = (cls: any) => {
-    // Calculate duration
-    const today = "1970-01-01";
-    const start = new Date(`${today}T${cls.start_time}`);
-    const end = new Date(`${today}T${cls.end_time}`);
-    const duration = (end.getTime() - start.getTime()) / 60000;
+const formatClassForDisplay = (cls: any) => {
+    // פונקציית עזר לחילוץ שעה נקייה בין אם זה ISO מ-Prisma ובין אם מחרוזת פשוטה
+    const extractTime = (timeValue: string) => {
+      if (!timeValue) return "00:00";
+      if (timeValue.includes('T')) {
+        return new Date(timeValue).toISOString().substring(11, 16);
+      }
+      return timeValue.substring(0, 5);
+    };
+
+    const startTimeStr = extractTime(cls.start_time);
+    const endTimeStr = extractTime(cls.end_time);
+
+    // חישוב משך הזמן בדקות
+    const start = new Date(`1970-01-01T${startTimeStr}:00.000Z`);
+    const end = new Date(`1970-01-01T${endTimeStr}:00.000Z`);
+    const duration = Math.round((end.getTime() - start.getTime()) / 60000);
 
     return {
       id: cls.id,
@@ -41,7 +52,7 @@ export const ClassSchedule: React.FC = () => {
       instructorAvatar: cls.instructor?.full_name
         ? cls.instructor.full_name.substring(0, 2).toUpperCase()
         : '?',
-      startTime: cls.start_time.substring(0, 5),
+      startTime: startTimeStr,
       duration: duration,
       dayOfWeek: DAY_MAP[cls.day_of_week] || "ראשון",
       students: cls.current_enrollment || 0,

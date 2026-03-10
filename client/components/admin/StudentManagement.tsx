@@ -234,7 +234,7 @@ export const StudentManagement: React.FC = () => {
                         </div>
                         <div className="mr-4">
                           <div className="font-medium text-slate-900">{student.full_name}</div>
-                          <div className="text-sm text-slate-500">#{student.id.substring(0, 6)}</div>
+                          <div className="text-sm text-slate-500">מזהה: {student.id.substring(0, 6)}</div>
                         </div>
                       </div>
                     </td>
