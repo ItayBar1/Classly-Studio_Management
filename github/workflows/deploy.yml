@@ -1,0 +1,31 @@
+name: Production Docker Deploy
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create .env files from Secrets
+        run: |
+          # יצירת קבצי הסביבה בתיקיית העבודה של הראנר
+          echo "${{ secrets.ROOT_ENV_FILE }}" > .env
+          echo "${{ secrets.SERVER_ENV_FILE }}" > server/.env
+          echo "${{ secrets.CLIENT_ENV_FILE }}" > client/.env
+          chmod 600 .env server/.env client/.env
+
+      - name: Build and Run
+        run: |
+          # שימוש בשם הפרויקט המדויק שמצאנו ב-Volume ls
+          docker compose --project-name classly-studio up -d --build
+
+      - name: Cleanup old Docker images
+        run: |
+          # מחיקת אימג'ים ישנים כדי למנוע סתימה של הדיסק בשרת
+          docker image prune -f
