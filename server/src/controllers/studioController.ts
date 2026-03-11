@@ -22,6 +22,9 @@ export class StudioController {
 
             const studio = await StudioService.createStudio(adminId, studioData);
 
+            if (!studio) {
+                return res.status(500).json({ error: 'Failed to create studio' });
+            }
             logger.info({ adminId, studioId: studio.id }, 'Studio created successfully');
 
             res.status(201).json({

@@ -46,11 +46,9 @@ export class BranchController {
             const updates = req.body;
 
             // Security: Verify studio ownership implies branch ownership
+            // We manually check studio first, then pass studio_id to the service layer.
+            // BranchService.update uses a compound where (branch_id + studio_id) for safety.
             const studio = await StudioService.getStudioByAdmin(adminId!);
-            // In a real optimized app we'd check branch ownership directly via query 
-            // "update branches where id=X and studio_id=Y". 
-            // Supabase RLS handles this if we used the user token, but we use Admin client here.
-            // Relying on RLS if possible is good, but here we manually check studio first.
             if (!studio) return res.status(403).json({ error: 'Forbidden' });
 
             const branch = await BranchService.update(id, studio.id, updates);

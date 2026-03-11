@@ -8,12 +8,12 @@ interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 export const FormInput: React.FC<FormInputProps> = ({ label, error, className = '', ...props }) => {
     return (
         <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-700">{label}</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>
             <input
-                className={`w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none ${className}`}
+                className={`w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:placeholder-slate-500 ${className}`}
                 {...props}
             />
-            {error && <span className="text-xs text-red-500">{error}</span>}
+            {error && <span className="text-xs text-red-500 dark:text-red-400">{error}</span>}
         </div>
     );
 };
@@ -28,9 +28,9 @@ interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> 
 export const FormSelect: React.FC<FormSelectProps> = ({ label, options, error, placeholder, className = '', ...props }) => {
     return (
         <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-700">{label}</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>
             <select
-                className={`w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white ${className}`}
+                className={`w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 ${className}`}
                 {...props}
             >
                 {placeholder && <option value="" disabled>{placeholder}</option>}

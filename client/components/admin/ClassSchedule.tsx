@@ -27,12 +27,23 @@ export const ClassSchedule: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<ClassSession | null>(null);
 
-  const formatClassForDisplay = (cls: any) => {
-    // Calculate duration
-    const today = "1970-01-01";
-    const start = new Date(`${today}T${cls.start_time}`);
-    const end = new Date(`${today}T${cls.end_time}`);
-    const duration = (end.getTime() - start.getTime()) / 60000;
+const formatClassForDisplay = (cls: any) => {
+    // פונקציית עזר לחילוץ שעה נקייה בין אם זה ISO מ-Prisma ובין אם מחרוזת פשוטה
+    const extractTime = (timeValue: string) => {
+      if (!timeValue) return "00:00";
+      if (timeValue.includes('T')) {
+        return new Date(timeValue).toISOString().substring(11, 16);
+      }
+      return timeValue.substring(0, 5);
+    };
+
+    const startTimeStr = extractTime(cls.start_time);
+    const endTimeStr = extractTime(cls.end_time);
+
+    // חישוב משך הזמן בדקות
+    const start = new Date(`1970-01-01T${startTimeStr}:00.000Z`);
+    const end = new Date(`1970-01-01T${endTimeStr}:00.000Z`);
+    const duration = Math.round((end.getTime() - start.getTime()) / 60000);
 
     return {
       id: cls.id,
@@ -41,7 +52,7 @@ export const ClassSchedule: React.FC = () => {
       instructorAvatar: cls.instructor?.full_name
         ? cls.instructor.full_name.substring(0, 2).toUpperCase()
         : '?',
-      startTime: cls.start_time.substring(0, 5),
+      startTime: startTimeStr,
       duration: duration,
       dayOfWeek: DAY_MAP[cls.day_of_week] || "ראשון",
       students: cls.current_enrollment || 0,
@@ -113,16 +124,17 @@ export const ClassSchedule: React.FC = () => {
           });
         }}
         editClass={editingClass}
+        defaultDay={DAYS.indexOf(selectedDay)}
       />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Calendar className="text-indigo-600" />
+          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2 dark:text-slate-100">
+            <Calendar className="text-indigo-600 dark:text-indigo-500" />
             מערכת שעות
           </h2>
-          <p className="text-slate-500">ניהול השיעורים השבועי שלך</p>
+          <p className="text-slate-500 dark:text-slate-400">ניהול השיעורים השבועי שלך</p>
         </div>
         <button
           onClick={() => { setEditingClass(null); setIsModalOpen(true); }}
@@ -134,14 +146,14 @@ export const ClassSchedule: React.FC = () => {
       </div>
 
       {/* Day Tabs */}
-      <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-100 flex overflow-x-auto">
+      <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-100 flex overflow-x-auto dark:bg-slate-900 dark:border-slate-800/10">
         {DAYS.map((day) => (
           <button
             key={day}
             onClick={() => setSelectedDay(day)}
             className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${selectedDay === day
-              ? "bg-indigo-50 text-indigo-700 shadow-sm"
-              : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+              ? "bg-indigo-50 text-indigo-700 shadow-sm dark:bg-indigo-600 dark:text-white"
+              : "text-slate-500 hover:bg-slate-50 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200"
               }`}
           >
             {day}
@@ -166,17 +178,17 @@ export const ClassSchedule: React.FC = () => {
             />
           ))
         ) : (
-          <div className="text-center py-16 bg-white rounded-xl border border-dashed border-slate-200">
-            <Calendar className="mx-auto h-12 w-12 text-slate-300 mb-4" />
-            <h3 className="text-lg font-medium text-slate-900">
+          <div className="text-center py-16 bg-white rounded-xl border border-dashed border-slate-200 dark:bg-slate-900/50 dark:border-slate-700">
+            <Calendar className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-600 mb-4" />
+            <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
               אין שיעורים מתוכננים
             </h3>
-            <p className="text-slate-500 mt-1 mb-6">
+            <p className="text-slate-500 mt-1 mb-6 dark:text-slate-400">
               לא נמצאו שיעורים ביום {selectedDay}.
             </p>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2 text-indigo-600 font-medium hover:text-indigo-700"
+              className="inline-flex items-center gap-2 text-indigo-600 font-medium hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
             >
               הוסף שיעור ליום {selectedDay} <ChevronLeft size={16} />
             </button>

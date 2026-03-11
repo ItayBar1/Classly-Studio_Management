@@ -17,7 +17,6 @@ import {
   LineChart,
   Line
 } from 'recharts';
-import { Database } from '../../types/database';
 import { DashboardService } from "../../services/api";
 
 interface ChartData {
@@ -26,15 +25,14 @@ interface ChartData {
   attendance: number;
 }
 
-type PaymentData = Pick<Database['public']['Tables']['payments']['Row'], 'amount_ils' | 'created_at'>;
-type AttendanceData = Pick<Database['public']['Tables']['attendance']['Row'], 'session_date' | 'status'>;
+
 
 const StatCard = ({ title, value, subtext, icon: Icon, color }: any) => (
-  <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-start justify-between hover:shadow-md transition-shadow">
+  <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-start justify-between hover:shadow-md transition-shadow dark:bg-slate-900 dark:border-slate-800">
     <div>
-      <p className="text-sm font-medium text-slate-500">{title}</p>
-      <h3 className="text-2xl font-bold text-slate-800 mt-1">{value}</h3>
-      <p className={`text-xs mt-2 font-medium ${subtext.includes('+') ? 'text-green-600' : 'text-slate-400'}`}>
+      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
+      <h3 className="text-2xl font-bold text-slate-800 mt-1 dark:text-slate-100">{value}</h3>
+      <p className={`text-xs mt-2 font-medium ${subtext.includes('+') ? 'text-green-600 dark:text-green-400' : 'text-slate-400 dark:text-slate-500'}`}>
         {subtext}
       </p>
     </div>
@@ -51,6 +49,7 @@ const DAY_NAMES_HE: Record<string, string> = {
 
 export const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({
     totalStudents: 0,
     monthlyRevenue: 0,
@@ -73,6 +72,7 @@ useEffect(() => {
       setChartData(data.chartData);
     } catch (error) {
       console.error('Failed to load dashboard:', error);
+      setError('שגיאה בטעינת הנתונים. אנא נסה שוב מאוחר יותר.');
     } finally {
       setLoading(false);
     }
@@ -88,14 +88,28 @@ useEffect(() => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+        <p className="text-lg font-medium text-red-500 mb-2">⚠️ {error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="text-indigo-600 hover:text-indigo-700 font-medium text-sm"
+        >
+          נסה שוב
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">מבט על</h2>
-          <p className="text-slate-500">ברוך שובך, מנהל המערכת.</p>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">מבט על</h2>
+          <p className="text-slate-500 dark:text-slate-400">ברוך שובך, מנהל המערכת.</p>
         </div>
-        <div className="text-sm text-slate-500 bg-slate-100 px-4 py-2 rounded-full">
+        <div className="text-sm text-slate-500 bg-slate-100 px-4 py-2 rounded-full dark:bg-slate-800 dark:text-slate-400">
           {new Date().toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </div>
       </div>
@@ -132,8 +146,8 @@ useEffect(() => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-          <h3 className="text-lg font-bold text-slate-800 mb-4">מגמת הכנסות (7 ימים אחרונים)</h3>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 dark:text-slate-100">מגמת הכנסות (7 ימים אחרונים)</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
@@ -150,8 +164,8 @@ useEffect(() => {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-          <h3 className="text-lg font-bold text-slate-800 mb-4">נוכחות שבועית</h3>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 dark:text-slate-100">נוכחות שבועית</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>

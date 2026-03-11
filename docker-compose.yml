@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:18
+    container_name: classly-db
+    restart: always
+    environment:
+      POSTGRES_USER: itay
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: classly_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./studio_management_schema_setup.sql:/docker-entrypoint-initdb.d/setup.sql
+
+  backend:
+    build: ./server
+    container_name: classly-api
+    restart: always
+    env_file:
+      - ./server/.env
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+
+  # השירות החדש להרצת סקריפטים ותחזוקה
+  backend-tools:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: builder  # <--- זה גורם לדוקר לעצור בשלב ה-node:20-alpine AS builder
+    container_name: classly-tools
+    env_file:
+      - ./server/.env
+    depends_on:
+      - db
+    # אנחנו לא צריכים ports או restart לכלים זמניים
+
+  frontend:
+    build: 
+      context: ./client
+      args:
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:5000/api}
+    container_name: classly-web
+    restart: always
+    ports:
+      - "80:80"
+    env_file:
+      - ./client/.env
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

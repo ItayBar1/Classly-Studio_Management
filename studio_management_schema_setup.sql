@@ -2,6 +2,7 @@
 BEGIN;
 
 -- ניקוי טבלאות ישנות (מאפס את הדאטה-בייס כדי למנוע התנגשויות)
+DROP TABLE IF EXISTS public.password_reset_tokens CASCADE;
 DROP TABLE IF EXISTS public.audit_logs CASCADE;
 DROP TABLE IF EXISTS public.notifications CASCADE;
 DROP TABLE IF EXISTS public.schedule_sessions CASCADE;
@@ -38,6 +39,8 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 DROP SEQUENCE IF EXISTS public.studio_serial_sequence CASCADE;
 CREATE SEQUENCE public.studio_serial_sequence START 1;
 
+
+
 -- יצירת טבלת STUDIOS
 CREATE TABLE IF NOT EXISTS public.studios (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -58,18 +61,6 @@ CREATE TABLE IF NOT EXISTS public.studios (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- STUDIO ROOMS
-CREATE TABLE IF NOT EXISTS public.studio_rooms (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  studio_id UUID NOT NULL REFERENCES public.studios(id) ON DELETE CASCADE,
-  branch_id UUID NOT NULL REFERENCES public.branches(id) ON DELETE CASCADE,
-  name VARCHAR(255) NOT NULL,
-  capacity INTEGER,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
 -- יצירת טבלת BRANCHES
 CREATE TABLE IF NOT EXISTS public.branches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -79,6 +70,18 @@ CREATE TABLE IF NOT EXISTS public.branches (
   city VARCHAR(100),
   coordinates POINT,
   phone_number VARCHAR(20),
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- STUDIO ROOMS
+CREATE TABLE IF NOT EXISTS public.studio_rooms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  studio_id UUID NOT NULL REFERENCES public.studios(id) ON DELETE CASCADE,
+  branch_id UUID NOT NULL REFERENCES public.branches(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  capacity INTEGER,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -104,8 +107,9 @@ CREATE INDEX IF NOT EXISTS idx_pending_registrations_email ON public.pending_reg
 
 -- יצירת טבלת USERS
 CREATE TABLE IF NOT EXISTS public.users (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
   full_name VARCHAR(255),
   phone_number VARCHAR(20),
   profile_image_url TEXT,
@@ -181,7 +185,7 @@ CREATE TABLE IF NOT EXISTS public.enrollments (
   class_id UUID NOT NULL REFERENCES public.classes(id) ON DELETE CASCADE,
   parent_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
   enrollment_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  status VARCHAR(20) CHECK (status IN ('ACTIVE', 'PAUSED', 'COMPLETED', 'CANCELLED')) DEFAULT 'ACTIVE',
+  status VARCHAR(20) CHECK (status IN ('ACTIVE', 'PAUSED', 'COMPLETED', 'CANCELLED', 'PENDING')) DEFAULT 'ACTIVE',
   payment_status VARCHAR(20) CHECK (payment_status IN ('PENDING', 'PAID', 'PARTIAL', 'OVERDUE')) DEFAULT 'PENDING',
   total_amount_due DECIMAL(10, 2) NOT NULL DEFAULT 0,
   total_amount_paid DECIMAL(10, 2) NOT NULL DEFAULT 0,
@@ -299,6 +303,16 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- PASSWORD RESET TOKENS
+CREATE TABLE IF NOT EXISTS public.password_reset_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  token_hash VARCHAR(255) NOT NULL,
+  used BOOLEAN DEFAULT false,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 ----------------------------------------------------------------
 -- 3. יצירת אינדקסים
 ----------------------------------------------------------------
@@ -325,96 +339,15 @@ CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON public.attendance(studen
 CREATE INDEX IF NOT EXISTS idx_attendance_class_id ON public.attendance(class_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_attendance_unique ON public.attendance(enrollment_id, session_date);
 
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON public.password_reset_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_hash ON public.password_reset_tokens(token_hash) WHERE NOT used;
+
 
 
 ----------------------------------------------------------------
 -- 4. פונקציות וטריגרים
 ----------------------------------------------------------------
 
--- פונקציית עזר למניעת לולאה אינסופית ב-RLS
-CREATE OR REPLACE FUNCTION public.get_my_studio_id()
-RETURNS UUID 
-AS $$
-  SELECT studio_id FROM public.users WHERE id = auth.uid();
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
-
--- פונקציה לטיפול בנרשמים חדשים
--- SECURITY FIX: studio_id now comes from server-validated pending_registrations table
--- instead of trusting client-supplied metadata, preventing unauthorized studio access
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-DECLARE
-  validated_studio_id UUID;
-  default_studio_id UUID;
-  user_role VARCHAR;
-  pending_reg_id UUID;
-  pending_reg_role VARCHAR;
-BEGIN
-  -- SECURITY: Look up validated studio_id and role from pending_registrations table
-  -- This prevents attackers from self-assigning to arbitrary studios via metadata
-  SELECT id, studio_id, role INTO pending_reg_id, validated_studio_id, pending_reg_role
-  FROM public.pending_registrations
-  WHERE email = NEW.email
-    AND NOT used
-    AND expires_at > NOW()
-  ORDER BY created_at DESC
-  LIMIT 1;
-
-  -- If found, mark as used to prevent reuse
-  IF pending_reg_id IS NOT NULL THEN
-    UPDATE public.pending_registrations
-    SET used = true
-    WHERE id = pending_reg_id;
-  ELSE
-    -- Fallback: If no pending registration exists, use the oldest studio
-    -- This should rarely happen in production with proper registration flow
-    SELECT id INTO default_studio_id 
-    FROM public.studios 
-    ORDER BY created_at ASC 
-    LIMIT 1;
-    validated_studio_id := default_studio_id;
-  END IF;
-
-  -- Security: Determine user role based on invitation or metadata
-  -- If user registered via invitation token, use the role from pending_registrations
-  IF pending_reg_role IS NOT NULL AND pending_reg_role IN ('ADMIN', 'INSTRUCTOR', 'SUPER_ADMIN') THEN
-    user_role := pending_reg_role;
-  -- Otherwise, prevent users from self-assigning privileged roles via metadata
-  -- Only allow STUDENT or PARENT. Everything else defaults to STUDENT.
-  ELSIF (UPPER(NEW.raw_user_meta_data->>'role') IN ('STUDENT', 'PARENT')) THEN
-    user_role := UPPER(NEW.raw_user_meta_data->>'role');
-  ELSE
-    user_role := 'STUDENT';
-  END IF;
-
-  INSERT INTO public.users (
-    id, 
-    email, 
-    full_name, 
-    role, 
-    phone_number, 
-    status,
-    studio_id
-  )
-  VALUES (
-    NEW.id,
-    NEW.email,
-    NEW.raw_user_meta_data->>'full_name',
-    user_role,
-    COALESCE(NEW.raw_user_meta_data->>'phone_number', NEW.raw_user_meta_data->>'phone', NEW.phone),
-    'ACTIVE',
-    validated_studio_id
-  );
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- יצירת הטריגר
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
 -- פונקציה לעדכון מונה נרשמים (עודכן שם ופרמטר)
 CREATE OR REPLACE FUNCTION public.increment_enrollment_count(row_id UUID)
@@ -573,113 +506,6 @@ AFTER INSERT OR UPDATE OR DELETE ON public.enrollments
 FOR EACH ROW
 EXECUTE FUNCTION update_class_enrollment_count();
 
-----------------------------------------------------------------
--- 5. הגדרת ROW LEVEL SECURITY (RLS)
-----------------------------------------------------------------
 
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.studios ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.branches ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.classes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.enrollments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.pending_registrations ENABLE ROW LEVEL SECURITY;
-
-
--- ניקוי מדיניות ישנה
-DROP POLICY IF EXISTS "Users can view own profile" ON public.users;
-DROP POLICY IF EXISTS "Users can view members of their own studio" ON public.users;
-DROP POLICY IF EXISTS "Admins can view studio users" ON public.users;
-DROP POLICY IF EXISTS "Users can view branches of their studio" ON public.branches;
-DROP POLICY IF EXISTS "Users can view active classes in their studio" ON public.classes;
-DROP POLICY IF EXISTS "Students can view active classes" ON public.classes;
-DROP POLICY IF EXISTS "Instructors can view own classes" ON public.classes;
-DROP POLICY IF EXISTS "Users can view relevant enrollments" ON public.enrollments;
-DROP POLICY IF EXISTS "Students can view own enrollments" ON public.enrollments;
-DROP POLICY IF EXISTS "View attendance based on role" ON public.attendance;
-DROP POLICY IF EXISTS "Instructors can view class attendance" ON public.attendance;
-
--- Users Policies
-CREATE POLICY "Users can view own profile" ON public.users
-FOR SELECT USING (auth.uid() = id);
-
-CREATE POLICY "Users can view members of their own studio" ON public.users
-FOR SELECT USING (
-  studio_id = public.get_my_studio_id()
-  OR id = auth.uid()
-  OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'SUPER_ADMIN'
-);
-
--- Branches Policies
-CREATE POLICY "Users can view branches of their studio" ON public.branches
-FOR SELECT USING (
-  studio_id = public.get_my_studio_id()
-  OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'SUPER_ADMIN'
-);
-
--- Classes Policies
-CREATE POLICY "Users can view active classes in their studio" ON public.classes
-FOR SELECT USING (
-  studio_id = public.get_my_studio_id()
-  OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'SUPER_ADMIN'
-);
-
-CREATE POLICY "Admins and Instructors can insert classes" ON public.classes
-FOR INSERT WITH CHECK (
-  (SELECT role FROM public.users WHERE id = auth.uid()) IN ('ADMIN', 'INSTRUCTOR')
-  AND studio_id = public.get_my_studio_id()
-);
-
-CREATE POLICY "Admins and Instructors can update their classes" ON public.classes
-FOR UPDATE USING (
-  (SELECT role FROM public.users WHERE id = auth.uid()) IN ('ADMIN', 'INSTRUCTOR')
-  AND studio_id = public.get_my_studio_id()
-);
-
-
--- Enrollments Policies
-CREATE POLICY "Users can view relevant enrollments" ON public.enrollments
-FOR SELECT USING (
-  student_id = auth.uid()
-  OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'SUPER_ADMIN'
-  OR ((SELECT role FROM public.users WHERE id = auth.uid()) = 'ADMIN' AND studio_id = public.get_my_studio_id())
-  OR class_id IN (SELECT id FROM public.classes WHERE instructor_id = auth.uid())
-);
-
-CREATE POLICY "Students can insert their own enrollments" ON public.enrollments
-FOR INSERT WITH CHECK (
-    student_id = auth.uid()
-    AND studio_id = public.get_my_studio_id()
-);
-
--- Attendance Policies
-CREATE POLICY "View attendance based on role" ON public.attendance
-FOR SELECT USING (
-  -- תלמיד רואה נוכחות של עצמו
-  student_id = auth.uid()
-  
-  -- מדריך רואה נוכחות של השיעורים שלו
-  OR class_id IN (SELECT id FROM public.classes WHERE instructor_id = auth.uid())
-  
-  -- אדמין רואה הכל בסטודיו שלו
-  OR (
-      public.get_my_studio_id() IS NOT NULL 
-      AND studio_id = public.get_my_studio_id() 
-      AND (SELECT role FROM public.users WHERE id = auth.uid()) = 'ADMIN'
-  )
-  -- סופר אדמין
-  OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'SUPER_ADMIN'
-);
-
--- Pending Registrations Policies
--- SECURITY: Only backend service (via SECURITY DEFINER functions) can manage this table
--- Regular authenticated users have no direct access to prevent manipulation
-CREATE POLICY "Backend service can manage pending registrations" ON public.pending_registrations
-FOR ALL USING (
-  -- Allow access when called from SECURITY DEFINER context (handle_new_user, etc.)
-  -- Block direct user access by checking if user is authenticated
-  auth.uid() IS NULL OR current_setting('request.jwt.claims', true)::json->>'role' = 'service_role'
-);
 
 COMMIT;

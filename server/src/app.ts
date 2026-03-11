@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import { allowedCorsOrigins } from "./config/env";
 
 // Import Routes
+import authRoutes from "./routes/authRoutes";
 import courseRoutes from "./routes/courseRoutes";
 import studentRoutes from "./routes/studentRoutes";
 import instructorRoutes from "./routes/instructorRoutes";
@@ -73,6 +74,7 @@ app.use(
 app.use(express.json()); // The rest of the app uses standard JSON parsing.
 
 // Routes
+app.use("/api/auth", authRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/instructors", instructorRoutes);

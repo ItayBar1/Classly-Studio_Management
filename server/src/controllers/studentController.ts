@@ -41,9 +41,9 @@ export const StudentController = {
 
   getByInstructor: async (req: Request, res: Response, next: NextFunction) => {
     const requestLog = req.logger || logger.child({ controller: "StudentController", method: "getByInstructor" });
-    requestLog.info({ userId: req.user.id }, "Controller entry");
+    requestLog.info({ userId: req.user!.id }, "Controller entry");
     try {
-      const students = await StudentService.getByInstructor(req.user.id);
+      const students = await StudentService.getByInstructor(req.user!.id);
       requestLog.info({ count: students.length }, "Fetched instructor students successfully");
       res.json(students);
     } catch (error) {

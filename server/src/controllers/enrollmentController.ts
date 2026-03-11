@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { EnrollmentService } from "../services/enrollmentService";
 import { PaymentService } from "../services/paymentService";
+import { prisma } from "../config/prisma";
 import { logger } from "../logger";
 
 export class EnrollmentController {
@@ -17,12 +18,16 @@ export class EnrollmentController {
         method: "adminEnrollStudent",
       });
     requestLog.info(
-      { body: req.body, studioId: req.user.studio_id },
+      { body: req.body, studioId: req.user!.studio_id },
       "Controller entry"
     );
     try {
       const { studentId, classId, notes } = req.body;
-      const studioId = req.user.studio_id;
+      const studioId = req.user!.studio_id;
+
+      if (!studioId) {
+        return res.status(400).json({ error: "Studio ID is missing from user profile" });
+      }
 
       if (!studentId || !classId) {
         return res
@@ -63,7 +68,7 @@ export class EnrollmentController {
         method: "studentSelfRegister",
       });
     requestLog.info(
-      { userId: req.user.id, body: req.body },
+      { userId: req.user!.id, body: req.body },
       "Controller entry"
     );
 
@@ -71,8 +76,12 @@ export class EnrollmentController {
     let createdEnrollmentId: string | null = null;
 
     try {
-      const studentId = req.user.id;
-      const studioId = req.user.studio_id;
+      const studentId = req.user!.id;
+      const studioId = req.user!.studio_id;
+
+      if (!studioId) {
+        return res.status(400).json({ error: "Studio ID is missing from user profile" });
+      }
       const { classId } = req.body;
 
       if (!classId) {
@@ -85,7 +94,7 @@ export class EnrollmentController {
           studioId,
           studentId,
           classId,
-          "PENDING", // Enrollment status awaiting payment
+          "PENDING", // Enrollment status awaiting confirmation
           "PENDING" // Payment status awaiting payment
         );
 
@@ -94,7 +103,7 @@ export class EnrollmentController {
 
       // --- FREE COURSE HANDLING ---
       // If the course is free, we skip payment processing entirely
-      if (courseDetails.price === 0) {
+      if (courseDetails.price.toNumber() === 0) {
         requestLog.info(
           { enrollmentId: enrollment.id },
           "Free course registration completed automatically"
@@ -110,7 +119,7 @@ export class EnrollmentController {
 
       // 2. Create a Stripe Payment Intent (ONLY if price > 0)
       const paymentIntent = await PaymentService.createIntent(
-        courseDetails.price,
+        courseDetails.price.toNumber(),
         "ils",
         `Registration for ${courseDetails.name}`,
         {
@@ -126,7 +135,7 @@ export class EnrollmentController {
         studioId: studioId,
         studentId: studentId,
         enrollmentId: enrollment.id,
-        amount: courseDetails.price,
+        amount: courseDetails.price.toNumber(),
         stripePaymentIntentId: paymentIntent.id,
       });
 
@@ -182,6 +191,13 @@ export class EnrollmentController {
       }
       // ----------------------
 
+      // המרת שגיאות 401 מצד שלישי (כמו Stripe) לשגיאות שרת (500)
+      // כדי למנוע מהקליינט לנתק את המשתמש
+      if (error && error.statusCode === 401) {
+        error.statusCode = 500;
+        error.message = "שגיאה בהתחברות לשירות התשלומים. אנא פנה להנהלה.";
+      }
+
       next(error);
     }
   }
@@ -198,9 +214,9 @@ export class EnrollmentController {
         controller: "EnrollmentController",
         method: "getMyEnrollments",
       });
-    requestLog.info({ userId: req.user.id }, "Controller entry");
+    requestLog.info({ userId: req.user!.id }, "Controller entry");
     try {
-      const studentId = req.user.id;
+      const studentId = req.user!.id;
       const enrollments = await EnrollmentService.getStudentEnrollments(
         studentId
       );
@@ -228,15 +244,15 @@ export class EnrollmentController {
         method: "getClassEnrollments",
       });
     requestLog.info(
-      { params: req.params, userId: req.user.id },
+      { params: req.params, userId: req.user!.id },
       "Controller entry"
     );
     try {
       const { classId } = req.params;
-      const userId = req.user.id;
+      const userId = req.user!.id;
 
       // For instructors: ensure the class belongs to them
-      if (req.user.role === "INSTRUCTOR") {
+      if (req.user!.role === "INSTRUCTOR") {
         const isOwner = await EnrollmentService.verifyInstructorClass(
           userId,
           classId
@@ -274,14 +290,69 @@ export class EnrollmentController {
         controller: "EnrollmentController",
         method: "cancelEnrollment",
       });
-    requestLog.info({ params: req.params }, "Controller entry");
+    requestLog.info({ params: req.params, userId: req.user!.id }, "Controller entry");
     try {
       const { id } = req.params;
+
+      // SECURITY: If user is a STUDENT, enforce ownership and restrict to PENDING only
+      if (req.user!.role === "STUDENT") {
+        const enrollment = await prisma.enrollments.findUnique({
+          where: { id },
+          select: { student_id: true, status: true },
+        });
+
+        if (!enrollment) {
+          return res.status(404).json({ error: "Enrollment not found" });
+        }
+
+        // Ownership check: student can only cancel their own enrollments
+        if (enrollment.student_id !== req.user!.id) {
+          requestLog.warn(
+            { enrollmentId: id, studentId: req.user!.id },
+            "IDOR attempt: student tried to cancel another student's enrollment"
+          );
+          return res.status(403).json({ error: "Not authorized to cancel this enrollment" });
+        }
+
+        // Status check: students can only cancel PENDING enrollments
+        if (enrollment.status !== "PENDING") {
+          return res.status(403).json({
+            error: "Only pending enrollments can be cancelled. Please contact your studio admin.",
+          });
+        }
+      }
+
       await EnrollmentService.cancelEnrollment(id);
       requestLog.info({ enrollmentId: id }, "Enrollment cancelled");
       res.json({ message: "Enrollment cancelled successfully" });
     } catch (error: any) {
       requestLog.error({ err: error }, "Error cancelling enrollment");
+      next(error);
+    }
+  }
+  // Admin fetches enrollments for a specific student
+  static async getStudentEnrollments(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    const requestLog =
+      req.logger ||
+      logger.child({
+        controller: "EnrollmentController",
+        method: "getStudentEnrollments",
+      });
+    requestLog.info({ params: req.params }, "Controller entry");
+    try {
+      const { studentId } = req.params;
+      const enrollments = await EnrollmentService.getStudentEnrollments(studentId);
+      requestLog.info(
+        { count: enrollments?.length },
+        "Fetched student enrollments for admin"
+      );
+      res.json(enrollments);
+    } catch (error: any) {
+      requestLog.error({ err: error }, "Error fetching student enrollments");
       next(error);
     }
   }

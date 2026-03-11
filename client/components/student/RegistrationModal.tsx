@@ -7,7 +7,7 @@ import {
   useElements,
 } from "@stripe/react-stripe-js";
 import { X, Loader2, CheckCircle, AlertCircle } from "lucide-react";
-import { PaymentService, EnrollmentService } from "../../services/api";
+import { EnrollmentService } from "../../services/api"; // מחקנו את PaymentService
 import { ClassSession } from "../../types/types";
 
 // טעינת Stripe
@@ -42,7 +42,6 @@ const CheckoutForm = ({
       onError(error.message || "שגיאה בתשלום");
       setProcessing(false);
     } else if (paymentIntent && paymentIntent.status === "succeeded") {
-      // לא מכבים את ה-processing כאן כדי לשמור על רצף חווית משתמש עד לסיום ההרשמה ב-onSuccess
       onSuccess();
     } else {
       setProcessing(false);
@@ -78,77 +77,68 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
 }) => {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false); // טעינה ראשונית של המודל
-  const [registering, setRegistering] = useState(false); // טעינה בעת ביצוע הרשמה
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<'initial' | 'payment' | 'success'>('initial');
+  
+  // שמירת מזהה ההרשמה למקרה של ביטול
+  const [pendingEnrollmentId, setPendingEnrollmentId] = useState<string | null>(null);
 
-  // בדיקה אם הקורס חינם
-  const isFree =
-    course && (course.price_ils === 0 || course.price_ils === null);
+  const isFree = course && (course.price_ils === 0 || course.price_ils === null);
 
   useEffect(() => {
-    if (isOpen && course) {
-      setRegistering(false); // איפוס סטייט הרשמה
-      // אם הקורס חינם, אין צורך לייצר כוונת תשלום
-      if (isFree) {
-        setClientSecret(null);
-        setError(null);
-        return;
-      }
-
-      // יצירת כוונת תשלום רק אם יש מחיר
-      const createIntent = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-          // ווידוא שהמחיר תקין לפני השליחה
-          if (!course.price_ils || course.price_ils <= 0) {
-            throw new Error("מחיר הקורס אינו תקין");
-          }
-
-          const data = await PaymentService.createIntent({
-            amount: course.price_ils,
-            currency: "ils",
-            description: `הרשמה לקורס: ${course.name}`,
-          });
-
-          setClientSecret(data.clientSecret);
-        } catch (err: any) {
-          console.error(err);
-          // הצגת הודעה ברורה יותר אם השגיאה הגיעה מהשרת
-          const serverMsg = err.response?.data?.error;
-          setError(serverMsg || "לא ניתן להתחבר לשרת התשלומים.");
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      createIntent();
-    } else {
+    if (isOpen) {
+      setStep('initial');
       setClientSecret(null);
-      setPaymentSuccess(false);
       setError(null);
-      setRegistering(false);
+      setPendingEnrollmentId(null);
     }
-  }, [isOpen, course, isFree]);
+  }, [isOpen, course]);
 
-  const handleRegistration = async () => {
-    // פונקציה המטפלת בסיום ההרשמה (גם לתשלום וגם לחינם)
-    setRegistering(true); // הפעלת מצב טעינה
+  const handleInitiateRegistration = async () => {
+    if (!course) return;
+    setLoading(true);
+    setError(null);
+    
     try {
-      if (course) {
-        await EnrollmentService.register(course.id);
+      const res = await EnrollmentService.register(course.id);
+
+      // שמירת מזהה ההרשמה שהשרת יצר
+      if (res.enrollmentId) {
+        setPendingEnrollmentId(res.enrollmentId);
       }
-      setPaymentSuccess(true);
-      setTimeout(() => {
-        onSuccess();
-        onClose();
-      }, 2000); // קיצרתי מעט ל-2 שניות לחוויה זריזה יותר
-    } catch (err) {
-      console.error("Error finalizing enrollment:", err);
-      setError("ההרשמה נכשלה. אנא נסה שוב או פנה לשירות לקוחות.");
-      setRegistering(false); // כיבוי טעינה במקרה של שגיאה
+
+      if (res.clientSecret) {
+        setClientSecret(res.clientSecret);
+        setStep('payment');
+      } else {
+        handlePaymentSuccess();
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.error || "לא ניתן להתחיל הרשמה. אנא נסה שוב.");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handlePaymentSuccess = () => {
+    setStep('success');
+    setTimeout(() => {
+      onSuccess();
+      onClose();
+    }, 2000); 
+  };
+
+  // פונקציית סגירה חכמה - מוחקת הרשמה אם ברחנו באמצע
+  const handleCloseModal = async () => {
+    if (step === 'payment' && pendingEnrollmentId) {
+      try {
+        await EnrollmentService.cancelEnrollment(pendingEnrollmentId);
+      } catch (err) {
+        console.error("Failed to cleanup incomplete enrollment", err);
+      }
+    }
+    onClose();
   };
 
   if (!isOpen || !course) return null;
@@ -161,19 +151,19 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
         <div className="bg-slate-900 p-4 flex justify-between items-center text-white">
           <h3 className="font-bold">הרשמה ל{course.name}</h3>
-          <button onClick={onClose} disabled={registering}>
-            <X size={20} className={registering ? "opacity-50" : ""} />
+          <button onClick={handleCloseModal} disabled={loading || step === 'success'}>
+            <X size={20} className={loading || step === 'success' ? "opacity-50" : ""} />
           </button>
         </div>
 
         <div className="p-6 overflow-y-auto">
-          {paymentSuccess ? (
+          {step === 'success' ? (
             <div className="text-center py-8 animate-fadeIn">
               <CheckCircle size={64} className="text-green-500 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-slate-800">
                 ההרשמה הושלמה!
               </h2>
-              <p className="text-slate-500 mt-2">קבלה נשלחה למייל שלך.</p>
+              <p className="text-slate-500 mt-2">הנך רשום לקורס בהצלחה.</p>
             </div>
           ) : (
             <>
@@ -181,16 +171,10 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                 <div className="flex justify-between mb-2">
                   <span className="text-slate-600">מחיר הקורס:</span>
                   <span className="font-bold text-lg">
-                    {course.price_ils === 0 ? "חינם" : `₪${course.price_ils}`}
+                    {isFree ? "חינם" : `₪${course.price_ils}`}
                   </span>
                 </div>
               </div>
-
-              {loading && (
-                <div className="flex justify-center py-10">
-                  <Loader2 className="animate-spin text-indigo-600" size={32} />
-                </div>
-              )}
 
               {error && (
                 <div className="bg-red-50 text-red-600 p-3 rounded-lg flex items-center gap-2 text-sm mb-4">
@@ -198,38 +182,36 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                 </div>
               )}
 
-              {/* תרחיש תשלום: הצגת טופס Stripe */}
-              {clientSecret && !loading && !isFree && (
-                <Elements
-                  stripe={stripePromise}
-                  options={{ clientSecret, locale: "he" }}
-                >
-                  <CheckoutForm
-                    onSuccess={handleRegistration}
-                    onError={setError}
-                  />
-                </Elements>
-              )}
-
-              {/* תרחיש חינם: הצגת כפתור הרשמה רגיל */}
-              {isFree && !loading && (
+              {step === 'initial' && (
                 <button
-                  onClick={handleRegistration}
-                  disabled={registering}
-                  className={`w-full text-white py-3 rounded-lg font-bold transition-colors flex justify-center items-center gap-2 ${
-                    registering
-                      ? "bg-green-400 cursor-not-allowed"
-                      : "bg-green-600 hover:bg-green-700"
-                  }`}
+                  onClick={handleInitiateRegistration}
+                  disabled={loading}
+                  className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition-colors flex justify-center items-center gap-2 disabled:opacity-70"
                 >
-                  {registering ? (
+                  {loading ? (
                     <>
-                      <Loader2 className="animate-spin" /> מבצע הרשמה...
+                      <Loader2 className="animate-spin" /> מעבד...
                     </>
-                  ) : (
+                  ) : isFree ? (
                     "הירשם בחינם"
+                  ) : (
+                    "המשך לתשלום"
                   )}
                 </button>
+              )}
+
+              {step === 'payment' && clientSecret && (
+                <div className="animate-fadeIn">
+                  <Elements
+                    stripe={stripePromise}
+                    options={{ clientSecret, locale: "he" }}
+                  >
+                    <CheckoutForm
+                      onSuccess={handlePaymentSuccess}
+                      onError={setError}
+                    />
+                  </Elements>
+                </div>
               )}
             </>
           )}

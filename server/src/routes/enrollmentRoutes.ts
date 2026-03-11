@@ -38,8 +38,15 @@ router.get('/class/:classId', requireRole(['ADMIN', 'INSTRUCTOR']), EnrollmentCo
 /**
  * @route   DELETE /api/enrollments/:id
  * @desc    Cancel enrollment (Soft delete / Update status)
- * @access  Admin (Student cancellation usually requires refund logic, so we keep it Admin only or strict logic)
+ * @access  Admin, Student (for aborting pending payments)
  */
-router.delete('/:id', requireRole(['ADMIN']), EnrollmentController.cancelEnrollment);
+router.delete('/:id', requireRole(['ADMIN', 'STUDENT']), EnrollmentController.cancelEnrollment);
+
+/**
+ * @route   GET /api/enrollments/student/:studentId
+ * @desc    Get all enrollments for a specific student (Admin view)
+ * @access  Admin
+ */
+router.get('/student/:studentId', requireRole(['ADMIN']), EnrollmentController.getStudentEnrollments);
 
 export default router;

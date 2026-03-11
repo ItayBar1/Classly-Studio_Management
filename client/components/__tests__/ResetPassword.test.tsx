@@ -3,14 +3,12 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import "@testing-library/jest-dom";
 import { ResetPassword } from "../ResetPassword";
-import { supabase } from "../../services/supabaseClient";
+import { apiClient } from "../../services/api";
 
-// Mock Supabase client
-vi.mock("../../services/supabaseClient", () => ({
-  supabase: {
-    auth: {
-      updateUser: vi.fn(),
-    },
+// Mock the API client
+vi.mock("../../services/api", () => ({
+  apiClient: {
+    post: vi.fn(),
   },
 }));
 
@@ -46,7 +44,7 @@ describe("ResetPassword Component", () => {
     expect(
       await screen.findByText("הסיסמה חייבת להכיל לפחות 8 תווים")
     ).toBeInTheDocument();
-    expect(supabase.auth.updateUser).not.toHaveBeenCalled();
+    expect(apiClient.post).not.toHaveBeenCalled();
   });
 
   it("shows error if passwords do not match", async () => {
@@ -61,11 +59,17 @@ describe("ResetPassword Component", () => {
     fireEvent.click(submitButton);
 
     expect(await screen.findByText("הסיסמאות אינן תואמות")).toBeInTheDocument();
-    expect(supabase.auth.updateUser).not.toHaveBeenCalled();
+    expect(apiClient.post).not.toHaveBeenCalled();
   });
 
-  it("calls supabase update and onSuccess when valid", async () => {
-    (supabase.auth.updateUser as any).mockResolvedValue({ error: null });
+  it("calls reset-password endpoint and onSuccess when valid", async () => {
+    (apiClient.post as any).mockResolvedValue({ data: { message: "OK" } });
+
+    // Set a token in the URL
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { ...window.location, search: '?token=test-token-123' },
+    });
 
     render(<ResetPassword onSuccess={mockOnSuccess} />);
 
@@ -78,7 +82,8 @@ describe("ResetPassword Component", () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(supabase.auth.updateUser).toHaveBeenCalledWith({
+      expect(apiClient.post).toHaveBeenCalledWith('/auth/reset-password', {
+        token: 'test-token-123',
         password: "newpassword123",
       });
     });

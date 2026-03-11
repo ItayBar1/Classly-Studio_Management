@@ -7,9 +7,12 @@ export class InstructorController {
     // Retrieve all instructors (admin)
     static async getAll(req: Request, res: Response, next: NextFunction) {
         const requestLog = req.logger || logger.child({ controller: 'InstructorController', method: 'getAll' });
-        requestLog.info({ studioId: req.user.studio_id }, 'Controller entry');
+        requestLog.info({ studioId: req.user!.studio_id }, 'Controller entry');
         try {
-            const studioId = req.user.studio_id;
+            const studioId = req.user!.studio_id;
+            if (!studioId) {
+                return res.status(400).json({ error: 'Studio ID is missing' });
+            }
             const instructors = await InstructorService.getAllInstructors(studioId);
             requestLog.info({ count: instructors?.length }, 'Fetched instructors');
             res.json(instructors);
@@ -22,10 +25,10 @@ export class InstructorController {
     // Retrieve instructor by ID
     static async getById(req: Request, res: Response, next: NextFunction) {
         const requestLog = req.logger || logger.child({ controller: 'InstructorController', method: 'getById' });
-        requestLog.info({ params: req.params, userId: req.user.id }, 'Controller entry');
+        requestLog.info({ params: req.params, userId: req.user!.id }, 'Controller entry');
         try {
             const { id } = req.params;
-            const requestingUser = req.user;
+            const requestingUser = req.user!;
 
             // Authorization: only admin or the instructor can view the profile
             if (requestingUser.role !== 'ADMIN' && requestingUser.id !== id) {
@@ -47,9 +50,9 @@ export class InstructorController {
     // Retrieve earnings/commissions for the authenticated instructor
     static async getMyEarnings(req: Request, res: Response, next: NextFunction) {
         const requestLog = req.logger || logger.child({ controller: 'InstructorController', method: 'getMyEarnings' });
-        requestLog.info({ userId: req.user.id }, 'Controller entry');
+        requestLog.info({ userId: req.user!.id }, 'Controller entry');
         try {
-            const instructorId = req.user.id;
+            const instructorId = req.user!.id;
             const earnings = await InstructorService.getEarnings(instructorId);
             requestLog.info({ count: earnings?.length }, 'Fetched instructor earnings');
             res.json(earnings);

@@ -16,20 +16,27 @@ export const InstructorSchedule: React.FC = () => {
         const data = await CourseService.getInstructorCourses();
 
         if (data) {
+          // פונקציית עזר לחילוץ שעה נקייה בין אם זה ISO מ-Prisma ובין אם מחרוזת פשוטה
+          const extractTime = (timeValue: string) => {
+            if (!timeValue) return "00:00";
+            if (timeValue.includes('T')) {
+              return new Date(timeValue).toISOString().substring(11, 16);
+            }
+            return timeValue.substring(0, 5);
+          };
+
           const formatClassForDisplay = (cls: any) => {
             if (!cls) return null;
 
-            // לוג לבדיקה - תראה ב-Console מה השמות האמיתיים של השדות מהשרת
-            console.log("Raw class object:", cls);
+            // חילוץ שעות נקיות
+            const startTimeStr = extractTime(cls.start_time || cls.startTime);
+            const endTimeStr = extractTime(cls.end_time || cls.endTime);
 
-            const today = "1970-01-01";
-            // וידוא שמות שדות (תמיכה גם ב-snake_case וגם ב-CamelCase)
-            const startStr = cls.start_time || cls.startTime || "00:00";
-            const endStr = cls.end_time || cls.endTime || "00:00";
-
-            const start = new Date(`${today}T${startStr}`);
-            const end = new Date(`${today}T${endStr}`);
-            const duration = (end.getTime() - start.getTime()) / 60000;
+            // חישוב משך הזמן בדקות בצורה תקינה
+            const start = new Date(`1970-01-01T${startTimeStr}:00.000Z`);
+            const end = new Date(`1970-01-01T${endTimeStr}:00.000Z`);
+            const duration = Math.round((end.getTime() - start.getTime()) / 60000);
+            
             const dayOfWeekIndex = cls.day_of_week;
 
             return {
@@ -39,7 +46,7 @@ export const InstructorSchedule: React.FC = () => {
               instructorAvatar: (cls.instructor?.full_name || "א")
                 .charAt(0)
                 .toUpperCase(),
-              startTime: startStr.substring(0, 5),
+              startTime: startTimeStr,
               duration: duration,
               dayOfWeek: dayOfWeekIndex,
               dayName: days[dayOfWeekIndex],
@@ -50,10 +57,14 @@ export const InstructorSchedule: React.FC = () => {
             };
           };
 
+          // מיון השיעורים לפי יום ושעת התחלה (בהנחה ש-ISO מתמיין נכון מילולית)
           const sorted = data.sort((a: any, b: any) => {
             if (a.day_of_week !== b.day_of_week)
               return a.day_of_week - b.day_of_week;
-            return a.start_time.localeCompare(b.start_time);
+            
+            const timeA = extractTime(a.start_time || a.startTime);
+            const timeB = extractTime(b.start_time || b.startTime);
+            return timeA.localeCompare(timeB);
           });
 
           setClasses(sorted.map(formatClassForDisplay).filter(Boolean));
