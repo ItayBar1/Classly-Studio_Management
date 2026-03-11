@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:latest
+    image: postgres:16-alpine
     container_name: classly-db
     restart: always
     environment:
@@ -41,7 +41,7 @@ services:
     build: 
       context: ./client
       args:
-        - VITE_API_URL=https://www.classly-studio-management.uk/api
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:5000/api}
     container_name: classly-web
     restart: always
     ports:

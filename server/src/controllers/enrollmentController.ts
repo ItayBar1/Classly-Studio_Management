@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { EnrollmentService } from "../services/enrollmentService";
 import { PaymentService } from "../services/paymentService";
+import { prisma } from "../config/prisma";
 import { logger } from "../logger";
 
 export class EnrollmentController {
@@ -289,9 +290,38 @@ export class EnrollmentController {
         controller: "EnrollmentController",
         method: "cancelEnrollment",
       });
-    requestLog.info({ params: req.params }, "Controller entry");
+    requestLog.info({ params: req.params, userId: req.user!.id }, "Controller entry");
     try {
       const { id } = req.params;
+
+      // SECURITY: If user is a STUDENT, enforce ownership and restrict to PENDING only
+      if (req.user!.role === "STUDENT") {
+        const enrollment = await prisma.enrollments.findUnique({
+          where: { id },
+          select: { student_id: true, status: true },
+        });
+
+        if (!enrollment) {
+          return res.status(404).json({ error: "Enrollment not found" });
+        }
+
+        // Ownership check: student can only cancel their own enrollments
+        if (enrollment.student_id !== req.user!.id) {
+          requestLog.warn(
+            { enrollmentId: id, studentId: req.user!.id },
+            "IDOR attempt: student tried to cancel another student's enrollment"
+          );
+          return res.status(403).json({ error: "Not authorized to cancel this enrollment" });
+        }
+
+        // Status check: students can only cancel PENDING enrollments
+        if (enrollment.status !== "PENDING") {
+          return res.status(403).json({
+            error: "Only pending enrollments can be cancelled. Please contact your studio admin.",
+          });
+        }
+      }
+
       await EnrollmentService.cancelEnrollment(id);
       requestLog.info({ enrollmentId: id }, "Enrollment cancelled");
       res.json({ message: "Enrollment cancelled successfully" });

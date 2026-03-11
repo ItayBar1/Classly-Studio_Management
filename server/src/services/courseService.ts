@@ -1,4 +1,4 @@
-import { prisma } from "../config/supabase";
+import { prisma } from "../config/prisma";
 import { logger } from "../logger";
 
 type CourseFilters = {

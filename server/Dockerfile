@@ -18,7 +18,7 @@ COPY --from=builder /app/package*.json ./
 # העתקת הסכימה גם לשלב ההרצה
 COPY --from=builder /app/prisma ./prisma/ 
 
-RUN npm install --only=production
+RUN npm ci --omit=dev
 # פקודה קריטית: ייצור הקליינט עבור סביבת הפרודקשן
 RUN npx prisma@6 generate
 

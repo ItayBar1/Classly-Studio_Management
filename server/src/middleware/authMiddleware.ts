@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { prisma } from "../config/supabase";
+import { prisma } from "../config/prisma";
 import { environment } from "../config/env";
 
 // Note: Request.user and Request.studioId types are defined in src/types/express.d.ts

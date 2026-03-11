@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { prisma } from "../config/supabase";
+import { prisma } from "../config/prisma";
 import { logger } from "../logger";
 import { environment } from "../config/env";
 

@@ -232,7 +232,7 @@ model payments {
   currency                 String?   @default("ILS") @db.VarChar(3)
   payment_method           String?   @db.VarChar(50)
   transzilla_transaction_id String?  @db.VarChar(100)
-  stripe_payment_intent_id String?   @db.VarChar(255)
+  stripe_payment_intent_id String?   @unique @db.VarChar(255)
   stripe_charge_id         String?   @db.VarChar(255)
   status                   String?   @default("PENDING") @db.VarChar(20)
   invoice_number           String?   @db.VarChar(50)

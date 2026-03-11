@@ -6,7 +6,7 @@ const emailLog = logger.child({ service: 'EmailService' });
 
 /**
  * Creates a nodemailer transporter.
- * Falls back to console logging if SMTP is not configured.
+ * Falls back to console logging if SMTP is not configured (development only).
  */
 const createTransporter = () => {
   const { smtp } = environment;
@@ -32,18 +32,25 @@ const transporter = createTransporter();
 export class EmailService {
   /**
    * Sends a password reset email with a reset link.
-   * Falls back to logging the link if SMTP is not configured.
+   * In development: falls back to logging the link if SMTP is not configured.
+   * In production: throws an error if SMTP is missing (never exposes tokens in logs).
    */
   static async sendPasswordResetEmail(to: string, resetToken: string): Promise<void> {
     const resetUrl = `${environment.frontendUrl}/reset-password?token=${resetToken}`;
 
     if (!transporter) {
-      emailLog.info(
-        { to, resetUrl },
-        '📧 SMTP not configured — Password reset link (use this for testing):'
-      );
-      console.log(`\n🔗 Password Reset Link for ${to}:\n   ${resetUrl}\n`);
-      return;
+      if (process.env.NODE_ENV === 'development') {
+        emailLog.info(
+          { to, resetUrl },
+          '📧 SMTP not configured — Password reset link (use this for testing):'
+        );
+        console.log(`\n🔗 Password Reset Link for ${to}:\n   ${resetUrl}\n`);
+        return;
+      }
+
+      // Production: refuse to leak tokens — throw instead
+      emailLog.error({ to }, 'SMTP not configured. Cannot send password reset email.');
+      throw new Error('Email service is not configured. Please contact support.');
     }
 
     try {
@@ -77,8 +84,10 @@ export class EmailService {
       emailLog.info({ to }, 'Password reset email sent successfully');
     } catch (error) {
       emailLog.error({ err: error, to }, 'Failed to send password reset email');
-      // Still log the URL as fallback
-      console.log(`\n🔗 Fallback — Password Reset Link for ${to}:\n   ${resetUrl}\n`);
+      // Only log the URL as fallback in development — never in production
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`\n🔗 Fallback — Password Reset Link for ${to}:\n   ${resetUrl}\n`);
+      }
       throw error;
     }
   }

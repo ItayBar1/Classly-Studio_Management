@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { prisma } from "../config/supabase";
+import { prisma } from "../config/prisma";
 import { environment } from "../config/env";
 import { logger } from "../logger";
 import { EmailService } from "../services/emailService";

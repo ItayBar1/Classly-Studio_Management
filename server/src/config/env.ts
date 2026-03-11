@@ -25,7 +25,13 @@ export const environment = {
     'http://localhost:3000',
   logLevel: process.env.LOG_LEVEL || 'info',
   databaseUrl: process.env.DATABASE_URL || '',
-  jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
+  jwtSecret: (() => {
+    const secret = process.env.JWT_SECRET;
+    if (!secret && process.env.NODE_ENV === 'production') {
+      throw new Error('FATAL: JWT_SECRET must be set in production. Refusing to start with an insecure default.');
+    }
+    return secret || 'dev-secret-change-in-production';
+  })(),
   stripe: {
     secretKey: process.env.STRIPE_SECRET_KEY || '',
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',

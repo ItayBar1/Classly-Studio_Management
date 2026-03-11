@@ -1,6 +1,7 @@
-import { prisma } from "../config/supabase";
+import { prisma } from "../config/prisma";
 import { logger } from "../logger";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 interface StudentPayload {
   email: string;
@@ -135,9 +136,13 @@ export const StudentService = {
 
     const { email, full_name, phone_number, password } = studentData;
 
+    // Generate a secure random password if none is provided
+    const rawPassword = password || crypto.randomBytes(32).toString("hex");
+    const requiresPasswordReset = !password;
+
     // Hash password
     const salt = await bcrypt.genSalt(10);
-    const password_hash = await bcrypt.hash(password || "123456", salt);
+    const password_hash = await bcrypt.hash(rawPassword, salt);
 
     // Create user directly in DB with student role
     const data = await prisma.users.create({
@@ -149,6 +154,10 @@ export const StudentService = {
         role: "STUDENT",
         studio_id: studioId,
         status: "ACTIVE",
+        // Flag account as requiring password reset if no password was provided
+        ...(requiresPasswordReset && {
+          preferences: { force_password_reset: true },
+        }),
       },
     });
 

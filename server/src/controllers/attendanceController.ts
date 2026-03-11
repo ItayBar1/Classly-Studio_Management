@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { AttendanceService } from "../services/attendanceService";
-import { prisma } from "../config/supabase";
+import { prisma } from "../config/prisma";
 import { logger } from "../logger";
 
 export class AttendanceController {

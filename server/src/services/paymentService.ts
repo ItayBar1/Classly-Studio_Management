@@ -1,4 +1,4 @@
-import { prisma } from "../config/supabase";
+import { prisma } from "../config/prisma";
 import Stripe from "stripe";
 import { logger } from "../logger";
 import { environment } from "../config/env";
@@ -111,8 +111,8 @@ export class PaymentService {
       throw new Error(`Payment not succeeded. Status: ${paymentIntent.status}`);
     }
 
-    // 2. Update payment record
-    const paymentRecord = await prisma.payments.updateMany({
+    // 2. Update payment record using unique constraint (eliminates race condition)
+    const updatedPayment = await prisma.payments.update({
       where: { stripe_payment_intent_id: paymentIntentId },
       data: {
         status: "SUCCEEDED",
@@ -121,19 +121,6 @@ export class PaymentService {
         updated_at: new Date(),
       },
     });
-
-    // Fetch the updated record
-    const updatedPayment = await prisma.payments.findFirst({
-      where: { stripe_payment_intent_id: paymentIntentId },
-    });
-
-    if (!updatedPayment) {
-      serviceLogger.error(
-        { paymentIntentId },
-        "Payment record not found after update",
-      );
-      throw new Error("Payment record not found");
-    }
 
     // 3. Update enrollment status if available
     if (updatedPayment.enrollment_id) {
@@ -219,7 +206,8 @@ export class PaymentService {
       "Handling successful payment from webhook",
     );
 
-    await prisma.payments.updateMany({
+    // Update payment record using unique constraint (eliminates race condition)
+    const paymentRecord = await prisma.payments.update({
       where: { stripe_payment_intent_id: paymentIntentId },
       data: {
         status: "SUCCEEDED",
@@ -228,11 +216,7 @@ export class PaymentService {
       },
     });
 
-    const paymentRecord = await prisma.payments.findFirst({
-      where: { stripe_payment_intent_id: paymentIntentId },
-    });
-
-    if (paymentRecord?.enrollment_id) {
+    if (paymentRecord.enrollment_id) {
       serviceLogger.info(
         { enrollmentId: paymentRecord.enrollment_id },
         "Updating enrollment after webhook payment success",
@@ -248,7 +232,7 @@ export class PaymentService {
     }
 
     serviceLogger.info(
-      { paymentId: paymentRecord?.id },
+      { paymentId: paymentRecord.id },
       "Webhook payment handling completed",
     );
     return paymentRecord;
