@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:18
+    image: postgres:latest
     container_name: classly-db
     restart: always
     environment:
