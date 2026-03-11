@@ -13,20 +13,24 @@ import {
   Loader2,
   BookOpen,
   UserMinus,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import { Student, EnrollmentStatus } from "../../types/types";
-import { StudentService, CourseService, InvitationService } from "../../services/api";
+import {
+  StudentService,
+  CourseService,
+  InvitationService,
+} from "../../services/api";
 import { InviteLinkModal } from "./InviteLinkModal";
 import { EnrollStudentModal } from "./EnrollStudentModal";
 import { UnenrollStudentModal } from "./UnenrollStudentModal";
 
 // מילון תרגום לסטטוסים
 const STATUS_TRANSLATION: Record<EnrollmentStatus, string> = {
-  'ACTIVE': 'פעיל',
-  'PAUSED': 'מושהה',
-  'COMPLETED': 'הושלם',
-  'CANCELLED': 'בוטל'
+  ACTIVE: "פעיל",
+  PAUSED: "מושהה",
+  COMPLETED: "הושלם",
+  CANCELLED: "בוטל",
 };
 
 const ITEMS_PER_PAGE = 10;
@@ -40,9 +44,12 @@ export const StudentManagement: React.FC = () => {
   const [page, setPage] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClass, setSelectedClass] = useState("הכל");
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Student | 'created_at'; ascending: boolean }>({
-    key: 'created_at',
-    ascending: false
+  const [sortConfig, setSortConfig] = useState<{
+    key: keyof Student | "created_at";
+    ascending: boolean;
+  }>({
+    key: "created_at",
+    ascending: false,
   });
 
   // Action menu state
@@ -55,11 +62,16 @@ export const StudentManagement: React.FC = () => {
   const [inviteLoading, setInviteLoading] = useState(false);
 
   // Enroll/Unenroll modal state
-  const [enrollModalStudent, setEnrollModalStudent] = useState<Student | null>(null);
-  const [unenrollModalStudent, setUnenrollModalStudent] = useState<Student | null>(null);
+  const [enrollModalStudent, setEnrollModalStudent] = useState<Student | null>(
+    null,
+  );
+  const [unenrollModalStudent, setUnenrollModalStudent] =
+    useState<Student | null>(null);
 
   // Delete confirmation state
-  const [deletingStudentId, setDeletingStudentId] = useState<string | null>(null);
+  const [deletingStudentId, setDeletingStudentId] = useState<string | null>(
+    null,
+  );
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -68,16 +80,18 @@ export const StudentManagement: React.FC = () => {
         setOpenMenuId(null);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // טעינת רשימת השיעורים (עבור ה-Dropdown)
   const fetchClassesList = async () => {
     try {
-      const courses = await CourseService.getAll({ status: 'active' });
+      const courses = await CourseService.getAll({ status: "active" });
       if (courses) {
-        const uniqueNames = Array.from(new Set(courses.map(c => c.name))).sort();
+        const uniqueNames = Array.from(
+          new Set(courses.map((c) => c.name)),
+        ).sort();
         setClassList(["הכל", ...uniqueNames]);
       }
     } catch (err) {
@@ -92,7 +106,7 @@ export const StudentManagement: React.FC = () => {
       const response = await StudentService.getAll({ limit: 1000 });
       setAllStudents(response.students);
     } catch (error) {
-      console.error('Error fetching students:', error);
+      console.error("Error fetching students:", error);
     } finally {
       setLoading(false);
     }
@@ -109,15 +123,18 @@ export const StudentManagement: React.FC = () => {
 
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase();
-      result = result.filter(student =>
-        student.full_name.toLowerCase().includes(lowerSearch) ||
-        student.email.toLowerCase().includes(lowerSearch) ||
-        (student.phone_number && student.phone_number.includes(searchTerm))
+      result = result.filter(
+        (student) =>
+          student.full_name.toLowerCase().includes(lowerSearch) ||
+          student.email.toLowerCase().includes(lowerSearch) ||
+          (student.phone_number && student.phone_number.includes(searchTerm)),
       );
     }
 
     if (selectedClass !== "הכל") {
-      result = result.filter(student => student.enrolledClass === selectedClass);
+      result = result.filter(
+        (student) => student.enrolledClass === selectedClass,
+      );
     }
 
     result.sort((a, b) => {
@@ -136,27 +153,47 @@ export const StudentManagement: React.FC = () => {
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
   const displayedStudents = filteredAndSortedStudents.slice(
     page * ITEMS_PER_PAGE,
-    (page + 1) * ITEMS_PER_PAGE
+    (page + 1) * ITEMS_PER_PAGE,
   );
 
-  const handleSort = (key: keyof Student | 'created_at') => {
-    setSortConfig(current => ({
+  const handleSort = (key: keyof Student | "created_at") => {
+    setSortConfig((current) => ({
       key,
-      ascending: current.key === key ? !current.ascending : true
+      ascending: current.key === key ? !current.ascending : true,
     }));
   };
 
   const handleExportCSV = () => {
-    const headers = ["ID", "שם", "שיעור", "סטטוס", "אימייל", "טלפון", "תאריך הצטרפות"];
+    const headers = [
+      "ID",
+      "שם",
+      "שיעור",
+      "סטטוס",
+      "אימייל",
+      "טלפון",
+      "תאריך הצטרפות",
+    ];
     const rows = filteredAndSortedStudents.map((student) => [
-      student.id, student.full_name, student.enrolledClass || '-', STATUS_TRANSLATION[student.status], student.email, student.phone_number || '-', student.created_at || '-',
+      student.id,
+      student.full_name,
+      student.enrolledClass || "-",
+      STATUS_TRANSLATION[student.status],
+      student.email,
+      student.phone_number || "-",
+      student.created_at || "-",
     ]);
-    const csvContent = [headers.join(","), ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join("\n");
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+    ].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `students_export_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute(
+      "download",
+      `students_export_${new Date().toISOString().split("T")[0]}.csv`,
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -166,12 +203,12 @@ export const StudentManagement: React.FC = () => {
   const handleAddStudent = async () => {
     setInviteLoading(true);
     try {
-      const result = await InvitationService.create('STUDENT');
+      const result = await InvitationService.create("STUDENT");
       setInviteLink(result.link);
       setShowInviteModal(true);
     } catch (err) {
       console.error("Failed to create student invitation", err);
-      alert('שגיאה ביצירת קישור הזמנה');
+      alert("שגיאה ביצירת קישור הזמנה");
     } finally {
       setInviteLoading(false);
     }
@@ -179,14 +216,19 @@ export const StudentManagement: React.FC = () => {
 
   // --- Remove student from studio ---
   const handleRemoveFromStudio = async (studentId: string) => {
-    if (!confirm('האם אתה בטוח שברצונך להסיר תלמיד זה מהסטודיו? פעולה זו אינה ניתנת לביטול.')) return;
+    if (
+      !confirm(
+        "האם אתה בטוח שברצונך להסיר תלמיד זה מהסטודיו? פעולה זו אינה ניתנת לביטול.",
+      )
+    )
+      return;
     setDeletingStudentId(studentId);
     try {
       await StudentService.delete(studentId);
-      setAllStudents(prev => prev.filter(s => s.id !== studentId));
+      setAllStudents((prev) => prev.filter((s) => s.id !== studentId));
     } catch (err) {
       console.error("Failed to remove student", err);
-      alert('שגיאה בהסרת התלמיד');
+      alert("שגיאה בהסרת התלמיד");
     } finally {
       setDeletingStudentId(null);
       setOpenMenuId(null);
@@ -195,11 +237,16 @@ export const StudentManagement: React.FC = () => {
 
   const getStatusColor = (status: EnrollmentStatus) => {
     switch (status) {
-      case 'ACTIVE': return "bg-green-50 text-green-700 border-green-200";
-      case 'PAUSED': return "bg-yellow-50 text-yellow-700 border-yellow-200";
-      case 'CANCELLED': return "bg-red-50 text-red-700 border-red-200";
-      case 'COMPLETED': return "bg-blue-50 text-blue-700 border-blue-200";
-      default: return "bg-slate-50 text-slate-700 border-slate-200";
+      case "ACTIVE":
+        return "bg-green-50 text-green-700 border-green-200";
+      case "PAUSED":
+        return "bg-yellow-50 text-yellow-700 border-yellow-200";
+      case "CANCELLED":
+        return "bg-red-50 text-red-700 border-red-200";
+      case "COMPLETED":
+        return "bg-blue-50 text-blue-700 border-blue-200";
+      default:
+        return "bg-slate-50 text-slate-700 border-slate-200";
     }
   };
 
@@ -233,11 +280,18 @@ export const StudentManagement: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">ניהול תלמידים</h2>
-          <p className="text-slate-500 dark:text-slate-400">ניהול הרשמות ופרטי תלמידים ({totalCount} רשומות)</p>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+            ניהול תלמידים
+          </h2>
+          <p className="text-slate-500 dark:text-slate-400">
+            ניהול הרשמות ופרטי תלמידים ({totalCount} רשומות)
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={handleExportCSV} className="flex items-center gap-2 bg-white text-slate-600 border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition-all shadow-sm dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700">
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 bg-white text-slate-600 border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition-all shadow-sm dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700"
+          >
             <Download size={16} /> ייצוא CSV
           </button>
           <button
@@ -245,7 +299,11 @@ export const StudentManagement: React.FC = () => {
             disabled={inviteLoading}
             className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg disabled:opacity-50"
           >
-            {inviteLoading ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />}
+            {inviteLoading ? (
+              <Loader2 className="animate-spin" size={16} />
+            ) : (
+              <Plus size={16} />
+            )}
             הוסף תלמיד
           </button>
         </div>
@@ -254,13 +312,19 @@ export const StudentManagement: React.FC = () => {
       {/* Filters */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4 justify-between items-center dark:bg-slate-900 dark:border-slate-800">
         <div className="relative w-full md:w-96">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={18} />
+          <Search
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
+            size={18}
+          />
           <input
             type="text"
             placeholder="חיפוש לפי שם או אימייל..."
             className="w-full pr-10 pl-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:placeholder-slate-500"
             value={searchTerm}
-            onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setPage(0);
+            }}
           />
         </div>
 
@@ -272,10 +336,15 @@ export const StudentManagement: React.FC = () => {
           <select
             className="px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
             value={selectedClass}
-            onChange={(e) => { setSelectedClass(e.target.value); setPage(0); }}
+            onChange={(e) => {
+              setSelectedClass(e.target.value);
+              setPage(0);
+            }}
           >
             {classList.map((c) => (
-              <option key={c} value={c}>{c === "הכל" ? "כל השיעורים" : c}</option>
+              <option key={c} value={c}>
+                {c === "הכל" ? "כל השיעורים" : c}
+              </option>
             ))}
           </select>
         </div>
@@ -287,56 +356,124 @@ export const StudentManagement: React.FC = () => {
           <table className="w-full text-right border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 dark:bg-slate-800/50 dark:border-slate-800">
-                <th onClick={() => handleSort("full_name")} className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 group dark:text-slate-400 dark:hover:bg-slate-800">
-                  <div className="flex items-center gap-1">תלמיד <ArrowUpDown size={12} className="opacity-50" /></div>
+                <th
+                  onClick={() => handleSort("full_name")}
+                  className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 group dark:text-slate-400 dark:hover:bg-slate-800"
+                >
+                  <div className="flex items-center gap-1">
+                    תלמיד <ArrowUpDown size={12} className="opacity-50" />
+                  </div>
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider dark:text-slate-400">שיעור</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider dark:text-slate-400">סטטוס</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider dark:text-slate-400">פרטי קשר</th>
-                <th onClick={() => handleSort("created_at")} className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 group dark:text-slate-400 dark:hover:bg-slate-800">
-                  <div className="flex items-center gap-1">הצטרף <ArrowUpDown size={12} className="opacity-50" /></div>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider dark:text-slate-400">
+                  שיעור
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-left dark:text-slate-400">פעולות</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider dark:text-slate-400">
+                  סטטוס
+                </th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider dark:text-slate-400">
+                  פרטי קשר
+                </th>
+                <th
+                  onClick={() => handleSort("created_at")}
+                  className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 group dark:text-slate-400 dark:hover:bg-slate-800"
+                >
+                  <div className="flex items-center gap-1">
+                    הצטרף <ArrowUpDown size={12} className="opacity-50" />
+                  </div>
+                </th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-left dark:text-slate-400">
+                  פעולות
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
-                <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400"><Loader2 className="animate-spin h-6 w-6 mx-auto mb-2" />טוען נתונים...</td></tr>
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-6 py-12 text-center text-slate-500 dark:text-slate-400"
+                  >
+                    <Loader2 className="animate-spin h-6 w-6 mx-auto mb-2" />
+                    טוען נתונים...
+                  </td>
+                </tr>
               ) : displayedStudents.length > 0 ? (
                 displayedStudents.map((student) => (
-                  <tr key={student.id} className="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50">
+                  <tr
+                    key={student.id}
+                    className="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-10 w-10 flex-shrink-0 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm dark:bg-indigo-900/50 dark:text-indigo-400">
                           {student.profile_image_url ? (
-                            <img src={student.profile_image_url} alt="" className="h-10 w-10 rounded-full" />
+                            <img
+                              src={student.profile_image_url}
+                              alt=""
+                              className="h-10 w-10 rounded-full"
+                            />
                           ) : (
-                            student.full_name?.charAt(0) || '?'
+                            student.full_name?.charAt(0) || "?"
                           )}
                         </div>
                         <div className="mr-4">
-                          <div className="font-medium text-slate-900 dark:text-slate-100">{student.full_name}</div>
-                          <div className="text-sm text-slate-500 dark:text-slate-400">מזהה: {student.id.substring(0, 6)}</div>
+                          <div className="font-medium text-slate-900 dark:text-slate-100">
+                            {student.full_name}
+                          </div>
+                          <div className="text-sm text-slate-500 dark:text-slate-400">
+                            מזהה: {student.id.substring(0, 6)}
+                          </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{student.enrolledClass || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">
+                      {student.enrolledClass || "-"}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getStatusColor(student.status as EnrollmentStatus)}`}>
-                        {STATUS_TRANSLATION[student.status as EnrollmentStatus] || student.status}
+                      <span
+                        className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getStatusColor(student.status as EnrollmentStatus)}`}
+                      >
+                        {STATUS_TRANSLATION[
+                          student.status as EnrollmentStatus
+                        ] || student.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300"><Mail size={14} className="text-slate-400 dark:text-slate-500" />{student.email}</div>
-                        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300"><Phone size={14} className="text-slate-400 dark:text-slate-500" />{student.phone_number || '-'}</div>
+                        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                          <Mail
+                            size={14}
+                            className="text-slate-400 dark:text-slate-500"
+                          />
+                          {student.email}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                          <Phone
+                            size={14}
+                            className="text-slate-400 dark:text-slate-500"
+                          />
+                          {student.phone_number || "-"}
+                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{student.created_at ? new Date(student.created_at).toLocaleDateString('he-IL') : '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">
+                      {student.created_at
+                        ? new Date(student.created_at).toLocaleDateString(
+                            "he-IL",
+                          )
+                        : "-"}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
-                      <div className="relative" ref={openMenuId === student.id ? menuRef : undefined}>
+                      <div
+                        className="relative"
+                        ref={openMenuId === student.id ? menuRef : undefined}
+                      >
                         <button
-                          onClick={() => setOpenMenuId(openMenuId === student.id ? null : student.id)}
+                          onClick={() =>
+                            setOpenMenuId(
+                              openMenuId === student.id ? null : student.id,
+                            )
+                          }
                           className="text-slate-400 hover:text-indigo-600 p-2 rounded-full hover:bg-slate-100 transition-colors dark:text-slate-400 dark:hover:text-indigo-400 dark:hover:bg-slate-800"
                         >
                           <MoreVertical size={18} />
@@ -344,41 +481,75 @@ export const StudentManagement: React.FC = () => {
 
                         {/* Dropdown Menu */}
                         {openMenuId === student.id && (
-                          <div className="absolute left-0 top-full mt-1 w-52 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-20 animate-fadeIn dark:bg-slate-800 dark:border-slate-700">
-                            <button
-                              onClick={() => {
-                                setEnrollModalStudent(student);
+                          <>
+                            {/* רקע חצי שקוף למובייל - לחיצה עליו תסגור את התפריט */}
+                            <div
+                              className="fixed inset-0 z-40 bg-black/20 md:hidden"
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setOpenMenuId(null);
                               }}
-                              className="w-full text-right px-4 py-2.5 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2 transition-colors dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-indigo-400"
+                            />
+
+                            {/* התפריט הרספונסיבי: במובייל תפריט תחתון (Fixed), במחשב דרופדאון (Absolute) */}
+                            <div
+                              className="
+                              fixed bottom-0 left-0 right-0 z-50 w-full bg-white rounded-t-2xl shadow-2xl border-t border-slate-200 py-4
+                              md:absolute md:top-full md:bottom-auto md:left-0 md:right-auto md:w-52 md:rounded-xl md:shadow-lg md:py-1 md:mt-1 md:border
+                              dark:bg-slate-800 dark:border-slate-700
+                            "
                             >
-                              <BookOpen size={15} />
-                              רישום לקורסים
-                            </button>
-                            <button
-                              onClick={() => {
-                                setUnenrollModalStudent(student);
-                                setOpenMenuId(null);
-                              }}
-                              className="w-full text-right px-4 py-2.5 text-sm text-slate-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-orange-400"
-                            >
-                              <UserMinus size={15} />
-                              הסרה מקורסים
-                            </button>
-                            <div className="border-t border-slate-100 my-1 dark:border-slate-700" />
-                            <button
-                              onClick={() => handleRemoveFromStudio(student.id)}
-                              disabled={deletingStudentId === student.id}
-                              className="w-full text-right px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-500/10"
-                            >
-                              {deletingStudentId === student.id ? (
-                                <Loader2 className="animate-spin" size={15} />
-                              ) : (
-                                <Trash2 size={15} />
-                              )}
-                              הסרה מהסטודיו
-                            </button>
-                          </div>
+                              <button
+                                onClick={() => {
+                                  setEnrollModalStudent(student);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full text-right px-4 py-3 md:py-2.5 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2 transition-colors dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-indigo-400"
+                              >
+                                <BookOpen size={15} />
+                                רישום לקורסים
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setUnenrollModalStudent(student);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full text-right px-4 py-3 md:py-2.5 text-sm text-slate-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-orange-400"
+                              >
+                                <UserMinus size={15} />
+                                הסרה מקורסים
+                              </button>
+
+                              <div className="border-t border-slate-100 my-2 md:my-1 dark:border-slate-700" />
+
+                              <button
+                                onClick={() =>
+                                  handleRemoveFromStudio(student.id)
+                                }
+                                disabled={deletingStudentId === student.id}
+                                className="w-full text-right px-4 py-3 md:py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-500/10"
+                              >
+                                {deletingStudentId === student.id ? (
+                                  <Loader2 className="animate-spin" size={15} />
+                                ) : (
+                                  <Trash2 size={15} />
+                                )}
+                                הסרה מהסטודיו
+                              </button>
+
+                              {/* כפתור ביטול ייעודי למובייל */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-[calc(100%-2rem)] mx-auto mt-4 py-3 block md:hidden text-center font-medium text-slate-600 bg-slate-100 rounded-xl dark:bg-slate-700 dark:text-slate-300 transition-colors"
+                              >
+                                ביטול
+                              </button>
+                            </div>
+                          </>
                         )}
                       </div>
                     </td>
@@ -386,10 +557,17 @@ export const StudentManagement: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                  <td
+                    colSpan={6}
+                    className="px-6 py-12 text-center text-slate-500"
+                  >
                     <div className="flex flex-col items-center justify-center">
                       <Search className="h-10 w-10 text-slate-300 mb-2" />
-                      <p className="font-medium">{searchTerm ? 'לא נמצאו תוצאות לחיפוש זה' : 'לא נמצאו תלמידים'}</p>
+                      <p className="font-medium">
+                        {searchTerm
+                          ? "לא נמצאו תוצאות לחיפוש זה"
+                          : "לא נמצאו תלמידים"}
+                      </p>
                     </div>
                   </td>
                 </tr>
@@ -401,7 +579,7 @@ export const StudentManagement: React.FC = () => {
         {/* Pagination Controls */}
         <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex items-center justify-between dark:bg-slate-800/50 dark:border-slate-800">
           <button
-            onClick={() => setPage(p => Math.max(0, p - 1))}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
             className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed dark:text-slate-400 dark:hover:text-indigo-400"
           >
@@ -411,7 +589,7 @@ export const StudentManagement: React.FC = () => {
             עמוד {page + 1} מתוך {totalPages || 1}
           </span>
           <button
-            onClick={() => setPage(p => (totalPages > p + 1 ? p + 1 : p))}
+            onClick={() => setPage((p) => (totalPages > p + 1 ? p + 1 : p))}
             disabled={page + 1 >= totalPages}
             className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed dark:text-slate-400 dark:hover:text-indigo-400"
           >
