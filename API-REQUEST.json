@@ -5,14 +5,212 @@
   },
   "resources": [
     {
+      "resource": "Auth",
+      "base_path": "/auth",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/register",
+          "access": "Public",
+          "description": "Register a new user."
+        },
+        {
+          "method": "POST",
+          "path": "/login",
+          "access": "Public",
+          "description": "Login and get a JWT token."
+        },
+        {
+          "method": "POST",
+          "path": "/forgot-password",
+          "access": "Public",
+          "description": "Request a password reset email."
+        },
+        {
+          "method": "POST",
+          "path": "/reset-password",
+          "access": "Public",
+          "description": "Reset a user's password with a valid token."
+        }
+      ]
+    },
+    {
       "resource": "Users",
       "base_path": "/users",
       "endpoints": [
         {
           "method": "GET",
+          "path": "/validate-studio/:serialNumber",
+          "access": "Public",
+          "description": "Validate studio serial number for registration."
+        },
+        {
+          "method": "POST",
+          "path": "/prepare-registration",
+          "access": "Public",
+          "description": "Prepare registration by validating and storing studio_id server-side."
+        },
+        {
+          "method": "GET",
+          "path": "/invitations/:token",
+          "access": "Public",
+          "description": "Validate an invitation token."
+        },
+        {
+          "method": "POST",
+          "path": "/invitations",
+          "access": "Admin, SuperAdmin",
+          "description": "Create a new invitation."
+        },
+        {
+          "method": "POST",
+          "path": "/invitations/accept",
+          "access": "Authenticated User",
+          "description": "Accept an invitation to upgrade user's role."
+        },
+        {
+          "method": "GET",
           "path": "/me",
           "access": "Authenticated User",
-          "description": "Retrieves the full profile of the currently logged-in user. [New Endpoint]"
+          "description": "Get the current logged-in user profile."
+        }
+      ]
+    },
+    {
+      "resource": "Studios",
+      "base_path": "/studios",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/my-studio",
+          "access": "Admin, SuperAdmin",
+          "description": "Get the current admin's studio details."
+        },
+        {
+          "method": "POST",
+          "path": "/",
+          "access": "Admin, SuperAdmin",
+          "description": "Create a new studio (one time setup)."
+        },
+        {
+          "method": "PUT",
+          "path": "/:id",
+          "access": "Admin, SuperAdmin",
+          "description": "Update studio details."
+        }
+      ]
+    },
+    {
+      "resource": "Branches",
+      "base_path": "/branches",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/",
+          "access": "Admin, SuperAdmin",
+          "description": "Get all branches."
+        },
+        {
+          "method": "POST",
+          "path": "/",
+          "access": "Admin, SuperAdmin",
+          "description": "Create a new branch."
+        },
+        {
+          "method": "PUT",
+          "path": "/:id",
+          "access": "Admin, SuperAdmin",
+          "description": "Update a specific branch's details."
+        },
+        {
+          "method": "DELETE",
+          "path": "/:id",
+          "access": "Admin, SuperAdmin",
+          "description": "Delete a specific branch."
+        }
+      ]
+    },
+    {
+      "resource": "Rooms",
+      "base_path": "/rooms",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/",
+          "access": "Authenticated User",
+          "description": "Get all rooms."
+        },
+        {
+          "method": "GET",
+          "path": "/branch/:branchId",
+          "access": "Authenticated User",
+          "description": "Get all rooms for a specific branch."
+        },
+        {
+          "method": "POST",
+          "path": "/",
+          "access": "Admin, SuperAdmin",
+          "description": "Create a new room."
+        },
+        {
+          "method": "PUT",
+          "path": "/:id",
+          "access": "Admin, SuperAdmin",
+          "description": "Update a specific room's details."
+        },
+        {
+          "method": "DELETE",
+          "path": "/:id",
+          "access": "Admin, SuperAdmin",
+          "description": "Delete a specific room."
+        }
+      ]
+    },
+    {
+      "resource": "Courses (Classes)",
+      "base_path": "/courses",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/",
+          "access": "Student, Instructor, Admin",
+          "description": "Get all courses. Admins see all, others see active/relevant ones."
+        },
+        {
+          "method": "GET",
+          "path": "/my-courses",
+          "access": "Instructor, Admin",
+          "description": "Get courses assigned to the logged-in instructor."
+        },
+        {
+          "method": "GET",
+          "path": "/available",
+          "access": "Student",
+          "description": "Get available courses for student registration."
+        },
+        {
+          "method": "GET",
+          "path": "/:id",
+          "access": "Authenticated User",
+          "description": "Get details for a single course."
+        },
+        {
+          "method": "POST",
+          "path": "/",
+          "access": "Admin",
+          "description": "Create a new course."
+        },
+        {
+          "method": "PATCH",
+          "path": "/:id",
+          "access": "Admin",
+          "description": "Update specific fields of a course."
+        },
+        {
+          "method": "DELETE",
+          "path": "/:id",
+          "access": "Admin",
+          "description": "Soft delete a course (set is_active to false)."
         }
       ]
     },
@@ -24,139 +222,31 @@
           "method": "GET",
           "path": "/",
           "access": "Admin",
-          "description": "Retrieves a list of all students registered in the studio."
+          "description": "Get a list of all students."
         },
         {
           "method": "POST",
           "path": "/",
           "access": "Admin",
-          "description": "Creates a new student profile manually."
+          "description": "Create a new student profile manually."
         },
         {
           "method": "GET",
           "path": "/my-students",
           "access": "Instructor, Admin",
-          "description": "Retrieves students associated with the logged-in instructor's classes."
+          "description": "Get students associated with the logged-in instructor's classes."
         },
         {
           "method": "GET",
           "path": "/:id",
-          "access": "Admin, Instructor",
-          "description": "Retrieves detailed profile information for a specific student."
-        },
-        {
-          "method": "DELETE",
-          "path": "/:id",
-          "access": "Admin",
-          "description": "Soft deletes a student by changing their status to 'INACTIVE'."
-        }
-      ]
-    },
-    {
-      "resource": "Courses (Classes)",
-      "base_path": "/courses",
-      "endpoints": [
-        {
-          "method": "GET",
-          "path": "/",
-          "access": "All (Filtered)",
-          "description": "Retrieves all courses. Admins see all; others see active/relevant courses."
-        },
-        {
-          "method": "GET",
-          "path": "/my-courses",
           "access": "Instructor, Admin",
-          "description": "Retrieves courses assigned to the logged-in instructor."
-        },
-        {
-          "method": "GET",
-          "path": "/available",
-          "access": "Student",
-          "description": "Retrieves a list of active courses available for registration."
-        },
-        {
-          "method": "GET",
-          "path": "/:id",
-          "access": "All Authenticated",
-          "description": "Retrieves details for a single course."
-        },
-        {
-          "method": "POST",
-          "path": "/",
-          "access": "Admin",
-          "description": "Creates a new course/class."
-        },
-        {
-          "method": "PATCH",
-          "path": "/:id",
-          "access": "Admin",
-          "description": "Updates course details."
+          "description": "Get detailed profile information for a specific student."
         },
         {
           "method": "DELETE",
           "path": "/:id",
           "access": "Admin",
-          "description": "Soft deletes a course by setting 'is_active' to false."
-        }
-      ]
-    },
-    {
-      "resource": "Enrollments",
-      "base_path": "/enrollments",
-      "endpoints": [
-        {
-          "method": "POST",
-          "path": "/admin",
-          "access": "Admin",
-          "description": "Manually enrolls a student into a class (bypassing payment)."
-        },
-        {
-          "method": "POST",
-          "path": "/register",
-          "access": "Student",
-          "description": "Initiates student self-registration. Creates a PENDING enrollment, generates a Stripe Payment Intent, and returns the Client Secret."
-        },
-        {
-          "method": "GET",
-          "path": "/my-enrollments",
-          "access": "Student",
-          "description": "Retrieves all enrollments for the logged-in student."
-        },
-        {
-          "method": "GET",
-          "path": "/class/:classId",
-          "access": "Admin, Instructor",
-          "description": "Retrieves the roster of students enrolled in a specific class."
-        },
-        {
-          "method": "DELETE",
-          "path": "/:id",
-          "access": "Admin",
-          "description": "Cancels an enrollment."
-        }
-      ]
-    },
-    {
-      "resource": "Payments",
-      "base_path": "/payments",
-      "endpoints": [
-        {
-          "method": "GET",
-          "path": "/",
-          "access": "Admin",
-          "description": "Retrieves a history of all payment records. [New Endpoint]"
-        },
-        {
-          "method": "POST",
-          "path": "/create-intent",
-          "access": "Authenticated User",
-          "description": "Creates a new Stripe Payment Intent manually."
-        },
-        {
-          "method": "POST",
-          "path": "/confirm",
-          "access": "Authenticated User",
-          "description": "Validates a successful Stripe payment via PaymentIntent ID and updates the database record to 'PAID'."
+          "description": "Soft delete a student by changing their status to 'INACTIVE'."
         }
       ]
     },
@@ -168,25 +258,25 @@
           "method": "GET",
           "path": "/",
           "access": "Admin",
-          "description": "Retrieves a list of all instructors."
+          "description": "Get a list of all instructors."
         },
         {
           "method": "GET",
           "path": "/earnings",
           "access": "Instructor",
-          "description": "Retrieves earnings and commission data for the logged-in instructor."
+          "description": "Get earnings and commission data for the logged-in instructor."
         },
         {
           "method": "GET",
           "path": "/:id",
-          "access": "Admin, Instructor",
-          "description": "Retrieves details of a specific instructor."
+          "access": "Instructor, Admin",
+          "description": "Get details of a specific instructor."
         },
         {
           "method": "DELETE",
           "path": "/:id",
           "access": "Admin",
-          "description": "Soft deletes an instructor."
+          "description": "Soft delete an instructor by changing their status to 'INACTIVE'."
         }
       ]
     },
@@ -198,21 +288,87 @@
           "method": "POST",
           "path": "/",
           "access": "Instructor",
-          "description": "Records or updates attendance for a class session."
+          "description": "Record or update attendance for a class session (Bulk upsert)."
         },
         {
           "method": "GET",
           "path": "/class/:classId",
           "access": "Instructor, Admin",
-          "description": "Gets attendance history for a specific class."
+          "description": "Get attendance history for a specific class."
         },
         {
           "method": "GET",
           "path": "/my-history",
           "access": "Student",
-          "description": "Gets attendance history for the logged-in student."
+          "description": "Get attendance history for the logged-in student."
         }
       ]
+    },
+    {
+      "resource": "Enrollments",
+      "base_path": "/enrollments",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/admin",
+          "access": "Admin",
+          "description": "Admin manually enrolls a student into a class."
+        },
+        {
+          "method": "POST",
+          "path": "/register",
+          "access": "Student",
+          "description": "Student self-registration. Creates a PENDING enrollment."
+        },
+        {
+          "method": "GET",
+          "path": "/my-enrollments",
+          "access": "Student",
+          "description": "Get all enrollments for the logged-in student."
+        },
+        {
+          "method": "GET",
+          "path": "/class/:classId",
+          "access": "Instructor, Admin",
+          "description": "Get the roster of students enrolled in a specific class."
+        },
+        {
+          "method": "GET",
+          "path": "/student/:studentId",
+          "access": "Admin",
+          "description": "Get all enrollments for a specific student (Admin view)."
+        },
+        {
+          "method": "DELETE",
+          "path": "/:id",
+          "access": "Student, Admin",
+          "description": "Cancel an enrollment (Soft delete / Update status)."
+        }
+      ]
+    },
+    {
+      "resource": "Payments",
+      "base_path": "/payments",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/",
+          "access": "Instructor, Admin",
+          "description": "Get a history of all payment records."
+        },
+        {
+          "method": "POST",
+          "path": "/create-intent",
+          "access": "Authenticated User (Student)",
+          "description": "Create a new Stripe Payment Intent."
+        },
+        {
+          "method": "POST",
+          "path": "/confirm",
+          "access": "Authenticated User",
+          "description": "Confirm successful Stripe payment via PaymentIntent ID and update DB to 'PAID'."
+        }
+       ]
     },
     {
       "resource": "Dashboard",
@@ -222,13 +378,13 @@
           "method": "GET",
           "path": "/admin",
           "access": "Admin",
-          "description": "Retrieves aggregated statistics and metrics for the admin dashboard."
+          "description": "Get aggregated statistics and metrics for the admin dashboard."
         },
         {
           "method": "GET",
           "path": "/instructor",
           "access": "Instructor, Admin",
-          "description": "Retrieves statistics for the instructor dashboard."
+          "description": "Get statistics for the instructor dashboard."
         }
       ]
     },
@@ -240,7 +396,7 @@
           "method": "POST",
           "path": "/stripe",
           "access": "Public (Signature Verified)",
-          "description": "Handles asynchronous events from Stripe (e.g., payment_intent.succeeded) to sync database state."
+          "description": "Handle incoming asynchronous events from Stripe (e.g., payment_intent.succeeded)."
         }
       ]
     }
