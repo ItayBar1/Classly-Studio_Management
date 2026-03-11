@@ -333,9 +333,46 @@ export class AuthController {
         }),
       ]);
 
-      requestLog.info({ userId: resetToken.user_id }, "Password reset successful");
+      // שליפת פרטי המשתמש המעודכנים לצורך כניסה אוטומטית
+      const user = await prisma.users.findUnique({
+        where: { id: resetToken.user_id },
+        select: {
+          id: true,
+          email: true,
+          full_name: true,
+          role: true,
+          studio_id: true,
+          profile_image_url: true,
+          status: true
+        }
+      });
 
-      res.status(200).json({ message: "הסיסמה עודכנה בהצלחה" });
+      if (!user) {
+        return res.status(404).json({ error: "המשתמש לא נמצא לאחר עדכון הסיסמה" });
+      }
+
+      // יצירת טוקן JWT חדש
+      const authToken = jwt.sign(
+        { userId: user.id, email: user.email, role: user.role },
+        JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
+      requestLog.info({ userId: resetToken.user_id }, "Password reset and auto-login successful");
+
+      // החזרת הודעת הצלחה יחד עם הטוקן ופרטי המשתמש
+      res.status(200).json({
+        message: "הסיסמה עודכנה בהצלחה",
+        token: authToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          full_name: user.full_name,
+          role: user.role,
+          studio_id: user.studio_id,
+          profile_image_url: user.profile_image_url
+        }
+      });
     } catch (error) {
       requestLog.error({ err: error }, "Password reset failed");
       next(error);

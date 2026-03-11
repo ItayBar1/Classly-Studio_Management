@@ -278,14 +278,13 @@ function App() {
   // Render Suspense fallback for Auth/Reset pages
   if (isResetPassword) {
     return (
-      <Suspense
-        fallback={
-          <div className="h-screen flex items-center justify-center">
-            <Loader2 className="animate-spin w-10 h-10 text-indigo-600" />
-          </div>
-        }
-      >
-        <ResetPassword onSuccess={() => (window.location.href = "/")} />
+      <Suspense fallback={<Loader2 />}>
+        <ResetPassword 
+          onSuccess={() => {
+            handleAuthSuccess();
+            window.history.replaceState({}, document.title, "/");
+          }} 
+        />
       </Suspense>
     );
   }

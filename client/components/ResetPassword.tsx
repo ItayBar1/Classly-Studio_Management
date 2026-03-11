@@ -32,18 +32,28 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess }) => {
     }
 
     try {
-      // Extract reset token from URL
       const params = new URLSearchParams(window.location.search);
-      const token = params.get('token');
+      const tokenFromUrl = params.get('token');
 
-      if (!token) {
+      if (!tokenFromUrl) {
         setError('קישור האיפוס אינו תקין — חסר טוקן בכתובת.');
         setLoading(false);
         return;
       }
-      
-      await apiClient.post('/auth/reset-password', { token, password });
-      onSuccess();
+
+      // שליחת הבקשה לשרת
+      const response = await apiClient.post('/auth/reset-password', { 
+        token: tokenFromUrl, 
+        password 
+      });
+
+      // שינוי: שמירת הטוקן ופרטי המשתמש שהתקבלו
+      if (response.data.token && response.data.user) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
+
+        onSuccess();
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'אירעה שגיאה בעדכון הסיסמה');
     } finally {
