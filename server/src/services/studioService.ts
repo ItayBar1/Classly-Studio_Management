@@ -6,6 +6,10 @@ export interface CreateStudioDTO {
   contact_email?: string;
   contact_phone?: string;
   website_url?: string;
+  branch_name?: string;
+  address?: string;
+  city?: string;
+  branch_phone?: string;
 }
 
 export class StudioService {
@@ -52,7 +56,10 @@ export class StudioService {
       await tx.branches.create({
         data: {
           studio_id: studio.id,
-          name: "Main Branch",
+          name: data.branch_name || "סניף ראשי",
+          address: data.address || null,
+          city: data.city || null,
+          phone_number: data.branch_phone || data.contact_phone || null,
           is_active: true,
         },
       });
