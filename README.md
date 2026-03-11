@@ -1,287 +1,160 @@
-# Classly Studio Management
+# Classly - Studio Management
 
-Classly is a full-stack platform for managing classes, enrollments, and payments for studios. The system combines a Supabase-secured REST API with a React 19 dashboard that adapts to Admin, Instructor, and Student roles.
+Classly is a comprehensive full-stack platform designed to streamline operations for fitness and wellness studios. It provides an all-in-one centralized dashboard for handling classes, enrollments, user management, advanced analytics, and automated billing. The system is built with a robust REST API and a highly responsive React 19 frontend that seamlessly adapts to different user roles: Admin, Instructor, and Student.
 
-## Project Overview
-- **Purpose:** Manage studios end-to-end—courses, schedules, enrollments, attendance, payments, and role-based analytics.
-- **Backend:** Express + TypeScript API backed by Supabase (PostgreSQL) with Stripe payment processing and role-aware middleware.
-- **Frontend:** React 19 + Vite single-page dashboard with role-driven navigation and feature gating.
-- **Database:** PostgreSQL schema (Supabase) with RLS policies, triggers, and indexes defined in `studio_management_schema_setup.sql`.
+## 🚀 Key Features and Enhancements
+- **Dynamic Role-Based Architecture:** Specialized workflows and gated features based on the logged-in user's role (Admin, Instructor, Student).
+- **Streamlined Studio Management:** Manage course catalogs, weekly schedules, real-time class enrollments, and daily attendance records end-to-end.
+- **Secure Payment Processing:** Fully integrated Stripe Elements in the frontend communicating securely with Stripe SDK in the backend for processing self-checkout purchases and subscriptions.
+- **Automated Communication:** Custom Nodemailer integration for operations like automated transactional emails and secure password reset routing.
+- **Advanced State & Theme Management:** Equipped with Dark/Light mode capabilities built seamlessly throughout all user dashboards to ensure a premium UI/UX.
 
-## Tech Stack
-- **API:** Node.js, Express, TypeScript, Pino, Helmet, Rate limiting, CORS, Supabase Admin SDK, Stripe SDK.
-- **Web:** React 19, TypeScript, Vite, Recharts, Lucide Icons, Supabase client, Axios, Stripe Elements.
-- **Database:** PostgreSQL (Supabase) with RLS, triggers for auth user provisioning, and domain tables for studios, classes, enrollments, attendance, and payments.
+## 🛠 Tech Stack
 
-## API Documentation
-All routes are prefixed with `/api` and secured by `authenticateUser` unless noted. Role enforcement uses `requireRole`.
+### Frontend (Client-Side)
+- **Framework:** React 19 with Vite (blazing-fast build tool)
+- **Language:** TypeScript for type-safe components
+- **Styling:** Tailwind CSS & custom CSS for modern, fully responsive UI and dynamic themes (Dark/Light Modes)
+- **Data Visualization & Icons:** Recharts for admin analytics and Lucide React for consistent, crisp SVG iconography
+- **Integrations:** Axios for API requests, Supabase JS Client for seamless file & storage syncing, and Stripe Elements for secure checkout handling.
 
-| Method | Path | Description | Auth / Role | Params & Notes |
-| --- | --- | --- | --- | --- |
-| GET | `/api/health` | Health check. | Public | — |
-| GET | `/api/courses` | List courses; admins see all, others see relevant/active. | Auth (ADMIN/INSTRUCTOR/STUDENT) | Optional query filters forwarded to service. |
-| GET | `/api/courses/my-courses` | Instructor’s courses. | Auth (INSTRUCTOR/ADMIN) | — |
-| GET | `/api/courses/available` | Courses open for student registration. | Auth (STUDENT) | — |
-| GET | `/api/courses/:id` | Course details. | Auth | `:id` course id. |
-| POST | `/api/courses` | Create course in user’s studio. | Auth (ADMIN) | Body: course fields (merged with `studio_id` from user). |
-| PATCH | `/api/courses/:id` | Update course. | Auth (ADMIN) | `:id` course id; body: partial updates. |
-| DELETE | `/api/courses/:id` | Soft delete (deactivate) course. | Auth (ADMIN) | `:id` course id. |
-| GET | `/api/students` | Paginated students for studio. | Auth (ADMIN) | Query: `page`, `limit`, `search`. Requires `studioId` on request. |
-| POST | `/api/students` | Create student in studio. | Auth (ADMIN) | Body: student payload. |
-| DELETE | `/api/students/:id` | Soft delete student (status update). | Auth (ADMIN) | `:id` student id. |
-| GET | `/api/students/my-students` | Students assigned to instructor. | Auth (INSTRUCTOR/ADMIN) | — |
-| GET | `/api/students/:id` | Student details. | Auth (ADMIN/INSTRUCTOR) | `:id` student id. |
-| GET | `/api/instructors` | List instructors in studio. | Auth (ADMIN) | — |
-| GET | `/api/instructors/earnings` | Earnings/commissions for logged-in instructor. | Auth (INSTRUCTOR) | — |
-| GET | `/api/instructors/:id` | Instructor profile (self or admin). | Auth (ADMIN/INSTRUCTOR) | `:id` instructor id; controller ensures self-access or admin. |
-| DELETE | `/api/instructors/:id` | Soft delete instructor. | Auth (ADMIN) | `:id` instructor id. |
-| POST | `/api/attendance` | Bulk upsert attendance for a class session. | Auth (INSTRUCTOR) | Body: `classId`, `date`, `records[{studentId,status,notes}]`; verifies instructor owns class unless admin. |
-| GET | `/api/attendance/class/:classId` | Attendance history for class (optional date filter). | Auth (INSTRUCTOR/ADMIN) | `:classId`; query `date`; instructors must own class. |
-| GET | `/api/attendance/my-history` | Logged-in student attendance history. | Auth (STUDENT) | — |
-| POST | `/api/enrollments/admin` | Admin enrolls student and marks paid. | Auth (ADMIN) | Body: `studentId`, `classId`, optional `notes`. |
-| POST | `/api/enrollments/register` | Student self-registration -> pending enrollment + Stripe intent. | Auth (STUDENT) | Body: `classId`. Returns Stripe client secret. |
-| GET | `/api/enrollments/my-enrollments` | Logged-in student enrollments. | Auth (STUDENT) | — |
-| GET | `/api/enrollments/class/:classId` | Enrollments for class. | Auth (ADMIN/INSTRUCTOR) | `:classId`; instructor must own class. |
-| DELETE | `/api/enrollments/:id` | Cancel enrollment (soft delete/update). | Auth (ADMIN) | `:id` enrollment id. |
-| GET | `/api/dashboard/admin` | Studio-level metrics (students, revenue, classes, attendance). | Auth (ADMIN) | Requires `studioId`. |
-| GET | `/api/dashboard/instructor` | Instructor metrics. | Auth (INSTRUCTOR/ADMIN) | Uses logged-in instructor id. |
-| GET | `/api/payments` | Payment history for studio. | Auth (ADMIN/INSTRUCTOR in routes) | Requires `studioId`; route comment suggests limiting to admin. |
-| POST | `/api/payments/create-intent` | Create Stripe Payment Intent. | Auth | Body: `amount` (required), `currency`, `description`, `metadata`. |
-| POST | `/api/payments/confirm` | Confirm payment and update status. | Auth | Body: `paymentIntentId`. |
-| GET | `/api/users/me` | Current user profile from Supabase users table. | Auth | — |
-| POST | `/api/webhooks/stripe` | Stripe webhook receiver (raw body, signature validated). | Public (Stripe) | Header `stripe-signature`; processes payment events. |
+### Backend (Server-Side)
+- **Core API Layer:** Node.js, Express, and TypeScript
+- **Database & Active ORM:** PostgreSQL 18 integrated seamlessly via Prisma ORM for efficient querying, relation management, and migrations.
+- **Authentication & Security:** Custom JWT (JSON Web Tokens) with bcryptjs handling user sessions. Hardened API through Helmet, Express-Rate-Limit, and strict CORS configuration.
+- **Utility & Ecosystem:** Pino (structured logging logging layer), Nodemailer (mailing services), and Stripe SDK server interactions.
 
-## Client-Side UX
-Role determines available tabs and content rendered via `Sidebar` and `App.tsx` state machine.
+### Infrastructure & DevOps
+- **Containerization:** Fully dockerized ecosystem powered by Docker and Docker Compose for predictable builds and parity across environments.
+- **CI/CD Pipeline:** Fully automated deployments utilizing GitHub Actions with custom self-hosted runners.
+- **Database Persistence:** Utilizing Docker volumes securely mapped to the Postgres 18 service.
 
-### Admin
-- **Dashboard:** Metrics, revenue & attendance charts fed by `/api/dashboard/admin`.
-- **Students:** Advanced roster with search, pagination, CSV export, class filter, and sorting. Integrates API-backed fetching and course list loading for filters.
-- **Schedule:** Weekly class timetable with capacity indicators (see `components/admin/ClassSchedule.tsx`).
-- **Payments:** Payment history view (admin-only tab).
-- **Settings:** Placeholder tab for future admin settings.
+---
 
-### Instructor
-- **Dashboard:** Instructor KPIs via `/api/dashboard/instructor` (uses `InstructorDashboard`).
-- **Students:** List of students registered to instructor’s classes (`/api/students/my-students`).
-- **Schedule:** Instructor’s schedule view (`InstructorSchedule`).
-- **Attendance:** Mark attendance through `/api/attendance` (accessed from schedule/related UI elements).
+## 🏗 System Architecture & Docker Ecosystem
 
-### Student
-- **Dashboard:** Personalized overview of enrollments and attendance (`StudentDashboard`).
-- **Browse Courses:** Discover enrollable courses (`/api/courses/available`) and initiate self-registration/payment via `/api/enrollments/register` and Stripe Elements.
+The platform relies on a robust `docker-compose.yml` configuration orchestrating the services autonomously. Here is the structure and behavior:
+- **`db` (Postgres 18):** Relational database utilizing a persistent named volume (`postgres_data`) for data retention. Initialized seamlessly via `studio_management_schema_setup.sql`.
+- **`backend` (Express API):** The Node.js application container mapping locally to port 5000 serving as the platform workhorse.
+- **`backend-tools`:** Abstracted transient build/target environment for isolated task-running (e.g., schema linting, Prisma migrations).
+- **`frontend` (React + Vite):** High-performance production client bundled successfully and mapping locally to port 80.
 
-Navigation: `Sidebar` filters available tabs per role (Admin: dashboard, students, schedule, payments, settings; Instructor: dashboard, students, schedule; Student: dashboard, browse courses). Logout calls Supabase sign-out.
+---
 
-## Database Schema
-Key tables from `studio_management_schema_setup.sql`:
+## ⚙️ Automated CI/CD Deployment Flow (GitHub Actions)
 
-| Table | Purpose | Key Columns & Relationships |
-| --- | --- | --- |
-| `users` | Profiles synced with Supabase Auth users; includes roles and studio membership. | `id` (PK, FK auth.users), `role`, `studio_id` (FK studios), `status`, audit fields. |
-| `studios` | Studio entities owned by admin users. | `admin_id` (FK users), contact/billing info, `is_active`. |
-| `categories` | Class categories per studio. | `studio_id` FK studios, `type`, `is_active`, display fields. |
-| `classes` | Class definitions/schedules. | `studio_id` FK studios, `category_id` FK categories, `instructor_id` FK users, timing, capacity, pricing, `is_active`. |
-| `enrollments` | Student enrollment records with payment status and date range. | `studio_id` FK studios, `student_id` FK users, `class_id` FK classes, `parent_id` FK users, `status`, `payment_status`, `start_date`/`end_date`. |
-| `attendance` | Attendance logs per session and enrollment. | `studio_id` FK studios, `class_id` FK classes, `instructor_id` FK users, `enrollment_id` FK enrollments, `student_id` FK users, `session_date`, `status`. |
-| `payments` | Payment records with linkage to enrollments and instructors. | `studio_id` FK studios, `enrollment_id` FK enrollments, `student_id`/`instructor_id` FK users, `amount_ils`, `payment_method`, `status`, invoice fields. |
-| `instructor_commissions` | Commission settings and payouts. | `studio_id` FK studios, `instructor_id`/`class_id` FK users/classes, `commission_percentage`, `billing_cycle`, `payment_status`. |
-| `schedule_sessions` | Individual session occurrences for classes. | `studio_id` FK studios, `class_id` FK classes, `session_date`, time span, `status`, capacity counts. |
-| `notifications` | User notifications. | `user_id`/`studio_id` FKs users/studios, `type`, `title`, `message`, `is_read`. |
-| `audit_logs` | Audit trail of user actions. | `user_id`/`studio_id` FKs users/studios, `action`, `table_name`, `record_id`, `changes`. |
+We utilize a robust workflow defined in `github/workflows/deploy.yml` that drastically shortens our release cycles and ensures safe delivery. 
 
-Additional logic: trigger `handle_new_user` seeds `users` on auth signup; `increment_enrollment` helper updates class counts; RLS policies enforce studio-scoped access and role checks.
+**Whenever new code is pushed directly to the `main` branch:**
+1. **Runner Trigger:** The GitHub Action pipeline is fired autonomously on our **self-hosted runner**.
+2. **Environment Variable Provisioning:** Essential secrets (API credentials, Stripe tokens, Database connection strings) securely stored inside GitHub Secrets are seamlessly injected into the server instance. This dynamically reconstructs the required `.env`, `server/.env`, and `client/.env` credentials.
+3. **Application Build & Launch:** The action triggers `docker compose --project-name classly-studio up -d --build`. This intelligently compiles all changed services and restarts only the necessary production docker containers, keeping downtime strictly minimized.
+4. **Maintenance & Cleanup:** An automated `docker image prune -f` prevents standard persistent runners from hoarding unused gigabytes of redundant container fragments, preserving optimal server disk capacity.
 
-## Getting Started
+---
+
+## 📡 API Documentation & Routing Constraints
+
+All backend paths are prefixed with `/api`. Global routing embraces the internal `authenticateUser` logic and role-guard middleware utilizing specialized `requireRole(ROLE)` validators.
+
+| Endpoint Target | Method | Description | Role / Auth Requirement |
+| --- | --- | --- | --- |
+| `/api/health` | `GET` | Perform routine system health & uptime checks. | Public |
+| `/api/courses` | `GET` / `POST` | Retrieve existing class directory or launch new courses. | Auth (`ADMIN` / `INSTRUCTOR`) |
+| `/api/courses/available` | `GET` | Retrieve publicly enrollable classes for self-registration. | Auth (`STUDENT`) |
+| `/api/courses/:id` | `PATCH` / `DELETE`| Modify course properties or cleanly soft-delete unused listings. | Auth (`ADMIN`) |
+| `/api/students` | `GET` | Granular pagination retrieving global studio active accounts. | Auth (`ADMIN`) |
+| `/api/dashboard/admin` | `GET` | Request structured time-series data populating complex React views. | Auth (`ADMIN`)|
+| `/api/payments/create-intent` | `POST` | Communicate with Stripe integration creating formal Payment Intents. | Auth (All logged in users) |
+| `/api/webhooks/stripe` | `POST` | Asynchronous validation of Stripe signatures checking payment status. | Public (`Stripe Webhook`) |
+
+*(Additional endpoints governing attendance, multi-instructor dynamics, authentication token management, and file uploads are structured following REST best practices).*
+
+---
+
+## 👩‍💻 User Experience (Role Capabilities)
+
+### 👑 Admin
+- **Global Dashboard:** Track aggregated metrics outlining historic enrollment trends and gross revenue comparisons utilizing Recharts visual representations.
+- **Student Data Master:** Browse a fully paginated, searchable grid of cross-studio student profiles resolving operational conflicts instantly.
+- **Timetable Configurator:** Blueprint long-term daily schedules, balancing resources inside the Studio Schedule Manager.
+- **Ledger Control:** Oversee global payment history validating transactions processed across Stripe systems.
+
+### 🏋️ Instructor
+- **Dashboard Hub:** Visual tracker isolating performance, personal enrollments, and customized instructor analytics.
+- **Class Rosters:** Complete visibility detailing real-time attendance rosters sorted natively by session slots.
+- **Attendance Toggling:** Dynamically log explicit absent/present ratios for sessions adjusting core business logic instantaneously.
+
+### 🎓 Student
+- **Profile Hub:** Visual representation tracking completed classes against ongoing active class registrations.
+- **Class Marketplace:** Intuitive interface cataloging incoming courses. Register seamlessly initiating integrated Stripe Elements checkouts bypassing manual redirects completely.
+
+---
+
+## 🏁 Getting Started & Local Development
 
 ### Prerequisites
-- Node.js 20+ and npm
-- Supabase project (URL + service role key)
-- Stripe secret key for payments
+- [Docker & Docker Compose](https://docs.docker.com/get-docker/) installed.
+- **Node.js 20+** running bare-metal for localized package development.
+- Active Stripe Account (API secret key & Webhook token) alongside any generalized keys.
 
-### Installation
-```bash
-# Clone
-git clone <repository-url>
-cd Classly-Studio_Management
+### 1. Configure Environments
 
-# Install client
-cd client
-npm install
+Create your distinct `.env` files establishing the foundational connection layer bridging React, Express, and PostgreSQL configurations seamlessly.
 
-# Install server
-cd ../server
-npm install
-```
-
-### Environment Variables
-Create `.env` files:
-
-`client/.env`
-```
+**`client/.env`:**
+```ini
+VITE_API_URL=http://localhost:5000/api
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_A11Y_WIDGET_ENABLED=true  # Set to true to enable the accessibility widget
+VITE_A11Y_WIDGET_ENABLED=true
 ```
 
-`server/.env`
-```
+**`server/.env`:**
+```ini
 PORT=5000
-CLIENT_URL=http://localhost:5173
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+CLIENT_URL=http://localhost
+DATABASE_URL=postgresql://itay:YOUR_PASSWORD@localhost:5432/classly_db
+JWT_SECRET=your_jwt_secret
 STRIPE_SECRET_KEY=your_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=your_webhook_secret
 ```
 
-### Running Locally
+### 2. Streamlined Docker Start
+Leverage the complete docker setup natively ensuring zero dependency drift across environments:
+
 ```bash
-# API
-cd server
-npm run dev
-
-# Web
-cd ../client
-npm run dev
+docker compose up -d --build
 ```
-Visit the client on the Vite dev URL (default `http://localhost:5173`) and ensure the server port matches `CLIENT_URL` CORS configuration.
+> Web UI fires on port `80`, API proxy bounds locally to `5000`, DB actively mapped onto `5432`.
 
-## Server Development
+### 3. Dedicated Bare-Metal Server Run (Optional)
+Prefer to code and interact directly via Express.js uncontained from Docker instances:
 
-The Express API lives in `/server/src` and follows a routes → controllers → services layout:
-- **Entry point:** `src/index.ts` exports the Express app for serverless platforms and starts the listener locally.
-- **App wiring:** `src/app.ts` registers security middleware, request logging, CORS, rate limiting, webhooks, and routes.
-- **Configuration:** `src/config/env.ts` centralizes environment parsing/validation (Supabase, Stripe, JWT, client URL, port).
-- **Logging:** `src/logger.ts` configures Pino and a `requestLogger` middleware that attaches a request ID and duration to every request. Errors are surfaced via `middleware/errorMiddleware.ts` without changing response format.
-- **Authentication:** `middleware/authMiddleware.ts` attaches the authenticated Supabase user and studio metadata to each request; `requireRole` enforces role-based access.
-- **Business logic:** Services under `src/services` encapsulate Supabase/Stripe access and are invoked by controllers in `src/controllers`.
-
-### Server Scripts
-- `npm run dev` — start the API in watch mode.
-- `npm run build` — compile TypeScript to `dist/`.
-- `npm start` — run the compiled server.
-- `npm test`, `npm run test:unit`, `npm run test:integration`, `npm run test:watch` — test commands (see Tests below).
-
-### Environment Validation
-- Required: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
-- Common: `CLIENT_URL` (CORS), `FRONTEND_URL` (invitation links), `PORT`, `LOG_LEVEL`.
-- Payments: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
-- Auth/Invites: `JWT_SECRET` (falls back to service role key in non-production).
-
-## Features & Improvements
-
-### Forgot Password Flow
-The application supports a secure password reset flow:
-1.  User requests a password reset link via the login page ("שכחת סיסמה?").
-2.  Supabase sends an email with a redirect link to the application.
-3.  The application routes the user to the Reset Password page (`/reset-password`).
-4.  User sets a new password.
-
-### Accessibility
--   **Widget:** An accessibility widget can be enabled via `VITE_A11Y_WIDGET_ENABLED=true`.
--   **Password Toggle:** All password fields include an accessible show/hide toggle.
--   **Forms:** Inputs are properly labeled for screen readers.
-
-### Testing
-- **Server:** Jest + Supertest (see `/server` package scripts) for unit/integration coverage of controllers, services, and middleware.
-- **Client:** Vitest + React Testing Library.
-
-**Running Server Tests:**
 ```bash
 cd server
-npm test             # all tests
-npm run test:unit    # unit only
-npm run test:integration  # integration only
+npm install
+npm run dev
 ```
 
-**Running Client Tests:**
+### 4. Database Schema Handling (Prisma)
+Manage your data-modeling strictly through Prisma core utilizing commands standardizing relational DB schema checks:
+
 ```bash
-cd client
-npm test
+cd server
+npx prisma generate
+npx prisma migrate dev
 ```
 
-### Logging
+---
 
-**Client-side:** A structured logging service is implemented (`client/src/services/logger.ts`) to handle errors and important events securely, masking sensitive data.
+## 🧪 Testing and Quality Control
 
-**Server-side:** The API uses [Pino](https://getpino.io/) for high-performance structured logging. All logs are JSON-formatted in production and pretty-printed in development.
+Comprehensive dual-faceted testing ensures deep platform reliability halting critical integration bugs.
 
-#### Log Levels
-Set the `LOG_LEVEL` environment variable to control verbosity (default: `info`):
-- `trace` — very detailed debugging (method entry/exit, variable values)
-- `debug` — detailed debugging information
-- `info` — informational messages (request completion, successful operations)
-- `warn` — warnings that don't stop execution
-- `error` — errors that require attention
-- `fatal` — critical errors that terminate the application
+**Backend Execution (Jest & Supertest Frameworks):**
+- Execute complete Unit Logic Check: `npm run test:unit`
+- Fire Mocked Services and Route Testing: `npm run test:integration`
 
-Example:
-```bash
-# Development with debug output
-LOG_LEVEL=debug npm run dev
-
-# Production with only errors
-LOG_LEVEL=error npm start
-```
-
-#### How to View Logs
-- **Development:** Logs are pretty-printed with colors via `pino-pretty` (automatically enabled when `NODE_ENV` is not `production` or `test`).
-- **Production:** Logs are JSON-formatted, suitable for log aggregation systems (e.g., CloudWatch, Datadog, Splunk). Each log entry includes:
-  - `level`: numeric log level
-  - `time`: ISO timestamp
-  - `service`: always `"classly-server"`
-  - `requestId`: unique ID per request (from header or auto-generated)
-  - `msg`: human-readable message
-  - Additional context fields (e.g., `userId`, `studioId`, `err`)
-
-#### Using the Logger
-
-**In controllers and services:**
-```typescript
-import { logger } from '../logger';  // Adjust path based on file location
-
-// Simple logging
-logger.info('User registration started');
-logger.error({ err: error }, 'Failed to create user');
-
-// Structured logging with context
-logger.info({ userId: '123', studioId: '456' }, 'User enrolled in class');
-
-// Child loggers for scoped context
-const requestLog = logger.child({ controller: 'StudentController', method: 'getAll' });
-requestLog.info({ params: req.params }, 'Controller entry');
-requestLog.error({ err: error }, 'Error fetching students');
-```
-
-**Request-scoped logging:**
-The `requestLogger` middleware automatically attaches a logger to each request (`req.logger`). This logger includes:
-- `requestId` — unique ID for tracing the request
-- `path` — API endpoint
-- `method` — HTTP method
-- Automatic request duration tracking
-
-```typescript
-export const myController = async (req: Request, res: Response, next: NextFunction) => {
-  // Use req.logger with fallback to child logger
-  const requestLog = req.logger || logger.child({ controller: 'MyController', method: 'myMethod' });
-
-  requestLog.info({ customField: 'value' }, 'Processing request');
-
-  try {
-    const result = await myService.doWork();
-    requestLog.info({ resultId: result.id }, 'Operation successful');
-    res.json(result);
-  } catch (error) {
-    // Use err key for proper error serialization
-    requestLog.error({ err: error }, 'Operation failed');
-    next(error);
-  }
-};
-```
-Visit the client on the Vite dev URL (default `http://localhost:5173`) and ensure the server port matches `CLIENT_URL` CORS configuration.
-
-#### Best Practices
-- Always use structured logging: pass objects as the first argument, message as second.
-- Include relevant context (e.g., `userId`, `studioId`, `classId`) but never log sensitive data (passwords, tokens).
-- Use `req.logger` in controllers to maintain request traceability.
-- Log errors with the `err` key: `logger.error({ err: error }, 'message')` for proper stack trace serialization.
+**Frontend Executions (Vitest Testing Tooling):**
+- Safely check Component and DOM structures: `npm test`
