@@ -63,13 +63,17 @@ export const StudentManagement: React.FC = () => {
 
   // Close dropdown on outside click
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpenMenuId(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   // טעינת רשימת השיעורים (עבור ה-Dropdown)
@@ -336,49 +340,66 @@ export const StudentManagement: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
                       <div className="relative" ref={openMenuId === student.id ? menuRef : undefined}>
                         <button
-                          onClick={() => setOpenMenuId(openMenuId === student.id ? null : student.id)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setOpenMenuId(openMenuId === student.id ? null : student.id);
+                          }}
                           className="text-slate-400 hover:text-indigo-600 p-2 rounded-full hover:bg-slate-100 transition-colors dark:text-slate-400 dark:hover:text-indigo-400 dark:hover:bg-slate-800"
                         >
                           <MoreVertical size={18} />
                         </button>
 
-                        {/* Dropdown Menu */}
+                        {/* Dropdown Menu / Bottom Sheet */}
                         {openMenuId === student.id && (
-                          <div className="absolute left-0 top-full mt-1 w-52 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-20 animate-fadeIn dark:bg-slate-800 dark:border-slate-700">
-                            <button
-                              onClick={() => {
-                                setEnrollModalStudent(student);
+                          <>
+                            {/* Mobile Backdrop */}
+                            <div 
+                              className="fixed inset-0 z-40 sm:hidden"
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setOpenMenuId(null);
                               }}
-                              className="w-full text-right px-4 py-2.5 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2 transition-colors dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-indigo-400"
+                            />
+                            <div 
+                              className="absolute left-0 top-full mt-1 w-52 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-50 animate-fadeIn dark:bg-slate-800 dark:border-slate-700 max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:top-auto max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:mt-0 max-sm:border-x-0 max-sm:border-b-0 max-sm:shadow-[0_-8px_30px_rgba(0,0,0,0.12)] max-sm:pb-6"
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              <BookOpen size={15} />
-                              רישום לקורסים
-                            </button>
-                            <button
-                              onClick={() => {
-                                setUnenrollModalStudent(student);
-                                setOpenMenuId(null);
-                              }}
-                              className="w-full text-right px-4 py-2.5 text-sm text-slate-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-orange-400"
-                            >
-                              <UserMinus size={15} />
-                              הסרה מקורסים
-                            </button>
-                            <div className="border-t border-slate-100 my-1 dark:border-slate-700" />
-                            <button
-                              onClick={() => handleRemoveFromStudio(student.id)}
-                              disabled={deletingStudentId === student.id}
-                              className="w-full text-right px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-500/10"
-                            >
-                              {deletingStudentId === student.id ? (
-                                <Loader2 className="animate-spin" size={15} />
-                              ) : (
-                                <Trash2 size={15} />
-                              )}
-                              הסרה מהסטודיו
-                            </button>
-                          </div>
+                              <button
+                                onClick={() => {
+                                  setEnrollModalStudent(student);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full text-right px-4 py-3 sm:py-2.5 text-sm sm:text-base text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-3 sm:gap-2 transition-colors dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-indigo-400"
+                              >
+                                <BookOpen size={16} className="sm:w-[15px] sm:h-[15px]" />
+                                רישום לקורסים
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setUnenrollModalStudent(student);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full text-right px-4 py-3 sm:py-2.5 text-sm sm:text-base text-slate-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 sm:gap-2 transition-colors dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-orange-400"
+                              >
+                                <UserMinus size={16} className="sm:w-[15px] sm:h-[15px]" />
+                                הסרה מקורסים
+                              </button>
+                              <div className="border-t border-slate-100 my-1 dark:border-slate-700" />
+                              <button
+                                onClick={() => handleRemoveFromStudio(student.id)}
+                                disabled={deletingStudentId === student.id}
+                                className="w-full text-right px-4 py-3 sm:py-2.5 text-sm sm:text-base text-red-600 hover:bg-red-50 flex items-center gap-3 sm:gap-2 transition-colors disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-500/10"
+                              >
+                                {deletingStudentId === student.id ? (
+                                  <Loader2 className="animate-spin sm:w-[15px] sm:h-[15px]" size={16} />
+                                ) : (
+                                  <Trash2 size={16} className="sm:w-[15px] sm:h-[15px]" />
+                                )}
+                                הסרה מהסטודיו
+                              </button>
+                            </div>
+                          </>
                         )}
                       </div>
                     </td>
