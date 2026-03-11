@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Suspense, lazy } from "react";
 import { Sidebar } from "./components/Sidebar";
-import { MobileDrawer } from "./components/MobileDrawer";
-import { Loader2, Menu } from "lucide-react";
+import { BottomNav } from "./components/BottomNav";
+import { Loader2 } from "lucide-react";
 import { AuthService, UserService, getStoredUser } from "./services/api";
 import type { User } from "./types/types";
 
@@ -102,7 +102,7 @@ function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [userRole, setUserRole] = useState<string>("STUDENT");
 
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false); // mobile drawer
+
   // If an invitation token is present in the URL, skip the LandingPage and go straight to AuthPage
   const [showLogin, setShowLogin] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -320,7 +320,7 @@ function App() {
   ];
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans" dir="rtl">
+    <div className="flex min-h-screen bg-slate-50 font-sans transition-colors duration-200 dark:bg-slate-950" dir="rtl">
       {/* Desktop Sidebar - hidden on small screens */}
       <div className="hidden md:block">
         <Sidebar
@@ -331,33 +331,23 @@ function App() {
         />
       </div>
 
-      {/* Mobile Drawer */}
-      <MobileDrawer
+      {/* Mobile Bottom Navigation */}
+      <BottomNav
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onLogout={handleLogout}
         userRole={userRole}
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
       />
 
-      <main className="flex-1 md:mr-64 p-4 sm:p-8">
+      <main className="flex-1 md:mr-64 p-4 sm:p-8 pb-24 md:pb-8">
         <header className="flex justify-end items-center mb-8">
-          {/* Hamburger Menu - visible only on small screens */}
-          <button
-            onClick={() => setIsDrawerOpen(true)}
-            className="md:hidden p-2 text-slate-600 hover:text-indigo-600"
-          >
-            <Menu size={24} />
-          </button>
-
           {/* User header */}
           <div className="flex items-center gap-4">
             <div className="text-left">
-              <p className="text-sm font-bold text-slate-700">
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
                 {currentUser?.full_name || "משתמש"}
               </p>
-              <p className="text-xs text-slate-500 uppercase">
+              <p className="text-xs text-slate-500 uppercase dark:text-slate-400">
                 {userRole === "SUPER_ADMIN"
                   ? "מנהל פלטפורמה"
                   : userRole === "ADMIN"
@@ -367,7 +357,7 @@ function App() {
                   : "סטודנט"}
               </p>
             </div>
-            <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold border-2 border-white shadow-sm">
+            <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold border-2 border-white shadow-sm dark:bg-indigo-900/50 dark:text-indigo-300 dark:border-slate-800">
               {currentUser?.email?.[0]?.toUpperCase() || "?"}
             </div>
           </div>

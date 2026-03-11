@@ -42,4 +42,11 @@ router.get('/class/:classId', requireRole(['ADMIN', 'INSTRUCTOR']), EnrollmentCo
  */
 router.delete('/:id', requireRole(['ADMIN', 'STUDENT']), EnrollmentController.cancelEnrollment);
 
+/**
+ * @route   GET /api/enrollments/student/:studentId
+ * @desc    Get all enrollments for a specific student (Admin view)
+ * @access  Admin
+ */
+router.get('/student/:studentId', requireRole(['ADMIN']), EnrollmentController.getStudentEnrollments);
+
 export default router;

@@ -57,7 +57,13 @@ export const DashboardService = {
         1,
       );
 
-      const [totalStudents, activeClasses, payments] = await Promise.all([
+      // Last 7 days range
+      const now = new Date();
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(now.getDate() - 6);
+      sevenDaysAgo.setHours(0, 0, 0, 0);
+
+      const [totalStudents, activeClasses, payments, recentPayments, recentAttendance] = await Promise.all([
         prisma.users.count({
           where: { role: "STUDENT", studio_id: studioId },
         }),
@@ -72,6 +78,23 @@ export const DashboardService = {
           },
           select: { amount_ils: true },
         }),
+        // Payments for the last 7 days (for chart)
+        prisma.payments.findMany({
+          where: {
+            status: { in: ["COMPLETED", "SUCCEEDED"] },
+            studio_id: studioId,
+            created_at: { gte: sevenDaysAgo },
+          },
+          select: { amount_ils: true, created_at: true },
+        }),
+        // Attendance for the last 7 days (for chart)
+        prisma.attendance.findMany({
+          where: {
+            studio_id: studioId,
+            session_date: { gte: sevenDaysAgo },
+          },
+          select: { session_date: true, status: true },
+        }),
       ]);
 
       const monthlyRevenue = payments.reduce(
@@ -79,17 +102,49 @@ export const DashboardService = {
         0,
       );
 
-      const chartData = [
-        { name: "ינואר", revenue: 4000, attendance: 240 },
-        { name: "פברואר", revenue: 3000, attendance: 139 },
-        { name: "מרץ", revenue: monthlyRevenue || 2000, attendance: 980 },
-      ];
+      // Hebrew day names indexed by JS getDay() (0=Sunday)
+      const DAY_NAMES_HE: Record<number, string> = {
+        0: "א׳", 1: "ב׳", 2: "ג׳", 3: "ד׳", 4: "ה׳", 5: "ו׳", 6: "ש׳",
+      };
+
+      // Build chart data for the last 7 days
+      const chartData: Array<{ name: string; revenue: number; attendance: number }> = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(now.getDate() - i);
+        const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const dayEnd = new Date(dayStart);
+        dayEnd.setDate(dayStart.getDate() + 1);
+
+        const dayRevenue = recentPayments
+          .filter(p => {
+            const pDate = p.created_at ? new Date(p.created_at) : null;
+            return pDate && pDate >= dayStart && pDate < dayEnd;
+          })
+          .reduce((sum, p) => sum + Number(p.amount_ils), 0);
+
+        const dayAttendance = recentAttendance
+          .filter(a => {
+            const aDate = new Date(a.session_date);
+            return aDate >= dayStart && aDate < dayEnd && a.status === "PRESENT";
+          }).length;
+
+        chartData.push({
+          name: DAY_NAMES_HE[dayStart.getDay()] || dayStart.toLocaleDateString("he-IL", { weekday: "short" }),
+          revenue: dayRevenue,
+          attendance: dayAttendance,
+        });
+      }
+
+      // Average daily attendance over the last 7 days
+      const totalPresent = recentAttendance.filter(a => a.status === "PRESENT").length;
+      const avgAttendance = Math.round(totalPresent / 7);
 
       return {
         totalStudents,
         activeClasses,
         monthlyRevenue,
-        avgAttendance: 85,
+        avgAttendance,
         chartData,
       };
     } catch (error) {

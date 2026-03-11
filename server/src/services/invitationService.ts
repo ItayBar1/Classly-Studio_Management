@@ -12,7 +12,7 @@ const JWT_SECRET = environment.jwtSecret;
 
 // Define the custom claims we add to the token
 interface InvitationClaims {
-  role: "ADMIN" | "INSTRUCTOR";
+  role: "ADMIN" | "INSTRUCTOR" | "STUDENT";
   studioId: string | null;
   creatorId: string;
 }
@@ -29,7 +29,7 @@ const JWT_OPTIONS: jwt.SignOptions = {
 export class InvitationService {
   static async createInvitation(
     creatorId: string,
-    role: "ADMIN" | "INSTRUCTOR",
+    role: "ADMIN" | "INSTRUCTOR" | "STUDENT",
     studioId: string | null = null,
   ) {
     logger.info({ creatorId, role, studioId }, "Creating invitation token");

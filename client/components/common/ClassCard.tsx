@@ -69,7 +69,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
   const getColorClasses = (color: string) => "bg-indigo-500";
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-all group relative overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-all group relative overflow-hidden dark:bg-slate-900 dark:border-slate-800">
       {/* פס צבע דקורטיבי בצד */}
       <div
         className={`absolute right-0 top-0 bottom-0 w-1.5 ${getColorClasses(
@@ -82,19 +82,19 @@ export const ClassCard: React.FC<ClassCardProps> = ({
         <div className="flex justify-between items-start gap-2">
           <div className="min-w-0">
             {/* הצגת היום בשבוע - חדש! */}
-            <div className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 uppercase tracking-wider mb-1">
+            <div className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 uppercase tracking-wider mb-1 dark:text-indigo-400">
               <Calendar size={12} />
               {/* @ts-ignore - נניח שהעברנו dayName מהאבא */}
               <span>יום {session.dayName}</span>
             </div>
 
-            <h3 className="text-lg font-bold text-slate-800 truncate">
+            <h3 className="text-lg font-bold text-slate-800 truncate dark:text-slate-100">
               {session.name}
             </h3>
-            <div className="flex items-center gap-2 text-slate-500 font-semibold text-sm mt-1">
+            <div className="flex items-center gap-2 text-slate-500 font-semibold text-sm mt-1 dark:text-slate-400">
               <Clock size={14} />
               <span>{session.startTime}</span>
-              <span className="text-slate-400 font-normal">
+              <span className="text-slate-400 font-normal dark:text-slate-500">
                 ({session.duration} דק׳)
               </span>
             </div>
@@ -109,14 +109,14 @@ export const ClassCard: React.FC<ClassCardProps> = ({
         </div>
 
         {/* שורת אמצע: מיקום ומדריך */}
-        <div className="grid grid-cols-2 gap-2 py-3 border-y border-slate-50">
-          <div className="flex items-center gap-2 text-sm text-slate-600 min-w-0">
-            <MapPin size={14} className="text-slate-400 flex-shrink-0" />
+        <div className="grid grid-cols-2 gap-2 py-3 border-y border-slate-50 dark:border-slate-800/50">
+          <div className="flex items-center gap-2 text-sm text-slate-600 min-w-0 dark:text-slate-400">
+            <MapPin size={14} className="text-slate-400 flex-shrink-0 dark:text-slate-500" />
             <span className="truncate">{session.room}</span>
           </div>
           {session.instructor && (
-            <div className="flex items-center gap-2 text-sm text-slate-600 min-w-0">
-              <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+            <div className="flex items-center gap-2 text-sm text-slate-600 min-w-0 dark:text-slate-400">
+              <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0 dark:bg-indigo-900/50 dark:text-indigo-400">
                 {session.instructorAvatar}
               </div>
               <span className="truncate">{session.instructor}</span>
@@ -127,18 +127,18 @@ export const ClassCard: React.FC<ClassCardProps> = ({
         {/* שורה תחתונה: תפוסה */}
         <div className="space-y-2">
           <div className="flex justify-between text-xs font-bold">
-            <span className="text-slate-500">תפוסת שיעור</span>
+            <span className="text-slate-500 dark:text-slate-400">תפוסת שיעור</span>
             <span
               className={
                 session.students >= session.capacity
-                  ? "text-red-500"
-                  : "text-slate-900"
+                  ? "text-red-500 dark:text-red-400"
+                  : "text-slate-900 dark:text-slate-200"
               }
             >
               {session.students} / {session.capacity}
             </span>
           </div>
-          <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+          <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden dark:bg-slate-800">
             <div
               className={`h-full transition-all duration-500 ${
                 session.students >= session.capacity

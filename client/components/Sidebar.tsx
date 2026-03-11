@@ -6,7 +6,9 @@ import {
   CreditCard,
   Settings,
   LogOut,
-  Search // New icon for browsing courses
+  Search,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -17,10 +19,30 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLogout, userRole }) => {
+  const [isDarkMode, setIsDarkMode] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark');
+    }
+    return false;
+  });
+
   useEffect(() => {
     console.info('Sidebar mounted', { userRole });
     return () => console.info('Sidebar unmounted');
   }, [userRole]);
+
+  const toggleTheme = () => {
+    const root = document.documentElement;
+    if (root.classList.contains('dark')) {
+      root.classList.remove('dark');
+      localStorage.setItem('classly_theme', 'light');
+      setIsDarkMode(false);
+    } else {
+      root.classList.add('dark');
+      localStorage.setItem('classly_theme', 'dark');
+      setIsDarkMode(true);
+    }
+  };
 
   // Define menu items alongside authorization rules
   const allMenuItems = [
@@ -72,12 +94,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLog
   const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
 
   return (
-    <div className="w-64 bg-slate-900 text-white h-screen fixed right-0 top-0 flex flex-col shadow-xl z-10">
-      <div className="p-6 border-b border-slate-800">
+    <div className="w-64 bg-white border-l border-slate-200 text-slate-700 h-screen fixed right-0 top-0 flex flex-col shadow-xl z-10 transition-colors duration-200 dark:bg-slate-900 dark:border-slate-800 dark:text-white">
+      <div className="p-6 border-b border-slate-100 dark:border-slate-800">
         <h1 className="text-2xl font-bold flex items-center gap-2">
-          <span className="text-indigo-500">❖</span> Classly
+          <span className="text-indigo-600 dark:text-indigo-500">❖</span> Classly
         </h1>
-        <p className="text-xs text-slate-400 mt-1">ניהול סטודיו {userRole === 'STUDENT' ? 'אישי' : 'מתקדם'}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">ניהול סטודיו {userRole === 'STUDENT' ? 'אישי' : 'מתקדם'}</p>
       </div>
 
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
@@ -88,9 +110,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLog
               console.info('Sidebar navigation clicked', { tab: item.id });
               setActiveTab(item.id);
             }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${activeTab === item.id
-              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50'
-              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+              activeTab === item.id
+                ? 'bg-indigo-50 text-indigo-700 font-medium shadow-sm dark:bg-indigo-600 dark:text-white dark:shadow-indigo-900/50'
+                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
               }`}
           >
             <item.icon size={20} />
@@ -99,13 +122,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLog
         ))}
       </nav>
 
-      <div className="p-4 border-t border-slate-800">
+      <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+        <button
+          onClick={toggleTheme}
+          className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors"
+        >
+          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          <span>{isDarkMode ? 'תצוגה בהירה' : 'תצוגה כהה'}</span>
+        </button>
+
         <button
           onClick={() => {
             console.info('Sidebar logout clicked');
             onLogout?.();
           }}
-          className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-red-400 transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors"
         >
           <LogOut size={20} />
           <span>יציאה</span>

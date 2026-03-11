@@ -176,7 +176,7 @@ export const RoomService = {
 };
 
 export const InvitationService = {
-  create: (role: 'ADMIN' | 'INSTRUCTOR') => apiClient.post<{ message: string; invitation: any; link: string }>('/users/invitations', { role }).then(res => res.data),
+  create: (role: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT') => apiClient.post<{ message: string; invitation: any; link: string }>('/users/invitations', { role }).then(res => res.data),
   validate: (token: string) => apiClient.get<{ valid: boolean; role: string; studioId: string; studio?: any }>(`/users/invitations/${token}`).then(res => res.data),
   accept: (token: string) => apiClient.post('/users/invitations/accept', { token }).then(res => res.data),
 };
@@ -205,6 +205,8 @@ export const EnrollmentService = {
   getMyEnrollments: () => apiClient.get<ClassSession[]>('/enrollments/my-enrollments').then(res => res.data),
   getClassEnrollments: (classId: string) => apiClient.get<any[]>(`/enrollments/class/${classId}`).then(res => res.data),
   cancelEnrollment: (id: string) => apiClient.delete(`/enrollments/${id}`).then(res => res.data),
+  adminEnroll: (studentId: string, classId: string) => apiClient.post('/enrollments/admin', { studentId, classId }).then(res => res.data),
+  getStudentEnrollments: (studentId: string) => apiClient.get<any[]>(`/enrollments/student/${studentId}`).then(res => res.data),
 };
 
 export const PaymentService = {

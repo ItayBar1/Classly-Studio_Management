@@ -21,9 +21,10 @@ interface AddClassModalProps {
     onClose: () => void;
     onSuccess: (newClass: any) => void;
     editClass?: ClassSession | null;
+    defaultDay?: number;
 }
 
-export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSuccess, editClass }) => {
+export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSuccess, editClass, defaultDay }) => {
     const [loading, setLoading] = useState(false);
     const [instructors, setInstructors] = useState<User[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
@@ -100,10 +101,11 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, o
                 location_room: editClass.location_room || 'אולם ראשי'
             });
         } else if (isOpen && !editClass) {
-            // Reset for create mode
+            // Reset for create mode — use defaultDay if provided
             setFormData(prev => ({
                 ...prev,
                 name: '',
+                day_of_week: defaultDay ?? 0,
                 price_ils: 0,
                 start_time: '09:00',
                 end_time: '10:00'
@@ -191,7 +193,7 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, o
             <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 py-2.5 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition-colors"
+                className="flex-1 py-2.5 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition-colors dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             >
                 ביטול
             </button>
@@ -312,7 +314,7 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, o
                     />
                 </div>
 
-                {error && <div className="text-red-500 text-sm bg-red-50 p-2 rounded">{error}</div>}
+                {error && <div className="text-red-500 text-sm bg-red-50 p-2 rounded dark:bg-red-500/10 dark:text-red-400">{error}</div>}
             </form>
         </BaseModal>
     );

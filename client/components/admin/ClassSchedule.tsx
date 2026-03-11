@@ -124,16 +124,17 @@ const formatClassForDisplay = (cls: any) => {
           });
         }}
         editClass={editingClass}
+        defaultDay={DAYS.indexOf(selectedDay)}
       />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Calendar className="text-indigo-600" />
+          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2 dark:text-slate-100">
+            <Calendar className="text-indigo-600 dark:text-indigo-500" />
             מערכת שעות
           </h2>
-          <p className="text-slate-500">ניהול השיעורים השבועי שלך</p>
+          <p className="text-slate-500 dark:text-slate-400">ניהול השיעורים השבועי שלך</p>
         </div>
         <button
           onClick={() => { setEditingClass(null); setIsModalOpen(true); }}
@@ -145,14 +146,14 @@ const formatClassForDisplay = (cls: any) => {
       </div>
 
       {/* Day Tabs */}
-      <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-100 flex overflow-x-auto">
+      <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-100 flex overflow-x-auto dark:bg-slate-900 dark:border-slate-800/10">
         {DAYS.map((day) => (
           <button
             key={day}
             onClick={() => setSelectedDay(day)}
             className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${selectedDay === day
-              ? "bg-indigo-50 text-indigo-700 shadow-sm"
-              : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+              ? "bg-indigo-50 text-indigo-700 shadow-sm dark:bg-indigo-600 dark:text-white"
+              : "text-slate-500 hover:bg-slate-50 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200"
               }`}
           >
             {day}
@@ -177,17 +178,17 @@ const formatClassForDisplay = (cls: any) => {
             />
           ))
         ) : (
-          <div className="text-center py-16 bg-white rounded-xl border border-dashed border-slate-200">
-            <Calendar className="mx-auto h-12 w-12 text-slate-300 mb-4" />
-            <h3 className="text-lg font-medium text-slate-900">
+          <div className="text-center py-16 bg-white rounded-xl border border-dashed border-slate-200 dark:bg-slate-900/50 dark:border-slate-700">
+            <Calendar className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-600 mb-4" />
+            <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
               אין שיעורים מתוכננים
             </h3>
-            <p className="text-slate-500 mt-1 mb-6">
+            <p className="text-slate-500 mt-1 mb-6 dark:text-slate-400">
               לא נמצאו שיעורים ביום {selectedDay}.
             </p>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2 text-indigo-600 font-medium hover:text-indigo-700"
+              className="inline-flex items-center gap-2 text-indigo-600 font-medium hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
             >
               הוסף שיעור ליום {selectedDay} <ChevronLeft size={16} />
             </button>

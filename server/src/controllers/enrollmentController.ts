@@ -330,4 +330,30 @@ export class EnrollmentController {
       next(error);
     }
   }
+  // Admin fetches enrollments for a specific student
+  static async getStudentEnrollments(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    const requestLog =
+      req.logger ||
+      logger.child({
+        controller: "EnrollmentController",
+        method: "getStudentEnrollments",
+      });
+    requestLog.info({ params: req.params }, "Controller entry");
+    try {
+      const { studentId } = req.params;
+      const enrollments = await EnrollmentService.getStudentEnrollments(studentId);
+      requestLog.info(
+        { count: enrollments?.length },
+        "Fetched student enrollments for admin"
+      );
+      res.json(enrollments);
+    } catch (error: any) {
+      requestLog.error({ err: error }, "Error fetching student enrollments");
+      next(error);
+    }
+  }
 }

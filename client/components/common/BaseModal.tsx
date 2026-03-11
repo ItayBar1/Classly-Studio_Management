@@ -22,7 +22,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-right">
-            <div className={`bg-white rounded-2xl shadow-xl w-full ${maxWidth} overflow-hidden animate-fadeIn flex flex-col max-h-[90vh]`}>
+            <div className={`bg-white rounded-2xl shadow-xl w-full ${maxWidth} overflow-hidden animate-fadeIn flex flex-col max-h-[90vh] dark:bg-slate-900 border dark:border-slate-800`}>
                 {/* Header */}
                 <div className="bg-indigo-600 p-6 flex justify-between items-center text-white shrink-0">
                     <h3 className="text-xl font-bold">{title}</h3>
@@ -38,7 +38,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
                 {/* Footer (Optional) */}
                 {footer && (
-                    <div className="p-6 pt-4 border-t border-slate-100 flex gap-3 shrink-0 bg-slate-50">
+                    <div className="p-6 pt-4 border-t border-slate-100 flex gap-3 shrink-0 bg-slate-50 dark:bg-slate-800/50 dark:border-slate-800">
                         {footer}
                     </div>
                 )}
