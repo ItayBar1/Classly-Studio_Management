@@ -21,7 +21,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 md:backdrop-blur-sm p-4 text-right">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-right">
             <div className={`bg-white rounded-2xl shadow-xl w-full ${maxWidth} overflow-hidden animate-fadeIn flex flex-col max-h-[90vh] dark:bg-slate-900 border dark:border-slate-800`}>
                 {/* Header */}
                 <div className="bg-indigo-600 p-6 flex justify-between items-center text-white shrink-0">
