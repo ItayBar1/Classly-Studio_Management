@@ -163,7 +163,7 @@ function App() {
     const token = params.get('token');
 
     // שאיבת הטוקן וניקוי שורת הכתובת באופן גלובלי
-    if (token) {
+    if (token && !isResetPassword) {
       sessionStorage.setItem('pendingInviteToken', token);
       window.history.replaceState({}, document.title, window.location.pathname);
       
