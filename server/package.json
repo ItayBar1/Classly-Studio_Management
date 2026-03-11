@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/index.js",
     "build": "tsc",
-    "dev": "nodemon src/index.ts",
+    "dev": "nodemon --exec ts-node --files src/index.ts",
     "test": "jest",
     "test:unit": "jest --runInBand --testPathPattern=tests/unit",
     "test:integration": "jest --runInBand --testPathPattern=tests/integration",
