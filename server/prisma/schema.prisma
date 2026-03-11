@@ -341,7 +341,6 @@ model pending_registrations {
   // Relations
   studio           studios   @relation(fields: [studio_id], references: [id], onDelete: Cascade)
 
-  @@index([email], map: "idx_pending_registrations_email")
 }
 
 model password_reset_tokens {
@@ -355,5 +354,4 @@ model password_reset_tokens {
   // Relations
   user       users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([token_hash], map: "idx_password_reset_tokens_hash")
 }
