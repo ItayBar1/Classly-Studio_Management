@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { apiClient } from '../services/api';
 import { Lock, Loader2, Eye, EyeOff } from 'lucide-react';
+import { setStoredToken, setStoredUser } from '../services/api';
 
 interface ResetPasswordProps {
   onSuccess: () => void;
@@ -46,10 +47,10 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess }) => {
         password 
       });
 
-      // Save token and user details to localStorage for auto login
+      // Save token and user details using centralized storage helpers for auto login
       if (response.data.token && response.data.user) {
-        localStorage.setItem('classly_auth_token', response.data.token);
-        localStorage.setItem('classly_user', JSON.stringify(response.data.user));
+        setStoredToken(response.data.token);
+        setStoredUser(response.data.user);
       }
 
         onSuccess();
