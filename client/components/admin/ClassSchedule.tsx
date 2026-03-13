@@ -4,19 +4,8 @@ import { CourseService } from "../../services/api";
 import { ClassSession } from "../../types/types";
 import { AddClassModal } from "./AddClassModal";
 import { ClassCard } from "../common/ClassCard";
+import { DAY_MAP, DAYS_ARRAY, extractTime } from "../../utils/dateUtils";
 
-// --- Constants ---
-const DAY_MAP: Record<number, string> = {
-  0: "ראשון",
-  1: "שני",
-  2: "שלישי",
-  3: "רביעי",
-  4: "חמישי",
-  5: "שישי",
-  6: "שבת"
-};
-
-const DAYS = Object.values(DAY_MAP);
 
 // --- Main Component ---
 
@@ -28,19 +17,10 @@ export const ClassSchedule: React.FC = () => {
   const [editingClass, setEditingClass] = useState<ClassSession | null>(null);
 
 const formatClassForDisplay = (cls: any) => {
-    // פונקציית עזר לחילוץ שעה נקייה בין אם זה ISO מ-Prisma ובין אם מחרוזת פשוטה
-    const extractTime = (timeValue: string) => {
-      if (!timeValue) return "00:00";
-      if (timeValue.includes('T')) {
-        return new Date(timeValue).toISOString().substring(11, 16);
-      }
-      return timeValue.substring(0, 5);
-    };
-
     const startTimeStr = extractTime(cls.start_time);
     const endTimeStr = extractTime(cls.end_time);
 
-    // חישוב משך הזמן בדקות
+    // Calculate duration in minutes
     const start = new Date(`1970-01-01T${startTimeStr}:00.000Z`);
     const end = new Date(`1970-01-01T${endTimeStr}:00.000Z`);
     const duration = Math.round((end.getTime() - start.getTime()) / 60000);
@@ -124,7 +104,7 @@ const formatClassForDisplay = (cls: any) => {
           });
         }}
         editClass={editingClass}
-        defaultDay={DAYS.indexOf(selectedDay)}
+        defaultDay={DAYS_ARRAY.indexOf(selectedDay)}
       />
 
       {/* Header */}
@@ -147,7 +127,7 @@ const formatClassForDisplay = (cls: any) => {
 
       {/* Day Tabs */}
       <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-100 flex overflow-x-auto dark:bg-slate-900 dark:border-slate-800/10">
-        {DAYS.map((day) => (
+        {DAYS_ARRAY.map((day) => (
           <button
             key={day}
             onClick={() => setSelectedDay(day)}

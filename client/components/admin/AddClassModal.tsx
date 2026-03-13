@@ -4,17 +4,7 @@ import { CourseService, UserService, BranchService, RoomService } from "../../se
 import { ClassSession, User, Branch, Room, ClassLevel } from "../../types/types";
 import { BaseModal } from "../common/BaseModal";
 import { FormInput, FormSelect } from "../common/FormFields";
-
-// --- Constants ---
-const DAY_MAP: Record<number, string> = {
-    0: "ראשון", 
-    1: "שני",
-    2: "שלישי",
-    3: "רביעי",
-    4: "חמישי",
-    5: "שישי",
-    6: "שבת"
-};
+import { DAY_MAP } from "../../utils/dateUtils";
 
 interface AddClassModalProps {
     isOpen: boolean;

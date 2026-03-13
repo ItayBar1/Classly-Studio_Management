@@ -38,7 +38,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
       validateToken(token);
       setView('register');
 
-      // ניקוי עקבות סופי
+      // Clean up URL and session storage
       sessionStorage.removeItem('pendingInviteToken');
       if (params.has('token')) {
         window.history.replaceState({}, document.title, window.location.pathname);

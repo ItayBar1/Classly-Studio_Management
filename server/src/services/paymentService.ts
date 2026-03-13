@@ -95,7 +95,13 @@ export class PaymentService {
   }
 
   /**
-   * Validate a payment and update the database
+   * Validates a Stripe payment intent and updates local payment and enrollment records.
+   * This is typically called by the frontend immediately after a successful Stripe Elements confirmation.
+   * We rely on the `stripe_payment_intent_id` unique constraint to avoid race conditions 
+   * between this client-driven confirmation and the async Stripe webhook.
+   * 
+   * @param paymentIntentId The Stripe Payment Intent ID generated during initialization
+   * @returns An object containing success status and the updated local payment record
    */
   static async confirmPayment(paymentIntentId: string) {
     const serviceLogger = logger.child({
@@ -196,6 +202,15 @@ export class PaymentService {
     return stripe.webhooks.constructEvent(payload, signature, webhookSecret);
   }
 
+  /**
+   * Asynchronously handles successful payment updates received via Stripe Webhooks.
+   * Ensures the system captures the payment success even if the client closes the browser
+   * before `confirmPayment` is called. Uses the same unique constraint logic to prevent
+   * double-processing the same payment intent.
+   * 
+   * @param paymentIntentId The Stripe Payment Intent ID from the webhook event
+   * @returns The updated payment record
+   */
   static async handlePaymentSuccess(paymentIntentId: string) {
     const serviceLogger = logger.child({
       service: "PaymentService",

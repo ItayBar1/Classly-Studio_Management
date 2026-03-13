@@ -41,13 +41,12 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess }) => {
         return;
       }
 
-      // שליחת הבקשה לשרת
       const response = await apiClient.post('/auth/reset-password', { 
         token: tokenFromUrl, 
         password 
       });
 
-      // שינוי: שמירת הטוקן ופרטי המשתמש שהתקבלו
+      // Save token and user details to localStorage for auto login
       if (response.data.token && response.data.user) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));

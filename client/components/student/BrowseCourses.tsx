@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Search, Filter, Loader2 } from "lucide-react";
-import { CourseService, EnrollmentService } from "../../services/api"; // הוספת EnrollmentService
+import { CourseService, EnrollmentService } from "../../services/api";
 import { CourseCard } from "./CourseCard";
 import { RegistrationModal } from "./RegistrationModal";
 import { ClassSession } from "../../types/types";
 
 export const BrowseCourses: React.FC = () => {
   const [courses, setCourses] = useState<ClassSession[]>([]);
-  const [enrolledCourseIds, setEnrolledCourseIds] = useState<string[]>([]); // state לשמירת ה-IDs של הקורסים אליהם המשתמש רשום
+  const [enrolledCourseIds, setEnrolledCourseIds] = useState<string[]>([]); // State to store enrolled course IDs
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCourse, setSelectedCourse] = useState<ClassSession | null>(
@@ -18,7 +18,7 @@ export const BrowseCourses: React.FC = () => {
   const fetchCourses = async () => {
     setLoading(true);
     try {
-      // שליפת הקורסים וההרשמות במקביל
+      // Fetch courses and enrollments concurrently
       const [coursesData, enrollmentsData] = await Promise.all([
         CourseService.getAll({ status: "active" }),
         EnrollmentService.getMyEnrollments(),
@@ -26,7 +26,7 @@ export const BrowseCourses: React.FC = () => {
 
       setCourses(coursesData);
 
-      // חילוץ ה-IDs של הקורסים אליהם המשתמש כבר רשום
+      // Extract IDs of courses the user is already enrolled in
       const userCourseIds = enrollmentsData
         .map((e: any) => e.class_id || e.class?.id)
         .filter(Boolean);
@@ -92,7 +92,7 @@ export const BrowseCourses: React.FC = () => {
               key={course.id}
               course={course}
               onRegister={handleRegisterClick}
-              isEnrolled={enrolledCourseIds.includes(course.id)} // בדיקה האם הסטודנט רשום
+              isEnrolled={enrolledCourseIds.includes(course.id)}
             />
           ))}
         </div>
@@ -108,7 +108,7 @@ export const BrowseCourses: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={() => {
-          fetchCourses(); // רענון הנתונים יעדכן גם את רשימת ההרשמות
+          fetchCourses(); // Refresh data to also update the enrollment list
         }}
       />
     </div>

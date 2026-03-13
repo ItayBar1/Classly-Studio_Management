@@ -1,4 +1,4 @@
 import { Pool } from 'pg';
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL, // יגיע מה-Docker Compose
+  connectionString: process.env.DATABASE_URL, // Provided by Docker Compose environment
 });

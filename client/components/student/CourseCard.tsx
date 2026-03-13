@@ -1,25 +1,6 @@
 import React from "react";
 import { MapPin, User, Users, Calendar } from "lucide-react";
-
-// המרת ימי השבוע למספרים לטובת תצוגה
-const DAY_MAP: Record<number, string> = {
-  0: "ראשון",
-  1: "שני",
-  2: "שלישי",
-  3: "רביעי",
-  4: "חמישי",
-  5: "שישי",
-  6: "שבת",
-};
-
-// פונקציית עזר לחילוץ השעה מתוך מחרוזת ה-ISO
-const extractTime = (timeValue: string) => {
-  if (!timeValue) return "00:00";
-  if (timeValue.includes("T")) {
-    return new Date(timeValue).toISOString().substring(11, 16);
-  }
-  return timeValue.substring(0, 5);
-};
+import { DAY_MAP, extractTime } from "../../utils/dateUtils";
 
 interface CourseCardProps {
   course: any;
@@ -34,7 +15,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   isEnrolled = false,
   hideButton = false,
 }) => {
-  // חישוב מקומות פנויים
+  // Calculate remaining capacity
   const spotsLeft = course.max_capacity - (course.current_enrollment || 0);
   const isFull = spotsLeft <= 0;
 
@@ -85,10 +66,10 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         {!hideButton && (
           <button
             onClick={() => onRegister(course)}
-            disabled={isFull || isEnrolled} // נטרול אם מלא או רשום
+            disabled={isFull || isEnrolled} // Disable if full or already enrolled
             className={`w-full py-2.5 rounded-lg font-bold transition-colors ${
               isEnrolled
-                ? "bg-green-100 text-green-700 cursor-not-allowed border border-green-200" // עיצוב למצב רשום
+                ? "bg-green-100 text-green-700 cursor-not-allowed border border-green-200" // Style for enrolled state
                 : isFull
                 ? "bg-slate-100 text-slate-400 cursor-not-allowed"
                 : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-lg"

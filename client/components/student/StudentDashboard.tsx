@@ -4,7 +4,6 @@ import { EnrollmentService } from "../../services/api";
 import { ClassSession } from "../../types/types";
 import { CourseCard } from "./CourseCard";
 
-// הוספת ממשק Props
 interface StudentDashboardProps {
   activeTab?: string;
 }
@@ -43,7 +42,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     fetchEnrolled();
   }, []);
 
-  // אפקט חדש לרענון נתונים בעת מעבר ללשונית זו
+  // Refresh data when switching to this tab
   useEffect(() => {
     if (activeTab === "dashboard") {
       setLoading(true);
@@ -62,7 +61,6 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-slate-800">הקורסים שלי</h2>
 
-      {/* שאר הקוד ללא שינוי... */}
       {enrolledCourses.length === 0 ? (
         <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-100 text-center">
           <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">

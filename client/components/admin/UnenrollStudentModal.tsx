@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Loader2, XCircle, BookOpen } from 'lucide-react';
 import { BaseModal } from '../common/BaseModal';
 import { EnrollmentService } from '../../services/api';
+import { DAY_MAP } from '../../utils/dateUtils';
 
 interface Enrollment {
   id: string;
@@ -62,10 +63,6 @@ export const UnenrollStudentModal: React.FC<UnenrollStudentModalProps> = ({
     } finally {
       setRemovingId(null);
     }
-  };
-
-  const DAY_MAP: Record<number, string> = {
-    0: "ראשון", 1: "שני", 2: "שלישי", 3: "רביעי", 4: "חמישי", 5: "שישי", 6: "שבת"
   };
 
   return (

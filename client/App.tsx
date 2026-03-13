@@ -162,12 +162,12 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
 
-    // שאיבת הטוקן וניקוי שורת הכתובת באופן גלובלי
+    // Extract the token and clean the URL globally
     if (token && !isResetPassword) {
       sessionStorage.setItem('pendingInviteToken', token);
       window.history.replaceState({}, document.title, window.location.pathname);
       
-      // כפיית ניתוק של סשן קיים כדי להבטיח מעבר למסך ההרשמה של המדריך/מנהל
+      // Force logout of existing session to ensure smooth transition to instructor/admin registration
       if (AuthService.isAuthenticated()) {
         console.info("Logging out existing user to process new invite token");
         AuthService.logout();

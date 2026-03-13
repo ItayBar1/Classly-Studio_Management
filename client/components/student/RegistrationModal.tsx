@@ -7,15 +7,14 @@ import {
   useElements,
 } from "@stripe/react-stripe-js";
 import { X, Loader2, CheckCircle, AlertCircle } from "lucide-react";
-import { EnrollmentService } from "../../services/api"; // מחקנו את PaymentService
+import { EnrollmentService } from "../../services/api";
 import { ClassSession } from "../../types/types";
 
-// טעינת Stripe
 const stripePromise = loadStripe(
   import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || ""
 );
 
-// --- CheckoutForm (עבור תשלום) ---
+// --- CheckoutForm (for payment) ---
 const CheckoutForm = ({
   onSuccess,
   onError,
@@ -61,7 +60,7 @@ const CheckoutForm = ({
   );
 };
 
-// --- המודל הראשי ---
+// --- Main Modal Component ---
 interface RegistrationModalProps {
   course: ClassSession | null;
   isOpen: boolean;
@@ -80,7 +79,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'initial' | 'payment' | 'success'>('initial');
   
-  // שמירת מזהה ההרשמה למקרה של ביטול
+  // Store enrollment ID in case of cancellation
   const [pendingEnrollmentId, setPendingEnrollmentId] = useState<string | null>(null);
 
   const isFree = course && (course.price_ils === 0 || course.price_ils === null);
@@ -102,7 +101,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
     try {
       const res = await EnrollmentService.register(course.id);
 
-      // שמירת מזהה ההרשמה שהשרת יצר
+      // Store the pending enrollment ID created by the server
       if (res.enrollmentId) {
         setPendingEnrollmentId(res.enrollmentId);
       }
@@ -129,7 +128,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
     }, 2000); 
   };
 
-  // פונקציית סגירה חכמה - מוחקת הרשמה אם ברחנו באמצע
+  // Smart close handler - deletes pending enrollment if abandoned
   const handleCloseModal = async () => {
     if (step === 'payment' && pendingEnrollmentId) {
       try {

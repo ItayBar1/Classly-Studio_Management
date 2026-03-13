@@ -17,10 +17,6 @@ export const InstructorDashboard: React.FC = () => {
   useEffect(() => {
     const fetchInstructorData = async () => {
       try {
-        // קבלת שם המשתמש (אופציונלי: אפשר גם דרך UserService.getMe אם רוצים)
-        const storedUser = localStorage.getItem('sb-kvk...-auth-token'); // או דרך הקונטקסט
-        // למען הפשטות, ה-API יחזיר את הנתונים, את השם אפשר לשלוף מהקונטקסט או להשאיר סטטי כרגע
-        
         const data = await DashboardService.getInstructorStats();
         setStats(data);
       } catch (error) {
@@ -52,7 +48,7 @@ export const InstructorDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* כרטיסי סטטיסטיקה */}
+      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
           <div>
@@ -85,7 +81,7 @@ export const InstructorDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* אזור השיעור הבא */}
+      {/* Next Class Section */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
         <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
           <CheckCircle className="text-indigo-600" size={20} />

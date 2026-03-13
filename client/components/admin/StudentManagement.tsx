@@ -21,7 +21,7 @@ import { InviteLinkModal } from "./InviteLinkModal";
 import { EnrollStudentModal } from "./EnrollStudentModal";
 import { UnenrollStudentModal } from "./UnenrollStudentModal";
 
-// מילון תרגום לסטטוסים
+// Status translation dictionary
 const STATUS_TRANSLATION: Record<EnrollmentStatus, string> = {
   'ACTIVE': 'פעיל',
   'PAUSED': 'מושהה',
@@ -36,7 +36,7 @@ export const StudentManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [classList, setClassList] = useState<string[]>([]);
 
-  // State עבור דפדוף וחיפוש
+  // Pagination and search state
   const [page, setPage] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClass, setSelectedClass] = useState("הכל");
@@ -76,7 +76,7 @@ export const StudentManagement: React.FC = () => {
     };
   }, []);
 
-  // טעינת רשימת השיעורים (עבור ה-Dropdown)
+  // Load list of classes for the dropdown
   const fetchClassesList = async () => {
     try {
       const courses = await CourseService.getAll({ status: 'active' });
@@ -89,7 +89,7 @@ export const StudentManagement: React.FC = () => {
     }
   };
 
-  // פונקציית הטעינה הראשית
+  // Main fetch function
   const fetchStudents = async () => {
     setLoading(true);
     try {
