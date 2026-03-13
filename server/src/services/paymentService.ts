@@ -116,24 +116,45 @@ export class PaymentService {
       throw new Error(`Payment not succeeded. Status: ${paymentIntent.status}`);
     }
 
-    const updatedPayment = await prisma.$transaction(async (tx) => {
-      // 2. Conditional update to enforce idempotency
+    const updatedPayment = await this.processSuccessfulPayment(
+      paymentIntentId,
+      paymentIntent.latest_charge,
+      "payment confirmation",
+    );
+
+    serviceLogger.info(
+      { paymentId: updatedPayment.id },
+      "Payment confirmation completed",
+    );
+    return { success: true, payment: updatedPayment };
+  }
+
+  private static async processSuccessfulPayment(
+    paymentIntentId: string,
+    latestCharge: Stripe.PaymentIntent["latest_charge"],
+    source: string,
+  ) {
+    const serviceLogger = logger.child({
+      service: "PaymentService",
+      method: "processSuccessfulPayment",
+    });
+
+    const paymentRecord = await prisma.$transaction(async (tx) => {
       const updateResult = await tx.payments.updateMany({
-        where: { 
+        where: {
           stripe_payment_intent_id: paymentIntentId,
-          status: "PENDING" 
+          status: "PENDING",
         },
         data: {
           status: "SUCCEEDED",
           paid_date: new Date(),
-          stripe_charge_id: paymentIntent.latest_charge as string,
+          stripe_charge_id: typeof latestCharge === "string" ? latestCharge : latestCharge?.id,
           updated_at: new Date(),
         },
       });
 
-      // Fetch the payment record (whether we updated it now or it was already updated)
       const record = await tx.payments.findUnique({
-        where: { stripe_payment_intent_id: paymentIntentId }
+        where: { stripe_payment_intent_id: paymentIntentId },
       });
 
       if (!record) {
@@ -142,46 +163,43 @@ export class PaymentService {
 
       if (updateResult.count === 0) {
         if (record.status !== "SUCCEEDED") {
-          throw new Error(`Payment intent succeeded in Stripe, but local record is in unexpected state: ${record.status}`);
+          throw new Error(
+            `Payment intent succeeded in Stripe, but local record is in unexpected state: ${record.status}`,
+          );
         }
         serviceLogger.info(
-          { paymentIntentId }, 
-          "Payment already processed. Ensuring side effects are complete."
+          { paymentIntentId },
+          "Payment already processed. Ensuring side effects are complete.",
         );
       }
 
-      // 3. Update enrollment status if available (only runs once!)
       if (record.enrollment_id) {
-        const enrollment = await tx.enrollments.findUnique({
-          where: { id: record.enrollment_id }
+        const enrollmentUpdateResult = await tx.enrollments.updateMany({
+          where: {
+            id: record.enrollment_id,
+            payment_status: { not: "PAID" },
+          },
+          data: {
+            payment_status: "PAID",
+            status: "ACTIVE",
+            updated_at: new Date(),
+          },
         });
 
-        if (enrollment && enrollment.payment_status !== "PAID") {
+        if (enrollmentUpdateResult.count > 0) {
           serviceLogger.info(
             { enrollmentId: record.enrollment_id },
             updateResult.count === 0
-              ? "Reconciling enrollment status after partial failure"
-              : "Updating enrollment after payment confirmation"
+              ? `Reconciling enrollment status after partial failure (${source})`
+              : `Updating enrollment after successful payment (${source})`,
           );
-          await tx.enrollments.update({
-            where: { id: record.enrollment_id },
-            data: {
-              payment_status: "PAID",
-              status: "ACTIVE",
-              updated_at: new Date(),
-            },
-          });
         }
       }
 
       return record;
     });
 
-    serviceLogger.info(
-      { paymentId: updatedPayment.id },
-      "Payment confirmation completed",
-    );
-    return { success: true, payment: updatedPayment };
+    return paymentRecord;
   }
 
   /**
@@ -243,7 +261,10 @@ export class PaymentService {
    * @param paymentIntentId The Stripe Payment Intent ID from the webhook event
    * @returns The updated payment record
    */
-  static async handlePaymentSuccess(paymentIntentId: string) {
+  static async handlePaymentSuccess(
+    paymentIntentId: string,
+    latestCharge: Stripe.PaymentIntent["latest_charge"],
+  ) {
     const serviceLogger = logger.child({
       service: "PaymentService",
       method: "handlePaymentSuccess",
@@ -253,66 +274,11 @@ export class PaymentService {
       "Handling successful payment from webhook",
     );
 
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-    const paymentRecord = await prisma.$transaction(async (tx) => {
-      // Conditional update to enforce idempotency
-      const updateResult = await tx.payments.updateMany({
-        where: { 
-          stripe_payment_intent_id: paymentIntentId,
-          status: "PENDING" 
-        },
-        data: {
-          status: "SUCCEEDED",
-          paid_date: new Date(),
-          stripe_charge_id: paymentIntent.latest_charge as string,
-          updated_at: new Date(),
-        },
-      });
-
-      const record = await tx.payments.findUnique({
-        where: { stripe_payment_intent_id: paymentIntentId }
-      });
-
-      if (!record) {
-        throw new Error(`Payment record not found for intent: ${paymentIntentId}`);
-      }
-
-      if (updateResult.count === 0) {
-        if (record.status !== "SUCCEEDED") {
-          throw new Error(`Payment intent succeeded in Stripe, but local record is in unexpected state: ${record.status}`);
-        }
-        serviceLogger.info(
-          { paymentIntentId }, 
-          "Payment already processed. Ensuring side effects are complete."
-        );
-      }
-
-      if (record.enrollment_id) {
-        const enrollment = await tx.enrollments.findUnique({
-          where: { id: record.enrollment_id }
-        });
-
-        if (enrollment && enrollment.payment_status !== "PAID") {
-          serviceLogger.info(
-            { enrollmentId: record.enrollment_id },
-            updateResult.count === 0
-              ? "Reconciling enrollment status after partial failure"
-              : "Updating enrollment after webhook payment success"
-          );
-          await tx.enrollments.update({
-            where: { id: record.enrollment_id },
-            data: {
-              payment_status: "PAID",
-              status: "ACTIVE",
-              updated_at: new Date(),
-            },
-          });
-        }
-      }
-
-      return record;
-    });
+    const paymentRecord = await this.processSuccessfulPayment(
+      paymentIntentId,
+      latestCharge,
+      "webhook",
+    );
 
     serviceLogger.info(
       { paymentId: paymentRecord.id },
@@ -320,4 +286,5 @@ export class PaymentService {
     );
     return paymentRecord;
   }
+
 }

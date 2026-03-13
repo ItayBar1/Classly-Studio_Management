@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { apiClient } from '../services/api';
+import { apiClient, setStoredToken, setStoredUser } from '../services/api';
 import { Lock, Loader2, Eye, EyeOff } from 'lucide-react';
-import { setStoredToken, setStoredUser } from '../services/api';
 
 interface ResetPasswordProps {
   onSuccess: () => void;
