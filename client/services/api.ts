@@ -68,15 +68,20 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
+    const statusCode = error.response?.status;
+    const requestUrl = error.config?.url || '';
+
     logger.error(
-      `API Error: ${error.response?.status} from ${error.config?.url}`,
+      `API Error: ${statusCode} from ${requestUrl}`,
       {
-        responseData: error.response?.data,
+        // Never log raw backend response payloads to avoid leaking sensitive data.
+        // This is intentionally strict for all environments.
+        responseData: "[REDACTED]",
         message: error.message
       }
     );
-    if (error.response?.status === 401) {
-      const requestUrl = error.config?.url || '';
+
+    if (statusCode === 401) {
       const isAuthRequest = AUTH_PATHS.some((path) => requestUrl.includes(path));
 
       if (!isAuthRequest) {

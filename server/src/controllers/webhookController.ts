@@ -23,9 +23,9 @@ export class WebhookController {
             switch (event.type) {
                 case 'payment_intent.succeeded':
                     // eslint-disable-next-line no-case-declarations
-                    const paymentIntent = event.data.object as { id: string };
+                    const paymentIntent = event.data.object as { id: string; latest_charge?: string | null };
                     requestLog.info({ paymentIntentId: paymentIntent.id }, 'Payment succeeded event received');
-                    await PaymentService.handlePaymentSuccess(paymentIntent.id);
+                    await PaymentService.handlePaymentSuccess(paymentIntent.id, paymentIntent.latest_charge ?? null);
                     break;
 
                 case 'payment_intent.payment_failed':
