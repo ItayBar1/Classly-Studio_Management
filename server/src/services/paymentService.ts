@@ -241,6 +241,7 @@ export class PaymentService {
    * before `confirmPayment` is called. Uses a conditional update on the PENDING status 
    * to enforce idempotency and prevent double-processing the same payment intent.
    * @param paymentIntentId The Stripe Payment Intent ID from the webhook event
+   * @param latestCharge The latest charge object or ID associated with the payment intent
    * @returns The updated payment record
    */
   static async handlePaymentSuccess(paymentIntentId: string) {
