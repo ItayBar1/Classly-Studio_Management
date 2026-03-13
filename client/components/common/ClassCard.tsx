@@ -8,6 +8,7 @@ import {
 interface ClassSession {
   id: string;
   name: string;
+  dayName?: string;
   instructor?: string;
   instructorAvatar?: string;
   startTime: string;
