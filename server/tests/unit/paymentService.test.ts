@@ -4,6 +4,8 @@ const mockPrisma = {
   payments: {
     create: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
+    findUnique: jest.fn(),
     findMany: jest.fn(),
   },
   enrollments: {
@@ -102,17 +104,28 @@ describe('PaymentService', () => {
         latest_charge: 'ch_test123',
       });
 
-      mockPrisma.payments.update.mockResolvedValue({
+      mockPrisma.payments.updateMany.mockResolvedValue({ count: 1 });
+      mockPrisma.payments.findUnique.mockResolvedValue({
         id: 'pay_123',
         enrollment_id: 'enroll_123',
+        status: 'SUCCEEDED'
       });
 
       const result = await PaymentService.confirmPayment('pi_success');
 
-      expect(mockPrisma.payments.update).toHaveBeenCalledWith(
+      expect(mockPrisma.payments.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { stripe_payment_intent_id: 'pi_success' },
+          where: { 
+            stripe_payment_intent_id: 'pi_success',
+            status: 'PENDING'
+          },
           data: expect.objectContaining({ status: 'SUCCEEDED' }),
+        })
+      );
+
+      expect(mockPrisma.payments.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { stripe_payment_intent_id: 'pi_success' }
         })
       );
 

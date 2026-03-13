@@ -17,7 +17,9 @@ class Logger {
     }
 
     const timestamp = new Date().toLocaleString('en-IL', { timeZone: 'Asia/Jerusalem', hour12: false });
-    const payload = data ? { ...data } : undefined;
+    const payload = data !== undefined 
+      ? (typeof data === 'object' && data !== null && !Array.isArray(data) ? { ...data } : { value: data }) 
+      : undefined;
 
     // Sanitize payload
     if (payload) {

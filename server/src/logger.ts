@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import pino, { LoggerOptions, Logger } from "pino";
+import pino, { stdTimeFunctions, LoggerOptions, Logger } from "pino";
 import { Request, Response, NextFunction } from "express";
 import { environment } from "./config/env";
 
@@ -15,7 +15,7 @@ const usePrettyPrint =
 const loggerOptions: LoggerOptions = {
   level: environment.logLevel || "info",
   base: { service: "classly-server" },
-  timestamp: () => `,"time":"${new Date().toLocaleString('en-IL', { timeZone: 'Asia/Jerusalem', hour12: false })}"`,
+  timestamp: stdTimeFunctions.isoTime,
   // In production or on Vercel, use standard JSON output (undefined transport).
   // This prevents errors related to loading worker threads in serverless environments.
   transport: usePrettyPrint
