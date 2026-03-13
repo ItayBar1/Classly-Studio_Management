@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { getCurrentTheme, toggleTheme as toggleThemeMode, type ThemeMode } from '../utils/theme';
 import {
   LayoutDashboard,
   Calendar,
@@ -19,24 +20,17 @@ interface BottomNavProps {
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab, onLogout, userRole }) => {
-  const [isDarkMode, setIsDarkMode] = React.useState(() => {
-    if (typeof window !== 'undefined') {
-      return document.documentElement.classList.contains('dark');
-    }
-    return false;
-  });
+  const [theme, setTheme] = React.useState<ThemeMode>(() => getCurrentTheme());
+  const isDarkMode = theme === 'dark';
+
+  useEffect(() => {
+    const syncTheme = () => setTheme(getCurrentTheme());
+    window.addEventListener('classly-theme-change', syncTheme as EventListener);
+    return () => window.removeEventListener('classly-theme-change', syncTheme as EventListener);
+  }, []);
 
   const toggleTheme = () => {
-    const root = document.documentElement;
-    if (root.classList.contains('dark')) {
-      root.classList.remove('dark');
-      localStorage.setItem('classly_theme', 'light');
-      setIsDarkMode(false);
-    } else {
-      root.classList.add('dark');
-      localStorage.setItem('classly_theme', 'dark');
-      setIsDarkMode(true);
-    }
+    setTheme(toggleThemeMode());
   };
 
   const allMenuItems = [

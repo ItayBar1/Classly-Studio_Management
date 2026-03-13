@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { getCurrentTheme, toggleTheme as toggleThemeMode, type ThemeMode } from '../utils/theme';
 import {
   LayoutDashboard,
   Calendar,
@@ -19,29 +20,22 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLogout, userRole }) => {
-  const [isDarkMode, setIsDarkMode] = React.useState(() => {
-    if (typeof window !== 'undefined') {
-      return document.documentElement.classList.contains('dark');
-    }
-    return false;
-  });
+  const [theme, setTheme] = React.useState<ThemeMode>(() => getCurrentTheme());
+  const isDarkMode = theme === 'dark';
 
   useEffect(() => {
     console.info('Sidebar mounted', { userRole });
     return () => console.info('Sidebar unmounted');
   }, [userRole]);
 
+  useEffect(() => {
+    const syncTheme = () => setTheme(getCurrentTheme());
+    window.addEventListener('classly-theme-change', syncTheme as EventListener);
+    return () => window.removeEventListener('classly-theme-change', syncTheme as EventListener);
+  }, []);
+
   const toggleTheme = () => {
-    const root = document.documentElement;
-    if (root.classList.contains('dark')) {
-      root.classList.remove('dark');
-      localStorage.setItem('classly_theme', 'light');
-      setIsDarkMode(false);
-    } else {
-      root.classList.add('dark');
-      localStorage.setItem('classly_theme', 'dark');
-      setIsDarkMode(true);
-    }
+    setTheme(toggleThemeMode());
   };
 
   // Define menu items alongside authorization rules
