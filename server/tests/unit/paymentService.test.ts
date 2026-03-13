@@ -1,6 +1,6 @@
 import { PaymentService } from '../../src/services/paymentService';
 
-const mockPrisma = {
+const mockPrisma: any = {
   payments: {
     create: jest.fn(),
     update: jest.fn(),
@@ -9,8 +9,12 @@ const mockPrisma = {
     findMany: jest.fn(),
   },
   enrollments: {
+    findUnique: jest.fn(),
     update: jest.fn(),
   },
+  $transaction: jest.fn(async (cb: any) => {
+    return await cb(mockPrisma);
+  }),
 };
 
 jest.mock('../../src/config/prisma', () => ({
@@ -110,6 +114,10 @@ describe('PaymentService', () => {
         enrollment_id: 'enroll_123',
         status: 'SUCCEEDED'
       });
+      mockPrisma.enrollments.findUnique.mockResolvedValue({
+        id: 'enroll_123',
+        payment_status: 'PENDING'
+      });
 
       const result = await PaymentService.confirmPayment('pi_success');
 
@@ -129,6 +137,39 @@ describe('PaymentService', () => {
         })
       );
 
+      expect(mockPrisma.enrollments.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'enroll_123' },
+          data: expect.objectContaining({ status: 'ACTIVE', payment_status: 'PAID' }),
+        })
+      );
+
+      expect(result.success).toBe(true);
+    });
+
+    it('handles idempotency gracefully when payment is already SUCCEEDED and ensures enrollment side-effects', async () => {
+      mockStripeRetrieve.mockResolvedValue({
+        status: 'succeeded',
+        latest_charge: 'ch_test123',
+      });
+
+      // Simulate step 1 already happened: count is 0
+      mockPrisma.payments.updateMany.mockResolvedValue({ count: 0 });
+      // Payment is already SUCCEEDED
+      mockPrisma.payments.findUnique.mockResolvedValue({
+        id: 'pay_123',
+        enrollment_id: 'enroll_123',
+        status: 'SUCCEEDED'
+      });
+      // But enrollment was not updated yet
+      mockPrisma.enrollments.findUnique.mockResolvedValue({
+        id: 'enroll_123',
+        payment_status: 'PENDING'
+      });
+
+      const result = await PaymentService.confirmPayment('pi_already_success');
+
+      expect(mockPrisma.payments.updateMany).toHaveBeenCalled();
       expect(mockPrisma.enrollments.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'enroll_123' },
