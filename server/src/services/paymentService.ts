@@ -140,6 +140,9 @@ export class PaymentService {
     }
 
     if (updateResult.count === 0) {
+      if (updatedPayment.status !== "SUCCEEDED") {
+        throw new Error(`Payment intent succeeded in Stripe, but local record is in unexpected state: ${updatedPayment.status}`);
+      }
       serviceLogger.info(
         { paymentIntentId }, 
         "Payment already processed by webhook. Skipping side effects."
@@ -261,6 +264,9 @@ export class PaymentService {
     }
 
     if (updateResult.count === 0) {
+      if (paymentRecord.status !== "SUCCEEDED") {
+        throw new Error(`Payment intent succeeded in Stripe, but local record is in unexpected state: ${paymentRecord.status}`);
+      }
       serviceLogger.info(
         { paymentIntentId }, 
         "Payment already processed by frontend confirmation. Skipping side effects."
