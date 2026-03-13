@@ -48,8 +48,8 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess }) => {
 
       // Save token and user details to localStorage for auto login
       if (response.data.token && response.data.user) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
+        localStorage.setItem('classly_auth_token', response.data.token);
+        localStorage.setItem('classly_user', JSON.stringify(response.data.user));
       }
 
         onSuccess();
