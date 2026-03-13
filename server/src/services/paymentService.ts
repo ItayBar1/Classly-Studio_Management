@@ -97,9 +97,8 @@ export class PaymentService {
   /**
    * Validates a Stripe payment intent and updates local payment and enrollment records.
    * This is typically called by the frontend immediately after a successful Stripe Elements confirmation.
-   * We rely on the `stripe_payment_intent_id` unique constraint to avoid race conditions 
-   * between this client-driven confirmation and the async Stripe webhook.
-   * 
+   * We use a conditional update (checking for PENDING status) to enforce idempotency
+   * and avoid race conditions between this client-driven confirmation and the async Stripe webhook.
    * @param paymentIntentId The Stripe Payment Intent ID generated during initialization
    * @returns An object containing success status and the updated local payment record
    */
@@ -117,9 +116,12 @@ export class PaymentService {
       throw new Error(`Payment not succeeded. Status: ${paymentIntent.status}`);
     }
 
-    // 2. Update payment record using unique constraint (eliminates race condition)
-    const updatedPayment = await prisma.payments.update({
-      where: { stripe_payment_intent_id: paymentIntentId },
+    // 2. Conditional update to enforce idempotency
+    const updateResult = await prisma.payments.updateMany({
+      where: { 
+        stripe_payment_intent_id: paymentIntentId,
+        status: "PENDING" 
+      },
       data: {
         status: "SUCCEEDED",
         paid_date: new Date(),
@@ -128,7 +130,24 @@ export class PaymentService {
       },
     });
 
-    // 3. Update enrollment status if available
+    // Fetch the payment record (whether we updated it now or it was already updated)
+    const updatedPayment = await prisma.payments.findUnique({
+      where: { stripe_payment_intent_id: paymentIntentId }
+    });
+
+    if (!updatedPayment) {
+      throw new Error(`Payment record not found for intent: ${paymentIntentId}`);
+    }
+
+    if (updateResult.count === 0) {
+      serviceLogger.info(
+        { paymentIntentId }, 
+        "Payment already processed by webhook. Skipping side effects."
+      );
+      return { success: true, payment: updatedPayment };
+    }
+
+    // 3. Update enrollment status if available (only runs once!)
     if (updatedPayment.enrollment_id) {
       serviceLogger.info(
         { enrollmentId: updatedPayment.enrollment_id },
@@ -205,9 +224,8 @@ export class PaymentService {
   /**
    * Asynchronously handles successful payment updates received via Stripe Webhooks.
    * Ensures the system captures the payment success even if the client closes the browser
-   * before `confirmPayment` is called. Uses the same unique constraint logic to prevent
-   * double-processing the same payment intent.
-   * 
+   * before `confirmPayment` is called. Uses a conditional update on the PENDING status 
+   * to enforce idempotency and prevent double-processing the same payment intent.
    * @param paymentIntentId The Stripe Payment Intent ID from the webhook event
    * @returns The updated payment record
    */
@@ -221,9 +239,12 @@ export class PaymentService {
       "Handling successful payment from webhook",
     );
 
-    // Update payment record using unique constraint (eliminates race condition)
-    const paymentRecord = await prisma.payments.update({
-      where: { stripe_payment_intent_id: paymentIntentId },
+    // Conditional update to enforce idempotency
+    const updateResult = await prisma.payments.updateMany({
+      where: { 
+        stripe_payment_intent_id: paymentIntentId,
+        status: "PENDING" 
+      },
       data: {
         status: "SUCCEEDED",
         paid_date: new Date(),
@@ -231,6 +252,23 @@ export class PaymentService {
       },
     });
 
+    const paymentRecord = await prisma.payments.findUnique({
+      where: { stripe_payment_intent_id: paymentIntentId }
+    });
+
+    if (!paymentRecord) {
+      throw new Error(`Payment record not found for intent: ${paymentIntentId}`);
+    }
+
+    if (updateResult.count === 0) {
+      serviceLogger.info(
+        { paymentIntentId }, 
+        "Payment already processed by frontend confirmation. Skipping side effects."
+      );
+      return paymentRecord;
+    }
+
+    // Only runs if this webhook actually performed the update
     if (paymentRecord.enrollment_id) {
       serviceLogger.info(
         { enrollmentId: paymentRecord.enrollment_id },
