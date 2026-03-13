@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
 import { PaymentService } from '../services/paymentService';
 import { logger } from '../logger';
 

@@ -1,4 +1,4 @@
-import { User } from '../types/types';
+import type { User } from '../types/types';
 
 const TOKEN_KEY = 'classly_auth_token';
 const USER_KEY = 'classly_user';

@@ -1,6 +1,6 @@
 import axios from "axios";
 import { logger } from "./logger";
-import {
+import type {
   User,
   Student,
   ClassSession,
