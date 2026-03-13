@@ -64,7 +64,7 @@ export class EnrollmentController {
    * 4. Return client secret to the frontend.
    * 
    * If any step fails after the enrollment is created, a rollback is attempted 
-   * to delete the pending enrollment and prevent orphaned records.
+   * to cancel the pending enrollment (mark it as CANCELLED) and prevent orphaned records.
    * 
    * @param req Express Request containing user ID in req.user and classId in req.body
    * @param res Express Response to send back payment initialization details
