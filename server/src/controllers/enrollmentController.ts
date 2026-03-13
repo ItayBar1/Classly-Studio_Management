@@ -55,7 +55,21 @@ export class EnrollmentController {
     }
   }
 
-  // Student self-registration (creates PENDING enrollment + payment + Stripe intent)
+  /**
+   * Handles self-registration for a student into a class.
+   * This is a critical business flow involving 4 main steps:
+   * 1. Create a PENDING enrollment record.
+   * 2. Handle FREE courses (skip payment) or create a Stripe Payment Intent.
+   * 3. Create a PENDING local payment record.
+   * 4. Return client secret to the frontend.
+   * 
+   * If any step fails after the enrollment is created, a rollback is attempted 
+   * to delete the pending enrollment and prevent orphaned records.
+   * 
+   * @param req Express Request containing user ID in req.user and classId in req.body
+   * @param res Express Response to send back payment initialization details
+   * @param next Express NextFunction for error handling
+   */
   static async studentSelfRegister(
     req: Request,
     res: Response,
@@ -191,8 +205,8 @@ export class EnrollmentController {
       }
       // ----------------------
 
-      // המרת שגיאות 401 מצד שלישי (כמו Stripe) לשגיאות שרת (500)
-      // כדי למנוע מהקליינט לנתק את המשתמש
+      // Convert third-party 401 errors (e.g., from Stripe) to 500 server errors
+      // This prevents the client-side app from forcefully logging out the user
       if (error && error.statusCode === 401) {
         error.statusCode = 500;
         error.message = "שגיאה בהתחברות לשירות התשלומים. אנא פנה להנהלה.";

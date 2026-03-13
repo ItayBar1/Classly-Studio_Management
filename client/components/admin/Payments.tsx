@@ -17,7 +17,7 @@ import {
   DollarSign
 } from 'lucide-react';
 
-// טעינת Stripe
+// Load Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
 
 // --- Checkout Form Component (Stripe Elements) ---
@@ -85,7 +85,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, refreshDat
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // איפוס בעת פתיחה/סגירה
+  // Reset when opening/closing
   useEffect(() => {
     if (isOpen) {
       setAmount('');

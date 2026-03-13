@@ -6,6 +6,7 @@ import { prisma } from "../config/prisma";
 import { environment } from "../config/env";
 import { logger } from "../logger";
 import { EmailService } from "../services/emailService";
+import { generateSecureToken, hashToken } from "../utils/cryptoUtils";
 
 const JWT_SECRET = environment.jwtSecret;
 
@@ -239,9 +240,9 @@ export class AuthController {
 
       if (user) {
         // Generate a secure random token
-        const rawToken = crypto.randomBytes(32).toString('hex');
+        const rawToken = generateSecureToken(32);
         // Store a hash of the token (never store raw tokens)
-        const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+        const tokenHash = hashToken(rawToken);
 
         // Invalidate any existing unused tokens for this user
         await prisma.password_reset_tokens.updateMany({
@@ -302,7 +303,7 @@ export class AuthController {
       }
 
       // Hash the incoming token to compare with stored hash
-      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      const tokenHash = hashToken(token);
 
       // Find a valid, unused, non-expired token
       const resetToken = await prisma.password_reset_tokens.findFirst({
@@ -333,7 +334,7 @@ export class AuthController {
         }),
       ]);
 
-      // שליפת פרטי המשתמש המעודכנים לצורך כניסה אוטומטית
+      // Fetch the updated user details for automatic login
       const user = await prisma.users.findUnique({
         where: { id: resetToken.user_id },
         select: {
@@ -351,7 +352,7 @@ export class AuthController {
         return res.status(404).json({ error: "המשתמש לא נמצא לאחר עדכון הסיסמה" });
       }
 
-      // יצירת טוקן JWT חדש
+      // Create a new JWT token
       const authToken = jwt.sign(
         { userId: user.id, email: user.email, role: user.role },
         JWT_SECRET,
@@ -360,7 +361,7 @@ export class AuthController {
 
       requestLog.info({ userId: resetToken.user_id }, "Password reset and auto-login successful");
 
-      // החזרת הודעת הצלחה יחד עם הטוקן ופרטי המשתמש
+      // Return a success message along with the token and user details
       res.status(200).json({
         message: "הסיסמה עודכנה בהצלחה",
         token: authToken,

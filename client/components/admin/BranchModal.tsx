@@ -128,7 +128,7 @@ export const BranchModal: React.FC<BranchModalProps> = ({ isOpen, onClose, onSuc
         try {
             if (editingRoom) {
                 const updatedRoom = await RoomService.update(editingRoom.id, { name: roomName, capacity: roomCapacity });
-                // עדכון ה-State המקומי כך שיראה את השינוי מיד
+                // Update local state to reflect changes instantly
                 setBranchRooms(prev => prev.map(r => r.id === editingRoom.id ? { ...r, name: roomName, capacity: roomCapacity } : r));
             } else {
                 const newRoom = await RoomService.create({
@@ -137,10 +137,10 @@ export const BranchModal: React.FC<BranchModalProps> = ({ isOpen, onClose, onSuc
                     capacity: roomCapacity,
                     is_active: true
                 });
-                // הוספת החדר החדש ל-State המקומי כדי שיוצג מיד ברשימה
+                // Add the new room to local state to display it instantly
                 setBranchRooms(prev => [...prev, newRoom]);
             }
-            onSuccess(); // עדכון האבא (ברקע)
+            onSuccess(); // Update parent in background
             cancelEdit();
         } catch (err: any) {
             setError(err.message);
@@ -151,7 +151,7 @@ export const BranchModal: React.FC<BranchModalProps> = ({ isOpen, onClose, onSuc
         if (!confirm('למחוק חדר זה?')) return;
         try {
             await RoomService.delete(id);
-            // הסרת החדר מהתצוגה מיד
+            // Remove room from display immediately
             setBranchRooms(prev => prev.filter(r => r.id !== id));
             onSuccess();
         } catch (err: any) {

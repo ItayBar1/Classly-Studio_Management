@@ -3,6 +3,7 @@ import { Loader2, BookOpen, Check } from 'lucide-react';
 import { BaseModal } from '../common/BaseModal';
 import { CourseService, EnrollmentService } from '../../services/api';
 import { ClassSession } from '../../types/types';
+import { DAY_MAP } from '../../utils/dateUtils';
 
 interface EnrollStudentModalProps {
   isOpen: boolean;
@@ -45,10 +46,6 @@ export const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({
     } finally {
       setEnrollingId(null);
     }
-  };
-
-  const DAY_MAP: Record<number, string> = {
-    0: "ראשון", 1: "שני", 2: "שלישי", 3: "רביעי", 4: "חמישי", 5: "שישי", 6: "שבת"
   };
 
   return (

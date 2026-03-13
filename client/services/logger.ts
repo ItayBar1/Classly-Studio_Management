@@ -1,14 +1,22 @@
-// client/services/logger.ts
-
 type LogLevel = 'info' | 'warn' | 'error';
 
+/**
+ * Logger service for consistent log formatting and production filtering.
+ * Sanitizes sensitive data (passwords, tokens) before logging.
+ */
 class Logger {
+  /**
+   * Internal logging method with timestamping and sensitive data sanitization.
+   * @param level Log level (info, warn, error)
+   * @param message Log message
+   * @param data Optional data object to log
+   */
   private log(level: LogLevel, message: string, data?: any) {
     if (import.meta.env.PROD && level === 'info') {
       return; // Skip info logs in production if desired
     }
 
-    const timestamp = new Date().toISOString();
+    const timestamp = new Date().toLocaleString('en-IL', { timeZone: 'Asia/Jerusalem', hour12: false });
     const payload = data ? { ...data } : undefined;
 
     // Sanitize payload

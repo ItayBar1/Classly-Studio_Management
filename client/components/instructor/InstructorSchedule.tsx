@@ -2,13 +2,14 @@ import React, { useEffect, useState } from "react";
 import { CourseService } from "../../services/api";
 import { Loader2, Calendar, Filter, X } from "lucide-react";
 import { ClassCard } from "../common/ClassCard";
+import { DAYS_ARRAY, extractTime } from "../../utils/dateUtils";
 
 export const InstructorSchedule: React.FC = () => {
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<number | "all">("all");
 
-  const days = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+
 
   useEffect(() => {
     const fetchMySchedule = async () => {
@@ -16,23 +17,13 @@ export const InstructorSchedule: React.FC = () => {
         const data = await CourseService.getInstructorCourses();
 
         if (data) {
-          // פונקציית עזר לחילוץ שעה נקייה בין אם זה ISO מ-Prisma ובין אם מחרוזת פשוטה
-          const extractTime = (timeValue: string) => {
-            if (!timeValue) return "00:00";
-            if (timeValue.includes('T')) {
-              return new Date(timeValue).toISOString().substring(11, 16);
-            }
-            return timeValue.substring(0, 5);
-          };
-
           const formatClassForDisplay = (cls: any) => {
             if (!cls) return null;
 
-            // חילוץ שעות נקיות
             const startTimeStr = extractTime(cls.start_time || cls.startTime);
             const endTimeStr = extractTime(cls.end_time || cls.endTime);
 
-            // חישוב משך הזמן בדקות בצורה תקינה
+            // Compute duration in minutes
             const start = new Date(`1970-01-01T${startTimeStr}:00.000Z`);
             const end = new Date(`1970-01-01T${endTimeStr}:00.000Z`);
             const duration = Math.round((end.getTime() - start.getTime()) / 60000);
@@ -49,7 +40,7 @@ export const InstructorSchedule: React.FC = () => {
               startTime: startTimeStr,
               duration: duration,
               dayOfWeek: dayOfWeekIndex,
-              dayName: days[dayOfWeekIndex],
+              dayName: DAYS_ARRAY[dayOfWeekIndex],
               students: cls.current_enrollment || 0,
               capacity: cls.max_capacity,
               level: cls.level,
@@ -57,7 +48,7 @@ export const InstructorSchedule: React.FC = () => {
             };
           };
 
-          // מיון השיעורים לפי יום ושעת התחלה (בהנחה ש-ISO מתמיין נכון מילולית)
+          // Sort classes by day and start time
           const sorted = data.sort((a: any, b: any) => {
             if (a.day_of_week !== b.day_of_week)
               return a.day_of_week - b.day_of_week;
@@ -104,7 +95,7 @@ export const InstructorSchedule: React.FC = () => {
               {selectedDay === "all"
                 ? `מציג את כל ${classes.length} השיעורים שלך`
                 : `מציג ${displayedClasses.length} שיעורים ליום ${
-                    days[selectedDay as number]
+                    DAYS_ARRAY[selectedDay as number]
                   }`}
             </p>
           </div>
@@ -140,7 +131,7 @@ export const InstructorSchedule: React.FC = () => {
             הכל
           </button>
 
-          {days.map((day, index) => {
+          {DAYS_ARRAY.map((day, index) => {
             const hasClasses = classes.some((c) => c.dayOfWeek === index);
             if (!hasClasses && selectedDay !== index) return null;
 
@@ -168,7 +159,6 @@ export const InstructorSchedule: React.FC = () => {
         {displayedClasses.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
             {displayedClasses.map((cls) => (
-              // ✅ התיקון כאן: העברת הנתונים בתוך prop בשם session
               <ClassCard key={cls.id} session={cls} />
             ))}
           </div>
@@ -183,7 +173,7 @@ export const InstructorSchedule: React.FC = () => {
             <p className="text-slate-500 max-w-sm mt-1">
               {selectedDay === "all"
                 ? "עדיין לא שובצת לשיעורים במערכת."
-                : `אין שיעורים מתוכננים ליום ${days[selectedDay as number]}.`}
+                : `אין שיעורים מתוכננים ליום ${DAYS_ARRAY[selectedDay as number]}.`}
             </p>
             {selectedDay !== "all" && (
               <button
