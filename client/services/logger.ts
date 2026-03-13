@@ -16,7 +16,7 @@ class Logger {
       return; // Skip info logs in production if desired
     }
 
-    const timestamp = new Date().toLocaleString('en-IL', { timeZone: 'Asia/Jerusalem', hour12: false });
+    const timestamp = new Date().toISOString();
     const payload = data !== undefined 
       ? (typeof data === 'object' && data !== null && !Array.isArray(data) ? { ...data } : { value: data }) 
       : undefined;
