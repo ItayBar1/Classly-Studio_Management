@@ -18,6 +18,7 @@ import {
   Line
 } from 'recharts';
 import { DashboardService } from "../../services/api";
+import { DAY_NAMES_HE } from "../../utils/dateUtils";
 
 interface ChartData {
   name: string;
@@ -41,11 +42,6 @@ const StatCard = ({ title, value, subtext, icon: Icon, color }: any) => (
     </div>
   </div>
 );
-
-// מיפוי ימים לעברית לגרפים
-const DAY_NAMES_HE: Record<string, string> = {
-  'Sun': 'א׳', 'Mon': 'ב׳', 'Tue': 'ג׳', 'Wed': 'ד׳', 'Thu': 'ה׳', 'Fri': 'ו׳', 'Sat': 'ש׳'
-};
 
 export const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);

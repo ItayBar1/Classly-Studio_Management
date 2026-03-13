@@ -4,6 +4,7 @@ import { BottomNav } from "./components/BottomNav";
 import { Loader2 } from "lucide-react";
 import { AuthService, UserService, getStoredUser } from "./services/api";
 import type { User } from "./types/types";
+import { initializeTheme } from "./utils/theme";
 
 // --- Lazy Load Components (Code Splitting) ---
 
@@ -120,6 +121,10 @@ function App() {
   // Check for reset password route
   const isResetPassword = window.location.pathname === "/reset-password";
 
+  useEffect(() => {
+    initializeTheme();
+  }, []);
+
   // Accessibility Widget Injection
   useEffect(() => {
     const isA11yEnabled = import.meta.env.VITE_A11Y_WIDGET_ENABLED === "true";
@@ -162,12 +167,12 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
 
-    // שאיבת הטוקן וניקוי שורת הכתובת באופן גלובלי
+    // Extract the token and clean the URL globally
     if (token && !isResetPassword) {
       sessionStorage.setItem('pendingInviteToken', token);
       window.history.replaceState({}, document.title, window.location.pathname);
       
-      // כפיית ניתוק של סשן קיים כדי להבטיח מעבר למסך ההרשמה של המדריך/מנהל
+      // Force logout of existing session to ensure smooth transition to instructor/admin registration
       if (AuthService.isAuthenticated()) {
         console.info("Logging out existing user to process new invite token");
         AuthService.logout();

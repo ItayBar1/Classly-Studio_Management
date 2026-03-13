@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { apiClient } from '../services/api';
+import { apiClient, setStoredToken, setStoredUser } from '../services/api';
 import { Lock, Loader2, Eye, EyeOff } from 'lucide-react';
 
 interface ResetPasswordProps {
@@ -41,16 +41,15 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess }) => {
         return;
       }
 
-      // שליחת הבקשה לשרת
       const response = await apiClient.post('/auth/reset-password', { 
         token: tokenFromUrl, 
         password 
       });
 
-      // שינוי: שמירת הטוקן ופרטי המשתמש שהתקבלו
+      // Save token and user details using centralized storage helpers for auto login
       if (response.data.token && response.data.user) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
+        setStoredToken(response.data.token);
+        setStoredUser(response.data.user);
       }
 
         onSuccess();

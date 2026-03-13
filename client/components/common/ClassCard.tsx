@@ -8,6 +8,7 @@ import {
 interface ClassSession {
   id: string;
   name: string;
+  dayName?: string;
   instructor?: string;
   instructorAvatar?: string;
   startTime: string;
@@ -70,7 +71,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-all group relative overflow-hidden dark:bg-slate-900 dark:border-slate-800">
-      {/* פס צבע דקורטיבי בצד */}
+      {/* Decorative side color bar */}
       <div
         className={`absolute right-0 top-0 bottom-0 w-1.5 ${getColorClasses(
           session.color || "indigo"
@@ -78,13 +79,13 @@ export const ClassCard: React.FC<ClassCardProps> = ({
       ></div>
 
       <div className="flex flex-col gap-4">
-        {/* שורה עליונה: זמן, כותרת ויום */}
+        {/* Top row: Time, Title, and Day */}
         <div className="flex justify-between items-start gap-2">
           <div className="min-w-0">
-            {/* הצגת היום בשבוע - חדש! */}
+            {/* Display Day of the Week */}
             <div className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 uppercase tracking-wider mb-1 dark:text-indigo-400">
               <Calendar size={12} />
-              {/* @ts-ignore - נניח שהעברנו dayName מהאבא */}
+              {/* @ts-ignore - Assuming dayName is passed from parent */}
               <span>יום {session.dayName}</span>
             </div>
 
@@ -108,7 +109,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
           </span>
         </div>
 
-        {/* שורת אמצע: מיקום ומדריך */}
+        {/* Middle row: Location and Instructor */}
         <div className="grid grid-cols-2 gap-2 py-3 border-y border-slate-50 dark:border-slate-800/50">
           <div className="flex items-center gap-2 text-sm text-slate-600 min-w-0 dark:text-slate-400">
             <MapPin size={14} className="text-slate-400 flex-shrink-0 dark:text-slate-500" />
@@ -124,7 +125,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
           )}
         </div>
 
-        {/* שורה תחתונה: תפוסה */}
+        {/* Bottom row: Capacity */}
         <div className="space-y-2">
           <div className="flex justify-between text-xs font-bold">
             <span className="text-slate-500 dark:text-slate-400">תפוסת שיעור</span>

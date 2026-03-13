@@ -67,7 +67,7 @@ export const InstructorStudents: React.FC = () => {
                   </div>
                 </td>
                 <td className="px-6 py-4 text-slate-600">
-                    {/* כאן אנו מניחים שה-API מחזיר שדה enrolledClass שהוא מחרוזת של שמות הקורסים */}
+                    {/* Assuming API returns enrolledClass as a string representing the course names */}
                     {student.enrolledClass || '-'} 
                 </td>
                 <td className="px-6 py-4">

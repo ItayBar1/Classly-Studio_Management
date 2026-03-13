@@ -1,22 +1,23 @@
 import { randomUUID } from "crypto";
-import pino, { LoggerOptions, Logger } from "pino";
+import pino, { stdTimeFunctions, LoggerOptions, Logger } from "pino";
 import { Request, Response, NextFunction } from "express";
 import { environment } from "./config/env";
 
-// בדיקה האם אנחנו רצים ב-Vercel או בפרודקשיין
+// Check if running in a Vercel environment or production
 const isVercel = process.env.VERCEL === "1";
 const isProduction =
   environment.nodeEnv === "production" || process.env.NODE_ENV === "production";
 
-// נשתמש ב-Pretty Print רק אם אנחנו בפיתוח מקומי וגם לא ב-Vercel
+// Use pino-pretty for structured console output only in local development (excluding Vercel)
 const usePrettyPrint =
   !isProduction && !isVercel && environment.nodeEnv !== "test";
 
 const loggerOptions: LoggerOptions = {
   level: environment.logLevel || "info",
   base: { service: "classly-server" },
-  // אם אנחנו בפרודקשיין או ב-Vercel - נשתמש ב-JSON הרגיל (undefined transport)
-  // זה מונע את השגיאה של טעינת ה-worker thread
+  timestamp: stdTimeFunctions.isoTime,
+  // In production or on Vercel, use standard JSON output (undefined transport).
+  // This prevents errors related to loading worker threads in serverless environments.
   transport: usePrettyPrint
     ? {
         target: "pino-pretty",
@@ -47,7 +48,7 @@ export const requestLogger = (
   req.logger.info({ query: req.query }, "Incoming request");
 
   res.on("finish", () => {
-    // המרת BigInt ל-Number בטוחה
+    // Safely convert BigInt to Number for duration logging
     const durationMs = Number(process.hrtime.bigint() - start) / 1_000_000;
     req.logger?.info(
       { statusCode: res.statusCode, durationMs },

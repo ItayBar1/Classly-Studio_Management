@@ -1,5 +1,6 @@
 import axios from "axios";
-import {
+import { logger } from "./logger";
+import type {
   User,
   Student,
   ClassSession,
@@ -11,46 +12,26 @@ import {
   Room
 } from "../types/types";
 
-// הגדרת כתובת ה-API
+import {
+  getStoredToken,
+  setStoredToken,
+  removeStoredToken,
+  getStoredUser,
+  setStoredUser,
+  removeStoredUser
+} from '../utils/storage';
+
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Token management utilities
-const TOKEN_KEY = 'classly_auth_token';
-
-export const getStoredToken = (): string | null => {
-  return localStorage.getItem(TOKEN_KEY);
+export {
+  getStoredToken,
+  setStoredToken,
+  removeStoredToken,
+  getStoredUser,
+  setStoredUser,
+  removeStoredUser
 };
 
-export const setStoredToken = (token: string): void => {
-  localStorage.setItem(TOKEN_KEY, token);
-};
-
-export const removeStoredToken = (): void => {
-  localStorage.removeItem(TOKEN_KEY);
-};
-
-// User data stored alongside token for quick access
-const USER_KEY = 'classly_user';
-
-export const getStoredUser = (): User | null => {
-  const userStr = localStorage.getItem(USER_KEY);
-  if (!userStr) return null;
-  try {
-    return JSON.parse(userStr);
-  } catch {
-    return null;
-  }
-};
-
-export const setStoredUser = (user: User): void => {
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
-};
-
-export const removeStoredUser = (): void => {
-  localStorage.removeItem(USER_KEY);
-};
-
-// יצירת מופע Axios
 export const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
@@ -58,8 +39,9 @@ export const apiClient = axios.create({
   },
 });
 
-// Interceptor: הוספת טוקן JWT מ-localStorage לכל בקשה
+// Interceptor: Add JWT from localStorage to every request
 apiClient.interceptors.request.use((config) => {
+  logger.info(`Starting API Request: ${config.method?.toUpperCase()} ${config.url}`);
   const token = getStoredToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -72,13 +54,34 @@ apiClient.interceptors.request.use((config) => {
 // Auth endpoints that should NOT trigger auto-logout on 401
 const AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password'];
 
-// Interceptor: Handle 401 responses (expired/invalid token)
-// Skip auto-logout for auth endpoints — let the calling code handle the error
+/**
+ * Global Response Interceptor
+ * 
+ * Intercepts responses to catch 401 Unauthorized errors (expired or invalid JWT).
+ * - For protected API routes, a 401 automatically logs the user out and refreshes the page.
+ * - For Auth routes (login/register), auto-logout is bypassed so the caller can display 
+ *   validation or credential errors directly on the form.
+ */
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    logger.info(`API Response Success: ${response.status} from ${response.config.url}`);
+    return response;
+  },
   (error) => {
-    if (error.response?.status === 401) {
-      const requestUrl = error.config?.url || '';
+    const statusCode = error.response?.status;
+    const requestUrl = error.config?.url || '';
+
+    logger.error(
+      `API Error: ${statusCode} from ${requestUrl}`,
+      {
+        // Never log raw backend response payloads to avoid leaking sensitive data.
+        // This is intentionally strict for all environments.
+        responseData: "[REDACTED]",
+        message: error.message
+      }
+    );
+
+    if (statusCode === 401) {
       const isAuthRequest = AUTH_PATHS.some((path) => requestUrl.includes(path));
 
       if (!isAuthRequest) {
@@ -137,16 +140,13 @@ export const AuthService = {
 // --- Services ---
 
 export const UserService = {
-  // שליפת המשתמש הנוכחי
   getMe: () => apiClient.get<User>('/users/me').then(res => res.data),
 
-  // שליפת כל המדריכים
   getInstructors: () => apiClient.get<User[]>('/instructors').then(res => res.data),
 
-  // אימות סטודיו לפי מספר סידורי
   validateStudio: (serialNumber: string) => apiClient.get<{ valid: boolean; studio: { id: string; name: string } }>(`/users/validate-studio/${serialNumber}`).then(res => res.data),
 
-  // הכנת הרשמה עם אימות סטודיו (אבטחה)
+  // Prepare registration with studio validation (security check)
   prepareRegistration: (email: string, serialNumber?: string, invitationToken?: string) => 
     apiClient.post<{ success: boolean; message: string; pendingRegistrationId: string }>(
       '/users/prepare-registration', 

@@ -6,7 +6,12 @@ type CourseFilters = {
   [key: string]: unknown;
 };
 
-// פונקציית עזר להמרת שעות לפורמט ISO ש-Prisma דורש
+/**
+ * Helper function to convert a time string to the ISO DateTime format required by Prisma.
+ *
+ * @param timeStr - The time string (e.g., "HH:MM")
+ * @returns An ISO-8601 formatted string or the original string if it doesn't match the expected format.
+ */
 const formatTimeForPrisma = (timeStr: string) => {
   if (/^\d{2}:\d{2}$/.test(timeStr)) {
     return `1970-01-01T${timeStr}:00.000Z`;

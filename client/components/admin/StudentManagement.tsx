@@ -21,7 +21,7 @@ import { InviteLinkModal } from "./InviteLinkModal";
 import { EnrollStudentModal } from "./EnrollStudentModal";
 import { UnenrollStudentModal } from "./UnenrollStudentModal";
 
-// מילון תרגום לסטטוסים
+// Status translation dictionary
 const STATUS_TRANSLATION: Record<EnrollmentStatus, string> = {
   'ACTIVE': 'פעיל',
   'PAUSED': 'מושהה',
@@ -36,7 +36,7 @@ export const StudentManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [classList, setClassList] = useState<string[]>([]);
 
-  // State עבור דפדוף וחיפוש
+  // Pagination and search state
   const [page, setPage] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClass, setSelectedClass] = useState("הכל");
@@ -76,7 +76,7 @@ export const StudentManagement: React.FC = () => {
     };
   }, []);
 
-  // טעינת רשימת השיעורים (עבור ה-Dropdown)
+  // Load list of classes for the dropdown
   const fetchClassesList = async () => {
     try {
       const courses = await CourseService.getAll({ status: 'active' });
@@ -89,7 +89,7 @@ export const StudentManagement: React.FC = () => {
     }
   };
 
-  // פונקציית הטעינה הראשית
+  // Main fetch function
   const fetchStudents = async () => {
     setLoading(true);
     try {
@@ -355,16 +355,25 @@ export const StudentManagement: React.FC = () => {
                           <>
                             {/* Mobile Backdrop */}
                             <div 
-                              className="fixed inset-0 z-40 sm:hidden"
+                              className="fixed inset-0 z-[90] bg-black/20 sm:hidden"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setOpenMenuId(null);
                               }}
                             />
                             <div 
-                              className="absolute left-0 top-full mt-1 w-52 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-50 animate-fadeIn dark:bg-slate-800 dark:border-slate-700 max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:top-auto max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:mt-0 max-sm:border-x-0 max-sm:border-b-0 max-sm:shadow-[0_-8px_30px_rgba(0,0,0,0.12)] max-sm:pb-6"
+                              className="absolute left-0 top-full mt-1 w-52 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-[95] animate-fadeIn dark:bg-slate-800 dark:border-slate-700 max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:top-auto max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:mt-0 max-sm:border-x-0 max-sm:border-b-0 max-sm:shadow-[0_-8px_30px_rgba(0,0,0,0.2)] max-sm:pb-6"
                               onClick={(e) => e.stopPropagation()}
                             >
+                              <div className="hidden max-sm:flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+                                <span className="font-semibold text-slate-800 dark:text-slate-100">פעולות לתלמיד</span>
+                                <button
+                                  onClick={() => setOpenMenuId(null)}
+                                  className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                                >
+                                  סגור
+                                </button>
+                              </div>
                               <button
                                 onClick={() => {
                                   setEnrollModalStudent(student);
