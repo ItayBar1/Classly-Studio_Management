@@ -1,80 +1,122 @@
-# Performance Regression Analysis - Commit e04e9b0
+# Performance Regression Analysis - Commit e04e9b0 (Infrastructure Focus)
 
 ## Executive Summary
-The most likely regression risk introduced by PR #98 is in the **payment success flow** (`PaymentService.processSuccessfulPayment`) where each successful payment now executes a **multi-step DB transaction** (`updateMany` + `findUnique` + conditional `enrollments.updateMany`) instead of a single `update`. Under concurrent webhook retries and client confirmation calls, this can increase row lock contention and DB write pressure, which can spill over into broad API latency if the DB pool is near saturation.
+Your updated symptom (“**all DB-related operations are slow**”) points less to an isolated feature bug and more to a **shared database bottleneck** (pool saturation / lock waits / high DB CPU). Based on the PR diff itself, the strongest candidate is the payment/webhook change that now performs heavier transactional work per event and processes webhooks synchronously before acknowledging Stripe. Under retry pressure, this can consume DB connections and degrade unrelated requests like Login, Signup, and Dashboard.
 
-A secondary risk is that the payments listing endpoint (`getAllPayments`) still performs an **unbounded `findMany` with nested includes**, which becomes expensive as data grows and can amplify perceived slowness when admin traffic is present.
+Importantly: I did **not** find evidence in this PR of Prisma singleton breakage or new global auth middleware scans on large tables.
+
+---
 
 ## Detailed Findings
 
-### 1) Hot-path payment write amplification and transaction contention
-- `confirmPayment()` and webhook handler now both funnel into `processSuccessfulPayment()`.
-- That method wraps multiple writes/reads in `prisma.$transaction(...)`:
-  - `payments.updateMany(...)` filtered by `stripe_payment_intent_id` and `status='PENDING'`
-  - `payments.findUnique(...)`
-  - `enrollments.updateMany(...)` when enrollment exists
-- This is safer for idempotency, but increases DB round trips and lock windows vs the previous single-row update pattern.
+### 1) Connection Pooling / Long-running transactions / Un-awaited promises
 
-**Why this can slow production:**
-- Stripe can retry webhooks aggressively on transient failures.
-- Client confirmation and webhook can race on same intent.
-- High payment throughput creates many short write transactions on `payments` + `enrollments`; if pool/IO is tight, p95+ latency can rise for unrelated endpoints.
+#### What changed in the PR
+- The payment success path was refactored into `processSuccessfulPayment()` with a DB transaction containing:
+  1. `payments.updateMany(...)` on `stripe_payment_intent_id + status='PENDING'`
+  2. `payments.findUnique(...)`
+  3. conditional `enrollments.updateMany(...)`
+- Both client confirmation and Stripe webhook success now go through this path.
 
-## 2) Heavy synchronous webhook path
-- `WebhookController.handleStripeWebhook` awaits full DB processing before returning `200` to Stripe.
-- Any DB slowness directly elongates webhook request time.
+#### Why this can become a global bottleneck
+- During bursts (or Stripe retries), each success event does multiple DB operations inside one transaction.
+- Webhook requests **wait** for DB processing before returning success to Stripe, so any slowdown increases webhook retry traffic.
+- That feedback loop can saturate Prisma pool/DB connections and increase latency for all endpoints.
 
-**Why this can slow production:**
-- Slow webhook responses trigger retries, increasing duplicate traffic and DB pressure.
-- This positive feedback loop can degrade overall API responsiveness.
+#### Evidence from code
+- Transactional payment path: `prisma.$transaction(...)` with multiple statements.  
+- Shared usage by both `confirmPayment` and webhook flow.  
+- Webhook handler awaits processing before `res.json({ received: true })`.
 
-## 3) Potentially expensive unpaginated payments read
-- `PaymentService.getAllPayments()` uses unpaginated `findMany` with nested `include` for student and class details.
+### 2) Prisma instantiation (multiple clients vs singleton)
 
-**Why this can slow production:**
-- Large result sets increase DB CPU, memory transfer, and Node serialization time.
-- Admin page loads can become expensive and contend with transactional workload.
+#### Result
+- No regression found in this PR.
+- Prisma client remains a singleton (`globalThis` cache in non-production), and the PR does not modify `server/src/config/prisma.ts`.
 
-## Recommended Fixes
+#### Implication
+- The slowdown is unlikely caused by accidental multiple PrismaClient instances introduced by this PR.
 
-1. **Shorten critical transaction path in payment success flow**
-   - Keep idempotency, but reduce work inside the transaction:
-     - First perform a conditional single-row update (`UPDATE ... WHERE status='PENDING'`) with `RETURNING` semantics (Prisma raw SQL or optimized pattern).
-     - Move non-critical reconciliation/logging outside the transaction.
-   - Ensure `enrollments` update only runs if payment transition actually occurred.
+### 3) Missing indexes on global/auth queries
 
-2. **Acknowledge webhook quickly**
-   - Persist a minimal webhook event record (or queue task), return `200`, then process asynchronously.
-   - Add dedup key on `event.id` to prevent replay work.
+#### What I checked
+- Auth middleware query path (`authenticateUser`) and auth controller login/register paths.
+- Dashboard queries used by admin/instructor screens.
 
-3. **Paginate payment history endpoint**
-   - Add `limit/offset` (or cursor) and only select fields required by UI.
-   - Consider summary + detail endpoints to avoid over-fetching.
+#### Result
+- No new middleware/guard query introduced by this PR in auth middleware.
+- Login still uses `users.findUnique({ where: { email } })` (index-friendly if unique email constraint exists).
+- Middleware uses `users.findUnique({ where: { id } })` (PK lookup).
 
-4. **Validate indexing explicitly**
-   - Confirm indexes exist and are used for:
-     - `payments(stripe_payment_intent_id)` (unique already expected)
-     - `payments(status)` or composite access path if queries often filter by status + studio/date
-     - `enrollments(id, payment_status)` (or rely on PK id and avoid additional predicates if possible)
+#### Caveat
+- Dashboard/service reads can still be expensive at scale if index coverage is weak (e.g., filters on `payments(studio_id, status, created_at)`), but this appears pre-existing rather than introduced in this PR.
 
-5. **Add timeout/circuit behavior around Stripe retrieval path**
-   - `confirmPayment()` currently blocks on Stripe retrieve; add strict timeout/retry budget and fail-fast behavior to avoid thread/event-loop backlog during Stripe issues.
+### 4) Deadlocks / row locks impact on Login & Dashboard
 
-## Monitoring Suggestions
-To confirm/refute this theory after deployment, monitor these metrics together:
+#### Risk assessment
+- `processSuccessfulPayment` updates `payments` and `enrollments` rows in a transaction; this can cause lock waits on those tables.
+- Login touches `users`, so it should not be directly blocked by row locks on payments/enrollments.
+- However, if webhook/payment traffic causes **pool exhaustion** or DB CPU saturation, login/dashboard can still slow down globally.
 
-- **API latency:** p50/p95/p99 by route (`/webhook`, `/payments`, global)
-- **DB health:**
-  - active connections / pool wait time
-  - transaction duration
-  - lock wait events and deadlocks
-  - top queries by total time (especially `payments` and `enrollments` updates)
-- **Webhook behavior:**
-  - Stripe webhook delivery latency
-  - retry counts and duplicate event rate
-- **JVM/Node runtime:**
-  - event-loop lag, CPU, heap usage, GC pause (if JVM services also depend on same DB)
-- **Error rates:**
-  - 5xx and timeout rates on payment + webhook endpoints
+#### Practical conclusion
+- Primary cross-cutting failure mode is likely **resource contention** (connections/CPU/IO), not direct lock conflict between login rows and payment rows.
 
-If these metrics show spikes aligned with payment success/webhook traffic, prioritize webhook decoupling + transaction simplification first.
+---
+
+## Recommended Fixes (Prioritized)
+
+1. **Fast-ack Stripe webhooks**
+   - Verify signature + persist minimal event metadata + return `200` quickly.
+   - Process DB side effects asynchronously (queue/worker).
+   - Deduplicate by Stripe `event.id` to avoid repeat work.
+
+2. **Reduce transaction footprint in payment success flow**
+   - Keep idempotency, but minimize statements inside one transaction.
+   - Only run enrollment update when payment actually transitions `PENDING -> SUCCEEDED`.
+
+3. **Protect the DB pool**
+   - Set explicit Prisma pool limits and monitor pool wait time.
+   - Add backpressure/rate limits on webhook endpoint to absorb spikes.
+
+4. **Index audit for high-frequency reads**
+   - Confirm execution plans for:
+     - `payments` filters used in dashboard (`studio_id`, `status`, `created_at`)
+     - enrollment filters used in instructor/dashboard paths.
+
+5. **Operational guardrails**
+   - Add timeout budgets around external Stripe calls and fail-fast policies.
+   - Add alerting on webhook retry anomalies.
+
+---
+
+## Monitoring Suggestions to Confirm the Theory
+
+Track these at the same time window:
+
+- **Prisma / app-layer**
+  - Active DB connections
+  - Pool wait time / query queueing
+  - Request latency p50/p95/p99 by route (`/api/auth/login`, `/api/users/me`, `/api/dashboard/*`, `/api/webhook/stripe`)
+
+- **Database**
+  - DB CPU and IO utilization
+  - Lock waits by table (`payments`, `enrollments`)
+  - Top SQL by total time + rows scanned
+  - Transaction duration percentiles
+
+- **Stripe webhook health**
+  - Webhook delivery latency
+  - Retry count and duplicate event rate
+
+If latency spikes correlate with webhook retry spikes + pool wait + DB CPU, it strongly supports the shared-bottleneck hypothesis.
+
+---
+
+## Quick Verification Checklist (Runbook)
+
+1. Inspect route-level latency before/after webhook spikes.
+2. Compare DB active connections vs pool max at incident time.
+3. Run EXPLAIN ANALYZE for dashboard payment queries.
+4. Verify Stripe retry logs around the same timestamps.
+5. Temporarily disable webhook side-effect processing (or queue it) in staging and load-test.
+
