@@ -68,7 +68,13 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    logger.error(`API Error: ${error.response?.status} from ${error.config?.url}`, error.response?.data || error.message);
+    logger.error(
+      `API Error: ${error.response?.status} from ${error.config?.url}`,
+      {
+        responseData: error.response?.data,
+        message: error.message
+      }
+    );
     if (error.response?.status === 401) {
       const requestUrl = error.config?.url || '';
       const isAuthRequest = AUTH_PATHS.some((path) => requestUrl.includes(path));
