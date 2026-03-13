@@ -1,5 +1,4 @@
 import { PaymentService } from '../../src/services/paymentService';
-import Stripe from 'stripe';
 
 const mockPrisma = {
   payments: {
