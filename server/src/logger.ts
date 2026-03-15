@@ -12,18 +12,39 @@ const isProduction =
 const usePrettyPrint =
   !isProduction && !isVercel && environment.nodeEnv !== "test";
 
+const targets: any[] = [];
+
+if (usePrettyPrint) {
+  targets.push({
+    target: "pino-pretty",
+    options: { colorize: true },
+  });
+} else {
+  // Explicitly add console output for production so we don't lose stdout
+  targets.push({
+    target: "pino/file",
+    options: { destination: 1 }, // 1 = stdout
+  });
+}
+
+// Add Loki transport
+targets.push({
+  target: "pino-loki",
+  options: {
+    batching: false, // Disabled temporarily for debugging JSON structure
+    interval: 5,
+    host: "http://loki:3100", // Log storage in Docker internal network
+    labels: { application: "classly-backend" },
+    propsToLabels: ["service"],
+  },
+});
+
 const loggerOptions: LoggerOptions = {
   level: environment.logLevel || "info",
   base: { service: "classly-server" },
-  timestamp: stdTimeFunctions.isoTime,
-  // In production or on Vercel, use standard JSON output (undefined transport).
-  // This prevents errors related to loading worker threads in serverless environments.
-  transport: usePrettyPrint
-    ? {
-        target: "pino-pretty",
-        options: { colorize: true },
-      }
-    : undefined,
+  transport: {
+    targets,
+  },
 };
 
 export const logger: Logger = pino(loggerOptions);

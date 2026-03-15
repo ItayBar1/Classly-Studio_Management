@@ -3,8 +3,11 @@ import {
     Building2,
     Users,
     Activity,
-    ShieldCheck
+    ShieldCheck,
+    Terminal
 } from 'lucide-react';
+
+const grafanaUrl = import.meta.env.VITE_GRAFANA_URL || 'http://localhost:3001';
 
 export const SuperAdminDashboard: React.FC = () => {
     return (
@@ -65,9 +68,20 @@ export const SuperAdminDashboard: React.FC = () => {
 
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
                 <h3 className="text-lg font-bold text-slate-800 mb-4">פעולות מהירות</h3>
-                <p className="text-slate-500">
+                <p className="text-slate-500 mb-4">
                     לביצוע פעולות ניהול מתקדמות, אנא עבור ללשונית "ניהול" בתפריט הצד.
                 </p>
+                <div className="flex items-center gap-4">
+                    <a
+                        href={grafanaUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition"
+                    >
+                        <Terminal size={18} />
+                        ראה לוגים מהמערכת
+                    </a>
+                </div>
             </div>
         </div>
     );

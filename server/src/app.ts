@@ -18,6 +18,7 @@ import userRoutes from "./routes/userRoutes";
 import studioRoutes from "./routes/studioRoutes";
 import branchRoutes from "./routes/branchRoutes";
 import roomRoutes from "./routes/roomRoutes";
+import logRoutes from "./routes/logRoutes";
 import { requestLogger } from "./logger";
 
 export const app = express();
@@ -86,6 +87,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/studios", studioRoutes);
 app.use("/api/branches", branchRoutes);
 app.use("/api/rooms", roomRoutes);
+app.use("/api/logs", logRoutes);
 
 // Health Check
 app.get("/api/health", (req, res) => {
