@@ -105,8 +105,8 @@ Create your distinct `.env` files establishing the foundational connection layer
 **`client/.env`:**
 ```ini
 VITE_API_URL=http://localhost:5000/api
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_GRAFANA_URL=http://localhost:3001
+VITE_STRIPE_PUBLISHABLE_KEY=your-stripe-published-key
 VITE_A11Y_WIDGET_ENABLED=true
 ```
 
@@ -114,10 +114,22 @@ VITE_A11Y_WIDGET_ENABLED=true
 ```ini
 PORT=5000
 CLIENT_URL=http://localhost
-DATABASE_URL=postgresql://itay:YOUR_PASSWORD@localhost:5432/classly_db
+DATABASE_URL=postgresql://itay:YOUR_PASSWORD@db:5432/classly_db?schema=public
 JWT_SECRET=your_jwt_secret
 STRIPE_SECRET_KEY=your_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=your_webhook_secret
+SUPERADMIN_EMAIL=your-superadmin-email
+SUPERADMIN_PASSWORD=your-superadmin-password
+SMTP_HOST=smtp.resend.com
+SMTP_PORT=587
+SMTP_USER=resend
+SMTP_PASS=your-SMTP-pass
+SMTP_FROM=onboarding@resend.dev
+```
+
+**`.env`:**
+```ini
+DB_PASSWORD=your-db-password
 ```
 
 ### 2. Streamlined Docker Start
