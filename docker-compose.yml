@@ -12,6 +12,21 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
       - ./studio_management_schema_setup.sql:/docker-entrypoint-initdb.d/setup.sql
+  loki:
+    image: grafana/loki:3.5.12
+    container_name: classly-loki
+    ports:
+      - "3100:3100"
+    restart: always
+
+  grafana:
+    image: grafana/grafana:12.3
+    container_name: classly-grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - loki
+    restart: always
 
   backend:
     build: ./server

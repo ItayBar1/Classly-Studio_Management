@@ -28,6 +28,25 @@ class Logger {
         if (payload.access_token) payload.access_token = '***';
     }
 
+    // Send to backend bridge
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api';
+      fetch(`${apiUrl}/logs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          level,
+          message,
+          context: payload
+        })
+      }).catch((err) => {
+        // Prevent recursive logging
+        console.error('Failed to send log to server:', err);
+      });
+    } catch(err) {
+      console.error('Failed to prepare log for server:', err);
+    } // End frontend log bridge
+
     console[level](`[${timestamp}] [${level.toUpperCase()}] ${message}`, payload || '');
   }
 
