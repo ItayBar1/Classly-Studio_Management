@@ -1,3 +1,5 @@
+import { getStoredToken } from '../utils/storage';
+
 type LogLevel = 'info' | 'warn' | 'error';
 
 /**
@@ -27,6 +29,31 @@ class Logger {
         if (payload.token) payload.token = '***';
         if (payload.access_token) payload.access_token = '***';
     }
+
+    // Send to backend bridge
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api';
+      const token = getStoredToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      fetch(`${apiUrl}/logs`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          level,
+          message,
+          context: payload
+        })
+      }).catch((err) => {
+        // Prevent recursive logging
+        console.error('Failed to send log to server:', err);
+      });
+    } catch(err) {
+      console.error('Failed to prepare log for server:', err);
+    } // End frontend log bridge
 
     console[level](`[${timestamp}] [${level.toUpperCase()}] ${message}`, payload || '');
   }

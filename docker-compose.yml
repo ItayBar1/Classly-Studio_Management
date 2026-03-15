@@ -12,6 +12,28 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
       - ./studio_management_schema_setup.sql:/docker-entrypoint-initdb.d/setup.sql
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: classly-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./docker/loki/loki-config.yaml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: always
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: classly-grafana
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./docker/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - loki
+    restart: always
 
   backend:
     build: ./server
@@ -42,6 +64,7 @@ services:
       context: ./client
       args:
         - VITE_API_URL=${VITE_API_URL:-http://localhost:5000/api}
+        - VITE_GRAFANA_URL=${VITE_GRAFANA_URL:-http://localhost:3001}
     container_name: classly-web
     restart: always
     ports:
@@ -53,3 +76,5 @@ services:
 
 volumes:
   postgres_data:
+  loki_data:
+  grafana_data:
