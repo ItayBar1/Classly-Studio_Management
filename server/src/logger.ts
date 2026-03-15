@@ -35,6 +35,7 @@ targets.push({
     interval: 5,
     host: "http://loki:3100", // Log storage in Docker internal network
     labels: { application: "classly-backend" },
+    propsToLabels: ["level", "service"],
   },
 });
 

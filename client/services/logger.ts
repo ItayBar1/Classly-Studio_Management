@@ -1,3 +1,5 @@
+import { getStoredToken } from '../utils/storage';
+
 type LogLevel = 'info' | 'warn' | 'error';
 
 /**
@@ -31,9 +33,15 @@ class Logger {
     // Send to backend bridge
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '/api';
+      const token = getStoredToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       fetch(`${apiUrl}/logs`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           level,
           message,

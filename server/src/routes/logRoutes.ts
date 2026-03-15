@@ -1,10 +1,11 @@
 import { Router, Request, Response } from "express";
 import { logger } from "../logger";
+import { authenticateUser } from "../middleware/authMiddleware";
 
 const router = Router();
 
-// Receives logs from the client
-router.post("/", (req: Request, res: Response) => {
+// Receives logs from the client, strictly authenticated
+router.post("/", authenticateUser, (req: Request, res: Response) => {
   const { level = "info", message, context, ...rest } = req.body;
 
   if (!message) {
