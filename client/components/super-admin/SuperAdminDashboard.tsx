@@ -7,6 +7,8 @@ import {
     Terminal
 } from 'lucide-react';
 
+const grafanaUrl = import.meta.env.VITE_GRAFANA_URL || 'http://localhost:3001';
+
 export const SuperAdminDashboard: React.FC = () => {
     return (
         <div className="space-y-6">
@@ -71,13 +73,13 @@ export const SuperAdminDashboard: React.FC = () => {
                 </p>
                 <div className="flex items-center gap-4">
                     <a
-                        href={import.meta.env.PROD ? 'https://grafana.classly.app' : 'http://localhost:3001'}
+                        href={grafanaUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition"
                     >
                         <Terminal size={18} />
-                        View System Logs
+                        ראה לוגים מהמערכת
                     </a>
                 </div>
             </div>

@@ -31,18 +31,17 @@ if (usePrettyPrint) {
 targets.push({
   target: "pino-loki",
   options: {
-    batching: true,
+    batching: false, // Disabled temporarily for debugging JSON structure
     interval: 5,
     host: "http://loki:3100", // Log storage in Docker internal network
     labels: { application: "classly-backend" },
-    propsToLabels: ["level", "service"],
+    propsToLabels: ["service"],
   },
 });
 
 const loggerOptions: LoggerOptions = {
   level: environment.logLevel || "info",
   base: { service: "classly-server" },
-  timestamp: stdTimeFunctions.isoTime,
   transport: {
     targets,
   },

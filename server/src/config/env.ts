@@ -47,7 +47,7 @@ export const environment = {
 
 export const allowedCorsOrigins = Array.from(
   new Set(
-    [process.env.CLIENT_URL, 'http://localhost:3000'].filter(
+    [process.env.CLIENT_URL, 'http://localhost:3000', 'http://localhost'].filter(
       (origin): origin is string => Boolean(origin)
     )
   )

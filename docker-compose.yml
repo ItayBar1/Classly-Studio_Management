@@ -64,6 +64,7 @@ services:
       context: ./client
       args:
         - VITE_API_URL=${VITE_API_URL:-http://localhost:5000/api}
+        - VITE_GRAFANA_URL=${VITE_GRAFANA_URL:-http://localhost:3001}
     container_name: classly-web
     restart: always
     ports:
