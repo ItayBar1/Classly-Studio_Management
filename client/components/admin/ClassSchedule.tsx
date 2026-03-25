@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, Clock, MapPin, Users, Plus, ChevronLeft, Loader2 } from "lucide-react";
+import { Helmet } from "react-helmet-async";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Users,
+  Plus,
+  ChevronLeft,
+  Loader2,
+} from "lucide-react";
 import { CourseService } from "../../services/api";
 import { ClassSession } from "../../types/types";
 import { AddClassModal } from "./AddClassModal";
 import { ClassCard } from "../common/ClassCard";
 import { DAY_MAP, DAYS_ARRAY, extractTime } from "../../utils/dateUtils";
-
 
 // --- Main Component ---
 
@@ -16,7 +24,7 @@ export const ClassSchedule: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<ClassSession | null>(null);
 
-const formatClassForDisplay = (cls: any) => {
+  const formatClassForDisplay = (cls: any) => {
     const startTimeStr = extractTime(cls.start_time);
     const endTimeStr = extractTime(cls.end_time);
 
@@ -28,35 +36,35 @@ const formatClassForDisplay = (cls: any) => {
     return {
       id: cls.id,
       name: cls.name,
-      instructor: cls.instructor?.full_name || 'לא ידוע',
+      instructor: cls.instructor?.full_name || "לא ידוע",
       instructorAvatar: cls.instructor?.full_name
         ? cls.instructor.full_name.substring(0, 2).toUpperCase()
-        : '?',
+        : "?",
       startTime: startTimeStr,
       duration: duration,
       dayOfWeek: DAY_MAP[cls.day_of_week] || "ראשון",
       students: cls.current_enrollment || 0,
       capacity: cls.max_capacity,
       level: cls.level,
-      room: cls.location_room || 'אולם ראשי',
-      category: 'כללי',
-      color: 'indigo',
+      room: cls.location_room || "אולם ראשי",
+      category: "כללי",
+      color: "indigo",
       // Raw fields for editing
-      original: cls
+      original: cls,
     };
   };
 
   const fetchClasses = async () => {
     try {
       setLoading(true);
-      const data = await CourseService.getAll({ status: 'active' });
+      const data = await CourseService.getAll({ status: "active" });
 
       if (data) {
         const formattedClasses = data.map(formatClassForDisplay);
         setClasses(formattedClasses);
       }
     } catch (error) {
-      console.error('Error fetching classes:', error);
+      console.error("Error fetching classes:", error);
     } finally {
       setLoading(false);
     }
@@ -77,28 +85,34 @@ const formatClassForDisplay = (cls: any) => {
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
-    if (!confirm('האם להסיר את השיעור מהמערכת?')) return;
+    if (!confirm("האם להסיר את השיעור מהמערכת?")) return;
 
     try {
       await CourseService.delete(id);
       fetchClasses();
     } catch (err) {
       console.error("Failed to delete class", err);
-      alert('שגיאה במחיקת השיעור');
+      alert("שגיאה במחיקת השיעור");
     }
   };
 
   return (
     <div className="space-y-6">
+      <Helmet>
+        <title>לוח שיעורים | Classly</title>
+      </Helmet>
       <AddClassModal
         isOpen={isModalOpen}
-        onClose={() => { setIsModalOpen(false); setEditingClass(null); }}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingClass(null);
+        }}
         onSuccess={(newClassRaw) => {
           const formatted = formatClassForDisplay(newClassRaw);
-          setClasses(prev => {
-            const exists = prev.some(c => c.id === formatted.id);
+          setClasses((prev) => {
+            const exists = prev.some((c) => c.id === formatted.id);
             if (exists) {
-              return prev.map(c => c.id === formatted.id ? formatted : c);
+              return prev.map((c) => (c.id === formatted.id ? formatted : c));
             }
             return [...prev, formatted];
           });
@@ -114,10 +128,15 @@ const formatClassForDisplay = (cls: any) => {
             <Calendar className="text-indigo-600 dark:text-indigo-500" />
             מערכת שעות
           </h2>
-          <p className="text-slate-500 dark:text-slate-400">ניהול השיעורים השבועי שלך</p>
+          <p className="text-slate-500 dark:text-slate-400">
+            ניהול השיעורים השבועי שלך
+          </p>
         </div>
         <button
-          onClick={() => { setEditingClass(null); setIsModalOpen(true); }}
+          onClick={() => {
+            setEditingClass(null);
+            setIsModalOpen(true);
+          }}
           className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg"
         >
           <Plus size={16} />
@@ -131,10 +150,11 @@ const formatClassForDisplay = (cls: any) => {
           <button
             key={day}
             onClick={() => setSelectedDay(day)}
-            className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${selectedDay === day
-              ? "bg-indigo-50 text-indigo-700 shadow-sm dark:bg-indigo-600 dark:text-white"
-              : "text-slate-500 hover:bg-slate-50 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200"
-              }`}
+            className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+              selectedDay === day
+                ? "bg-indigo-50 text-indigo-700 shadow-sm dark:bg-indigo-600 dark:text-white"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200"
+            }`}
           >
             {day}
           </button>

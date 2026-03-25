@@ -15,6 +15,16 @@ interface JwtPayload {
   role: string;
 }
 
+// Cookie options applied to every auth cookie set by this controller.
+// secure is gated on NODE_ENV=production — local dev runs over HTTP.
+const AUTH_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
+  path: "/",
+};
+
 export class AuthController {
   /**
    * Register a new user
@@ -107,17 +117,17 @@ export class AuthController {
           role: newUser.role,
         } as JwtPayload,
         JWT_SECRET,
-        { expiresIn: "7d" },
+        { expiresIn: "7d" }
       );
 
       requestLog.info(
         { userId: newUser.id, email },
-        "User registered successfully",
+        "User registered successfully"
       );
 
+      res.cookie("classly_token", token, AUTH_COOKIE_OPTIONS);
       res.status(201).json({
         message: "User registered successfully",
-        token,
         user: {
           id: newUser.id,
           email: newUser.email,
@@ -159,7 +169,9 @@ export class AuthController {
       }
 
       // Debug: check if password_hash looks like a bcrypt hash
-      const isBcryptHash = user.password_hash.startsWith('$2a$') || user.password_hash.startsWith('$2b$');
+      const isBcryptHash =
+        user.password_hash.startsWith("$2a$") ||
+        user.password_hash.startsWith("$2b$");
       if (!isBcryptHash) {
         requestLog.warn(
           { userId: user.id, email },
@@ -170,7 +182,10 @@ export class AuthController {
       // Compare password
       const isMatch = await bcrypt.compare(password, user.password_hash);
       if (!isMatch) {
-        requestLog.info({ userId: user.id, email }, "Login failed: password mismatch");
+        requestLog.info(
+          { userId: user.id, email },
+          "Login failed: password mismatch"
+        );
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
@@ -192,16 +207,16 @@ export class AuthController {
       const token = jwt.sign(
         { userId: user.id, email: user.email, role: user.role } as JwtPayload,
         JWT_SECRET,
-        { expiresIn: "7d" },
+        { expiresIn: "7d" }
       );
 
       requestLog.info(
         { userId: user.id, email },
-        "User logged in successfully",
+        "User logged in successfully"
       );
 
+      res.cookie("classly_token", token, AUTH_COOKIE_OPTIONS);
       res.status(200).json({
-        token,
         user: {
           id: user.id,
           email: user.email,
@@ -263,16 +278,23 @@ export class AuthController {
           await EmailService.sendPasswordResetEmail(email, rawToken);
           requestLog.info({ email }, "Password reset email sent");
         } catch (emailError) {
-          requestLog.error({ err: emailError, email }, "Failed to send reset email");
+          requestLog.error(
+            { err: emailError, email },
+            "Failed to send reset email"
+          );
           // Don't fail the request — the token is saved, the link is in the logs
         }
       } else {
-        requestLog.info({ email }, "Password reset requested for non-existent email");
+        requestLog.info(
+          { email },
+          "Password reset requested for non-existent email"
+        );
       }
 
       // Always return the same response
       res.status(200).json({
-        message: "If an account with that email exists, a password reset link has been sent.",
+        message:
+          "If an account with that email exists, a password reset link has been sent.",
       });
     } catch (error) {
       requestLog.error({ err: error }, "Forgot password failed");
@@ -294,11 +316,15 @@ export class AuthController {
       const { token, password } = req.body;
 
       if (!token || !password) {
-        return res.status(400).json({ error: "Token and new password are required" });
+        return res
+          .status(400)
+          .json({ error: "Token and new password are required" });
       }
 
       if (password.length < 8) {
-        return res.status(400).json({ error: "Password must be at least 8 characters" });
+        return res
+          .status(400)
+          .json({ error: "Password must be at least 8 characters" });
       }
 
       // Hash the incoming token to compare with stored hash
@@ -314,7 +340,9 @@ export class AuthController {
       });
 
       if (!resetToken) {
-        return res.status(400).json({ error: "קישור האיפוס אינו תקין או שפג תוקפו" });
+        return res
+          .status(400)
+          .json({ error: "קישור האיפוס אינו תקין או שפג תוקפו" });
       }
 
       // Hash the new password
@@ -343,12 +371,14 @@ export class AuthController {
           role: true,
           studio_id: true,
           profile_image_url: true,
-          status: true
-        }
+          status: true,
+        },
       });
 
       if (!user) {
-        return res.status(404).json({ error: "המשתמש לא נמצא לאחר עדכון הסיסמה" });
+        return res
+          .status(404)
+          .json({ error: "המשתמש לא נמצא לאחר עדכון הסיסמה" });
       }
 
       // Create a new JWT token
@@ -358,24 +388,66 @@ export class AuthController {
         { expiresIn: "7d" }
       );
 
-      requestLog.info({ userId: resetToken.user_id }, "Password reset and auto-login successful");
+      requestLog.info(
+        { userId: resetToken.user_id },
+        "Password reset and auto-login successful"
+      );
 
-      // Return a success message along with the token and user details
+      res.cookie("classly_token", authToken, AUTH_COOKIE_OPTIONS);
       res.status(200).json({
         message: "הסיסמה עודכנה בהצלחה",
-        token: authToken,
         user: {
           id: user.id,
           email: user.email,
           full_name: user.full_name,
           role: user.role,
           studio_id: user.studio_id,
-          profile_image_url: user.profile_image_url
-        }
+          profile_image_url: user.profile_image_url,
+        },
       });
     } catch (error) {
       requestLog.error({ err: error }, "Password reset failed");
       next(error);
     }
+  }
+
+  /**
+   * Lean session check — returns only the fields needed to bootstrap the UI.
+   * Called on every app mount; kept intentionally minimal (no joins).
+   * GET /api/auth/me
+   */
+  static async me(req: Request, res: Response, next: NextFunction) {
+    try {
+      const token = req.cookies?.classly_token;
+      if (!token) return res.status(401).json({ error: "Not authenticated" });
+
+      const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+
+      const user = await prisma.users.findUnique({
+        where: { id: decoded.userId },
+        select: { id: true, role: true, studio_id: true, status: true },
+      });
+
+      if (!user) return res.status(401).json({ error: "User not found" });
+      if (user.status === "SUSPENDED")
+        return res.status(403).json({ error: "Account is suspended" });
+
+      res.json({ id: user.id, role: user.role, studio_id: user.studio_id });
+    } catch (err: any) {
+      if (err.name === "TokenExpiredError")
+        return res.status(401).json({ error: "Token expired" });
+      if (err.name === "JsonWebTokenError")
+        return res.status(401).json({ error: "Invalid token" });
+      next(err);
+    }
+  }
+
+  /**
+   * Clear the auth cookie — effectively logs the user out.
+   * POST /api/auth/logout
+   */
+  static logout(req: Request, res: Response) {
+    res.clearCookie("classly_token", { path: "/" });
+    res.json({ message: "Logged out successfully" });
   }
 }

@@ -1,5 +1,13 @@
 {
+  "scripts": {
+    "prepare": "husky",
+    "typecheck": "npm run typecheck --prefix client && npm run typecheck --prefix server",
+    "test": "npm run test:unit --prefix client && npm run test:unit --prefix server"
+  },
   "devDependencies": {
-    "@types/node": "^25.4.0"
+    "@types/node": "^25.4.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.0.0"
   }
 }
