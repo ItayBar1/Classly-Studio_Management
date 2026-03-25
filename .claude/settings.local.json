@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(docker compose:*)",
+      "Bash(npm test:*)",
+      "Bash(curl -si http://localhost/)",
+      "Bash(curl:*)",
+      "Bash(npx jest:*)"
+    ]
+  }
+}

@@ -90,6 +90,12 @@ services:
       - letsencrypt:/etc/letsencrypt
       - certbot_webroot:/var/www/certbot
 
+cf-tunnel:
+  image: cloudflare/cloudflared:latest
+  container_name: cf-tunnel
+  restart: always
+  command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}
+
 volumes:
   postgres_data:
   loki_data:
