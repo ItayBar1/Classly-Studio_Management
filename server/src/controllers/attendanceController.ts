@@ -1,24 +1,18 @@
 import { Request, Response, NextFunction } from "express";
 import { AttendanceService } from "../services/attendanceService";
 import { prisma } from "../config/prisma";
-import { logger } from "../logger";
 
 export class AttendanceController {
   // Record attendance (create or update)
   static async recordAttendance(
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ) {
-    const requestLog =
-      req.logger ||
-      logger.child({
-        controller: "AttendanceController",
-        method: "recordAttendance",
-      });
+    const requestLog = req.logger!;
     requestLog.info(
       { body: req.body, userId: req.user!.id },
-      "Controller entry",
+      "Controller entry"
     );
     try {
       const instructorId = req.user!.id;
@@ -35,12 +29,12 @@ export class AttendanceController {
       // Basic guard before calling service to avoid unnecessary work
       const isAuthorized = await AttendanceController.verifyInstructorForClass(
         instructorId,
-        classId,
+        classId
       );
       if (!isAuthorized && req.user!.role !== "ADMIN") {
         requestLog.warn(
           { instructorId, classId },
-          "Unauthorized attendance attempt",
+          "Unauthorized attendance attempt"
         );
         return res
           .status(403)
@@ -51,11 +45,11 @@ export class AttendanceController {
         classId,
         date,
         instructorId,
-        records,
+        records
       );
       requestLog.info(
         { count: result.length },
-        "Attendance recorded successfully",
+        "Attendance recorded successfully"
       );
       res.json({
         message: "Attendance recorded successfully",
@@ -71,17 +65,12 @@ export class AttendanceController {
   static async getClassAttendance(
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ) {
-    const requestLog =
-      req.logger ||
-      logger.child({
-        controller: "AttendanceController",
-        method: "getClassAttendance",
-      });
+    const requestLog = req.logger!;
     requestLog.info(
       { params: req.params, query: req.query, userId: req.user!.id },
-      "Controller entry",
+      "Controller entry"
     );
     try {
       const { classId } = req.params;
@@ -93,7 +82,7 @@ export class AttendanceController {
         const isAuthorized =
           await AttendanceController.verifyInstructorForClass(
             instructorId,
-            classId,
+            classId
           );
         if (!isAuthorized)
           return res.status(403).json({ error: "Unauthorized" });
@@ -101,11 +90,11 @@ export class AttendanceController {
 
       const data = await AttendanceService.getClassAttendance(
         classId,
-        date as string,
+        date as string
       );
       requestLog.info(
         { classId, count: data?.length },
-        "Class attendance fetched successfully",
+        "Class attendance fetched successfully"
       );
       res.json(data);
     } catch (error: any) {
@@ -118,27 +107,22 @@ export class AttendanceController {
   static async getStudentHistory(
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ) {
-    const requestLog =
-      req.logger ||
-      logger.child({
-        controller: "AttendanceController",
-        method: "getStudentHistory",
-      });
+    const requestLog = req.logger!;
     requestLog.info({ userId: req.user!.id }, "Controller entry");
     try {
       const studentId = req.user!.id;
       const history = await AttendanceService.getStudentHistory(studentId);
       requestLog.info(
         { count: history?.length },
-        "Student attendance history fetched",
+        "Student attendance history fetched"
       );
       res.json(history);
     } catch (error: any) {
       requestLog.error(
         { err: error },
-        "Error fetching student attendance history",
+        "Error fetching student attendance history"
       );
       next(error);
     }
@@ -147,7 +131,7 @@ export class AttendanceController {
   // Helper: ensure instructor is assigned to the class
   private static async verifyInstructorForClass(
     instructorId: string,
-    classId: string,
+    classId: string
   ): Promise<boolean> {
     const data = await prisma.classes.findUnique({
       where: { id: classId },

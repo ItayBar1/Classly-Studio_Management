@@ -3,7 +3,6 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../config/prisma";
 import { environment } from "../config/env";
-import { logger } from "../logger";
 import { EmailService } from "../services/emailService";
 import { generateSecureToken, hashToken } from "../utils/cryptoUtils";
 
@@ -31,10 +30,7 @@ export class AuthController {
    * POST /api/auth/register
    */
   static async register(req: Request, res: Response, next: NextFunction) {
-    const requestLog = logger.child({
-      controller: "AuthController",
-      method: "register",
-    });
+    const requestLog = req.logger!;
 
     try {
       const {
@@ -147,10 +143,7 @@ export class AuthController {
    * POST /api/auth/login
    */
   static async login(req: Request, res: Response, next: NextFunction) {
-    const requestLog = logger.child({
-      controller: "AuthController",
-      method: "login",
-    });
+    const requestLog = req.logger!;
 
     try {
       const { email, password } = req.body;
@@ -237,10 +230,7 @@ export class AuthController {
    * POST /api/auth/forgot-password
    */
   static async forgotPassword(req: Request, res: Response, next: NextFunction) {
-    const requestLog = logger.child({
-      controller: "AuthController",
-      method: "forgotPassword",
-    });
+    const requestLog = req.logger!;
 
     try {
       const { email } = req.body;
@@ -307,10 +297,7 @@ export class AuthController {
    * POST /api/auth/reset-password
    */
   static async resetPassword(req: Request, res: Response, next: NextFunction) {
-    const requestLog = logger.child({
-      controller: "AuthController",
-      method: "resetPassword",
-    });
+    const requestLog = req.logger!;
 
     try {
       const { token, password } = req.body;

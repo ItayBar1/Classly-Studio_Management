@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from "react";
+import React, { useState, useEffect, Suspense, lazy, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
 import { BottomNav } from "./components/BottomNav";
@@ -118,11 +118,6 @@ function App() {
     return false;
   });
 
-  // Keep track of which tabs have been visited to lazy-load them
-  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(
-    new Set(["dashboard"])
-  );
-
   const isResetPassword = location.pathname === "/reset-password";
 
   // Fetch the latest role from the backend (authoritative source)
@@ -187,14 +182,6 @@ function App() {
     console.info("Initial auth check completed");
   }, []);
 
-  useEffect(() => {
-    setVisitedTabs((prev) => {
-      const newSet = new Set(prev);
-      newSet.add(activeTab);
-      return newSet;
-    });
-  }, [activeTab]);
-
   const handleAuthSuccess = () => {
     setIsAuthenticated(true);
     const cachedUser = getStoredUser();
@@ -213,7 +200,6 @@ function App() {
       setIsAuthenticated(false);
       setCurrentUser(null);
       setUserRole("STUDENT");
-      setVisitedTabs(new Set(["dashboard"]));
       setActiveTab("dashboard");
       setShowLogin(false);
       navigate("/"); // return to landing after logout
@@ -305,20 +291,14 @@ function App() {
     );
   }
 
-  // List of all possible tabs for authenticated users
-  const allTabs = [
-    "dashboard",
-    "students",
-    "schedule",
-    "payments",
-    "administration",
-    "settings",
-    "browse",
-  ];
+  const tabContent = useMemo(
+    () => getComponentForTab(activeTab),
+    [activeTab, userRole]
+  );
 
   return (
     <div
-      className="flex min-h-screen bg-slate-50 font-sans transition-colors duration-200 dark:bg-slate-950"
+      className="flex min-h-screen bg-slate-50 font-sans transition-colors duration-200 dark:bg-slate-950 overflow-x-hidden"
       dir="rtl"
     >
       {/* Desktop Sidebar - hidden on small screens */}
@@ -339,7 +319,7 @@ function App() {
         userRole={userRole}
       />
 
-      <main className="flex-1 md:mr-64 p-4 sm:p-8 pb-24 md:pb-8">
+      <main className="flex-1 md:mr-64 p-4 sm:p-8 pb-24 md:pb-8 min-w-0 overflow-x-hidden">
         <header className="flex justify-end items-center mb-8">
           {/* User header */}
           <div className="flex items-center gap-4">
@@ -364,24 +344,15 @@ function App() {
         </header>
 
         <div className="max-w-7xl mx-auto animate-fadeIn">
-          {allTabs.map((tab) => {
-            // Keep tabs alive if they were visited
-            if (!visitedTabs.has(tab) && activeTab !== tab) return null;
-
-            return (
-              <div key={tab} className={activeTab === tab ? "block" : "hidden"}>
-                <Suspense
-                  fallback={
-                    <div className="flex h-64 items-center justify-center">
-                      <Loader2 className="animate-spin w-8 h-8 text-indigo-600" />
-                    </div>
-                  }
-                >
-                  {getComponentForTab(tab)}
-                </Suspense>
+          <Suspense
+            fallback={
+              <div className="flex h-64 items-center justify-center">
+                <Loader2 className="animate-spin w-8 h-8 text-indigo-600" />
               </div>
-            );
-          })}
+            }
+          >
+            {tabContent}
+          </Suspense>
         </div>
       </main>
     </div>

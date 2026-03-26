@@ -31,9 +31,40 @@ jest.mock("../../src/logger", () => ({
 // Alias for ergonomic access to mock functions in test bodies.
 const mockPrisma = prisma as any;
 
+/** Simulates a Prisma Decimal so that Number(mock) works correctly. */
+const mockDecimal = (n: number) => ({
+  toNumber: () => n,
+  valueOf: () => n,
+  toString: () => String(n),
+});
+
 describe("EnrollmentService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe("getCourseInfo", () => {
+    it("returns course name and price", async () => {
+      mockPrisma.classes.findUnique.mockResolvedValue({
+        name: "Yoga",
+        price_ils: mockDecimal(120),
+      });
+
+      const info = await EnrollmentService.getCourseInfo("class-1");
+      expect(info.name).toBe("Yoga");
+      expect(Number(info.price)).toBe(120);
+      expect(mockPrisma.classes.findUnique).toHaveBeenCalledWith({
+        where: { id: "class-1" },
+        select: { name: true, price_ils: true },
+      });
+    });
+
+    it("throws 404 if course not found", async () => {
+      mockPrisma.classes.findUnique.mockResolvedValue(null);
+      await expect(
+        EnrollmentService.getCourseInfo("nonexistent")
+      ).rejects.toThrow("Course not found");
+    });
   });
 
   describe("enrollStudent", () => {
@@ -48,7 +79,7 @@ describe("EnrollmentService", () => {
       mockPrisma.classes.findUnique.mockResolvedValue({
         max_capacity: 10,
         current_enrollment: 10,
-        price_ils: 50,
+        price_ils: mockDecimal(50),
         name: "Yoga class",
       });
       await expect(
@@ -60,7 +91,7 @@ describe("EnrollmentService", () => {
       mockPrisma.classes.findUnique.mockResolvedValue({
         max_capacity: 10,
         current_enrollment: 5,
-        price_ils: 50,
+        price_ils: mockDecimal(50),
         name: "Yoga class",
       });
       mockPrisma.enrollments.findFirst.mockResolvedValue({ id: "enroll-1" });
@@ -74,7 +105,7 @@ describe("EnrollmentService", () => {
       mockPrisma.classes.findUnique.mockResolvedValue({
         max_capacity: 10,
         current_enrollment: 5,
-        price_ils: 50,
+        price_ils: mockDecimal(50),
         name: "Yoga class",
       });
       mockPrisma.enrollments.findFirst.mockResolvedValue(null);
@@ -102,7 +133,7 @@ describe("EnrollmentService", () => {
       mockPrisma.classes.findUnique.mockResolvedValue({
         max_capacity: 10,
         current_enrollment: 5,
-        price_ils: 0,
+        price_ils: mockDecimal(0),
         name: "Free class",
       });
       mockPrisma.enrollments.findFirst.mockResolvedValue(null);
@@ -127,6 +158,43 @@ describe("EnrollmentService", () => {
         })
       );
       expect(result.enrollment.status).toBe("ACTIVE");
+    });
+
+    it("uses tx client when tx parameter is provided", async () => {
+      const mockTx = {
+        classes: {
+          findUnique: jest.fn().mockResolvedValue({
+            max_capacity: 10,
+            current_enrollment: 3,
+            price_ils: mockDecimal(50),
+            name: "Pilates",
+          }),
+        },
+        enrollments: {
+          findFirst: jest.fn().mockResolvedValue(null),
+          create: jest.fn().mockResolvedValue({
+            id: "tx-enroll-1",
+            studio_id: "studio-1",
+            student_id: "student-1",
+            class_id: "class-1",
+            status: "PENDING",
+            payment_status: "PENDING",
+          }),
+        },
+      };
+
+      await EnrollmentService.enrollStudent(
+        "studio-1",
+        "student-1",
+        "class-1",
+        "PENDING",
+        "PENDING",
+        undefined,
+        mockTx as any
+      );
+
+      expect(mockTx.enrollments.create).toHaveBeenCalled();
+      expect(mockPrisma.enrollments.create).not.toHaveBeenCalled();
     });
   });
 

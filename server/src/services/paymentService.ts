@@ -1,11 +1,11 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma";
 import Stripe from "stripe";
 import { logger } from "../logger";
 import { environment } from "../config/env";
+import { AppError } from "../utils/AppError";
 
-const stripe = new Stripe(environment.stripe.secretKey || "", {
-  apiVersion: "2026-02-25.clover",
-});
+const stripe = new Stripe(environment.stripe.secretKey || "");
 
 export class PaymentService {
   /**
@@ -15,7 +15,7 @@ export class PaymentService {
     amount: number,
     currency: string = "ils",
     description?: string,
-    metadata?: Record<string, unknown>,
+    metadata?: Record<string, unknown>
   ) {
     const serviceLogger = logger.child({
       service: "PaymentService",
@@ -23,11 +23,11 @@ export class PaymentService {
     });
     serviceLogger.info(
       { amount, currency, description },
-      "Starting createIntent",
+      "Starting createIntent"
     );
 
     if (!amount || amount <= 0) {
-      throw new Error("Invalid amount");
+      throw new AppError("Invalid amount", 400);
     }
 
     const paymentIntent = await stripe.paymentIntents.create({
@@ -42,7 +42,7 @@ export class PaymentService {
 
     serviceLogger.info(
       { paymentIntentId: paymentIntent.id },
-      "Payment intent created via Stripe",
+      "Payment intent created via Stripe"
     );
     return { clientSecret: paymentIntent.client_secret, id: paymentIntent.id };
   }
@@ -50,14 +50,17 @@ export class PaymentService {
   /**
    * Create a payment record with PENDING status
    */
-  static async createPaymentRecord(params: {
-    studioId: string;
-    studentId: string;
-    enrollmentId: string;
-    amount: number;
-    currency?: string;
-    stripePaymentIntentId: string;
-  }) {
+  static async createPaymentRecord(
+    params: {
+      studioId: string;
+      studentId: string;
+      enrollmentId: string;
+      amount: number;
+      currency?: string;
+      stripePaymentIntentId: string;
+    },
+    tx?: Prisma.TransactionClient
+  ) {
     const {
       studioId,
       studentId,
@@ -73,10 +76,10 @@ export class PaymentService {
     });
     serviceLogger.info(
       { studioId, studentId, enrollmentId },
-      "Creating payment record",
+      "Creating payment record"
     );
 
-    const data = await prisma.payments.create({
+    const data = await (tx ?? prisma).payments.create({
       data: {
         studio_id: studioId,
         student_id: studentId,
@@ -113,18 +116,21 @@ export class PaymentService {
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
     if (paymentIntent.status !== "succeeded") {
-      throw new Error(`Payment not succeeded. Status: ${paymentIntent.status}`);
+      throw new AppError(
+        `Payment not succeeded. Status: ${paymentIntent.status}`,
+        422
+      );
     }
 
     const updatedPayment = await this.processSuccessfulPayment(
       paymentIntentId,
       paymentIntent.latest_charge,
-      "payment confirmation",
+      "payment confirmation"
     );
 
     serviceLogger.info(
       { paymentId: updatedPayment.id },
-      "Payment confirmation completed",
+      "Payment confirmation completed"
     );
     return { success: true, payment: updatedPayment };
   }
@@ -132,7 +138,7 @@ export class PaymentService {
   private static async processSuccessfulPayment(
     paymentIntentId: string,
     latestCharge: Stripe.PaymentIntent["latest_charge"],
-    source: string,
+    source: string
   ) {
     const serviceLogger = logger.child({
       service: "PaymentService",
@@ -148,7 +154,8 @@ export class PaymentService {
         data: {
           status: "SUCCEEDED",
           paid_date: new Date(),
-          stripe_charge_id: typeof latestCharge === "string" ? latestCharge : latestCharge?.id,
+          stripe_charge_id:
+            typeof latestCharge === "string" ? latestCharge : latestCharge?.id,
           updated_at: new Date(),
         },
       });
@@ -158,18 +165,20 @@ export class PaymentService {
       });
 
       if (!record) {
-        throw new Error(`Payment record not found for intent: ${paymentIntentId}`);
+        throw new Error(
+          `Payment record not found for intent: ${paymentIntentId}`
+        );
       }
 
       if (updateResult.count === 0) {
         if (record.status !== "SUCCEEDED") {
           throw new Error(
-            `Payment intent succeeded in Stripe, but local record is in unexpected state: ${record.status}`,
+            `Payment intent succeeded in Stripe, but local record is in unexpected state: ${record.status}`
           );
         }
         serviceLogger.info(
           { paymentIntentId },
-          "Payment already processed. Ensuring side effects are complete.",
+          "Payment already processed. Ensuring side effects are complete."
         );
       }
 
@@ -191,7 +200,7 @@ export class PaymentService {
             { enrollmentId: record.enrollment_id },
             updateResult.count === 0
               ? `Reconciling enrollment status after partial failure (${source})`
-              : `Updating enrollment after successful payment (${source})`,
+              : `Updating enrollment after successful payment (${source})`
           );
         }
       }
@@ -231,7 +240,7 @@ export class PaymentService {
 
     serviceLogger.info(
       { count: data?.length },
-      "Fetched payments successfully",
+      "Fetched payments successfully"
     );
     return data;
   }
@@ -256,7 +265,7 @@ export class PaymentService {
   /**
    * Asynchronously handles successful payment updates received via Stripe Webhooks.
    * Ensures the system captures the payment success even if the client closes the browser
-   * before `confirmPayment` is called. Uses a conditional update on the PENDING status 
+   * before `confirmPayment` is called. Uses a conditional update on the PENDING status
    * to enforce idempotency and prevent double-processing the same payment intent.
    * @param paymentIntentId The Stripe Payment Intent ID from the webhook event
    * @param latestCharge The latest charge object or ID associated with the payment intent
@@ -264,7 +273,7 @@ export class PaymentService {
    */
   static async handlePaymentSuccess(
     paymentIntentId: string,
-    latestCharge: Stripe.PaymentIntent["latest_charge"],
+    latestCharge: Stripe.PaymentIntent["latest_charge"]
   ) {
     const serviceLogger = logger.child({
       service: "PaymentService",
@@ -272,20 +281,19 @@ export class PaymentService {
     });
     serviceLogger.info(
       { paymentIntentId },
-      "Handling successful payment from webhook",
+      "Handling successful payment from webhook"
     );
 
     const paymentRecord = await this.processSuccessfulPayment(
       paymentIntentId,
       latestCharge,
-      "webhook",
+      "webhook"
     );
 
     serviceLogger.info(
       { paymentId: paymentRecord.id },
-      "Webhook payment handling completed",
+      "Webhook payment handling completed"
     );
     return paymentRecord;
   }
-
 }
