@@ -1,4 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
 import { BottomNav } from "./components/BottomNav";
 import { Loader2 } from "lucide-react";
@@ -97,18 +98,22 @@ const BrowseCourses = lazy(() =>
 );
 
 function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [userRole, setUserRole] = useState<string>("STUDENT");
 
-
-  // If an invitation token is present in the URL, skip the LandingPage and go straight to AuthPage
+  // Invite token causes the AuthPage to render even on "/"
   const [showLogin, setShowLogin] = useState(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      return params.has('token') || !!sessionStorage.getItem('pendingInviteToken');
+      return (
+        params.has("token") || !!sessionStorage.getItem("pendingInviteToken")
+      );
     }
     return false;
   });
@@ -118,29 +123,7 @@ function App() {
     new Set(["dashboard"])
   );
 
-  // Check for reset password route
-  const isResetPassword = window.location.pathname === "/reset-password";
-
-  useEffect(() => {
-    initializeTheme();
-  }, []);
-
-  // Accessibility Widget Injection
-  useEffect(() => {
-    const isA11yEnabled = import.meta.env.VITE_A11Y_WIDGET_ENABLED === "true";
-    if (isA11yEnabled) {
-      const scriptId = "a11y-widget-script";
-      if (!document.getElementById(scriptId)) {
-        const script = document.createElement("script");
-        script.id = scriptId;
-        script.src = "https://nagishli.co.il/widget.js"; // Example provider
-        script.async = true;
-        script.defer = true;
-        document.body.appendChild(script);
-        console.info("Accessibility widget injected");
-      }
-    }
-  }, []);
+  const isResetPassword = location.pathname === "/reset-password";
 
   // Fetch the latest role from the backend (authoritative source)
   const fetchUserRole = async () => {
@@ -160,42 +143,47 @@ function App() {
     }
   };
 
-  // Initial auth check
+  // Initial auth check — reads the HttpOnly cookie via GET /api/auth/me.
+  // Cannot inspect the cookie from JavaScript; the server is the source of truth.
   useEffect(() => {
     console.info("App initialization started");
-    
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
 
-    // Extract the token and clean the URL globally
-    if (token && !isResetPassword) {
-      sessionStorage.setItem('pendingInviteToken', token);
-      window.history.replaceState({}, document.title, window.location.pathname);
-      
-      // Force logout of existing session to ensure smooth transition to instructor/admin registration
-      if (AuthService.isAuthenticated()) {
+    const params = new URLSearchParams(window.location.search);
+    const inviteToken = params.get("token");
+
+    const initialize = async () => {
+      // Handle invitation token: clean the URL, then clear any active session
+      // so the invite flow starts from a clean state.
+      if (inviteToken && !isResetPassword) {
+        sessionStorage.setItem("pendingInviteToken", inviteToken);
+        navigate(location.pathname, { replace: true }); // strip ?token= from URL
         console.info("Logging out existing user to process new invite token");
-        AuthService.logout();
+        await AuthService.logout().catch(() => {}); // clear cookie if one exists
         setIsAuthenticated(false);
         setCurrentUser(null);
         setUserRole("STUDENT");
-        setShowLogin(true);
+        navigate("/auth"); // URL-based navigation to auth page
         setLoading(false);
-        return; 
+        return;
       }
-    }
 
-    if (AuthService.isAuthenticated()) {
-      setIsAuthenticated(true);
-      const cachedUser = getStoredUser();
-      if (cachedUser) {
-        setCurrentUser(cachedUser);
-        setUserRole(cachedUser.role || "STUDENT");
+      try {
+        await AuthService.me(); // throws 401 if no valid session
+        setIsAuthenticated(true);
+        const cachedUser = getStoredUser();
+        if (cachedUser) {
+          setCurrentUser(cachedUser);
+          setUserRole(cachedUser.role || "STUDENT");
+        }
+        fetchUserRole(); // background refresh of full profile
+      } catch {
+        // 401 — no active session, show landing page
+      } finally {
+        setLoading(false);
       }
-      fetchUserRole().finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    };
+
+    initialize();
     console.info("Initial auth check completed");
   }, []);
 
@@ -215,18 +203,20 @@ function App() {
       setUserRole(cachedUser.role || "STUDENT");
     }
     fetchUserRole();
+    navigate("/"); // return to root after login
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     try {
       console.info("User requested logout");
-      AuthService.logout();
+      await AuthService.logout(); // clears HttpOnly cookie server-side
       setIsAuthenticated(false);
       setCurrentUser(null);
       setUserRole("STUDENT");
       setVisitedTabs(new Set(["dashboard"]));
       setActiveTab("dashboard");
       setShowLogin(false);
+      navigate("/"); // return to landing after logout
       console.info("User signed out successfully");
     } catch (error) {
       console.error("Failed to sign out user", error);
@@ -284,18 +274,20 @@ function App() {
   if (isResetPassword) {
     return (
       <Suspense fallback={<Loader2 />}>
-        <ResetPassword 
+        <ResetPassword
           onSuccess={() => {
             handleAuthSuccess();
             window.history.replaceState({}, document.title, "/");
-          }} 
+          }}
         />
       </Suspense>
     );
   }
 
-  // If not authenticated, decide whether to show the LandingPage or the AuthPage
+  // If not authenticated, use URL to determine the view
   if (!isAuthenticated) {
+    // Show AuthPage when at /auth or when an invite token triggered the flow
+    const showAuthPage = location.pathname === "/auth" || showLogin;
     return (
       <Suspense
         fallback={
@@ -304,10 +296,10 @@ function App() {
           </div>
         }
       >
-        {showLogin ? (
+        {showAuthPage ? (
           <AuthPage onAuthSuccess={handleAuthSuccess} />
         ) : (
-          <LandingPage onLoginClick={() => setShowLogin(true)} />
+          <LandingPage onLoginClick={() => navigate("/auth")} />
         )}
       </Suspense>
     );
@@ -325,7 +317,10 @@ function App() {
   ];
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans transition-colors duration-200 dark:bg-slate-950" dir="rtl">
+    <div
+      className="flex min-h-screen bg-slate-50 font-sans transition-colors duration-200 dark:bg-slate-950"
+      dir="rtl"
+    >
       {/* Desktop Sidebar - hidden on small screens */}
       <div className="hidden md:block">
         <Sidebar
@@ -356,10 +351,10 @@ function App() {
                 {userRole === "SUPER_ADMIN"
                   ? "מנהל פלטפורמה"
                   : userRole === "ADMIN"
-                  ? "מנהל מערכת"
-                  : userRole === "INSTRUCTOR"
-                  ? "מדריך"
-                  : "סטודנט"}
+                    ? "מנהל מערכת"
+                    : userRole === "INSTRUCTOR"
+                      ? "מדריך"
+                      : "סטודנט"}
               </p>
             </div>
             <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold border-2 border-white shadow-sm dark:bg-indigo-900/50 dark:text-indigo-300 dark:border-slate-800">

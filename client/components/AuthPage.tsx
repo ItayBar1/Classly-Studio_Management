@@ -1,16 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { Mail, Lock, User, Phone, Loader2, ArrowRight, Building, AlertTriangle, Eye, EyeOff, ArrowLeft } from 'lucide-react';
-import { AuthService, UserService, InvitationService } from '../services/api';
-import { logger } from '../services/logger';
+import React, { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
+import {
+  Mail,
+  Lock,
+  User,
+  Phone,
+  Loader2,
+  ArrowRight,
+  Building,
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  ArrowLeft,
+} from "lucide-react";
+import { AuthService, UserService, InvitationService } from "../services/api";
+import { logger } from "../services/logger";
 
-type AuthView = 'login' | 'register' | 'forgot';
+type AuthView = "login" | "register" | "forgot";
 
 interface AuthPageProps {
   onAuthSuccess?: () => void;
 }
 
 export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
-  const [view, setView] = useState<AuthView>('login');
+  const [view, setView] = useState<AuthView>("login");
   const [loading, setLoading] = useState(false);
   const [validationLoading, setValidationLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,28 +33,36 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
   // Invitation State
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [invitedRole, setInvitedRole] = useState<string | null>(null);
-  const [invitedStudio, setInvitedStudio] = useState<{ name: string, id: string } | null>(null);
+  const [invitedStudio, setInvitedStudio] = useState<{
+    name: string;
+    id: string;
+  } | null>(null);
 
   // Form State
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [studioSerial, setStudioSerial] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [studioSerial, setStudioSerial] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const token = sessionStorage.getItem('pendingInviteToken') || params.get('token');
+    const token =
+      sessionStorage.getItem("pendingInviteToken") || params.get("token");
 
     if (token) {
       setInviteToken(token);
       validateToken(token);
-      setView('register');
+      setView("register");
 
       // Clean up URL and session storage
-      sessionStorage.removeItem('pendingInviteToken');
-      if (params.has('token')) {
-        window.history.replaceState({}, document.title, window.location.pathname);
+      sessionStorage.removeItem("pendingInviteToken");
+      if (params.has("token")) {
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname
+        );
       }
     }
   }, []);
@@ -54,25 +75,25 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
         setInvitedRole(res.role);
         if (res.studio) {
           setInvitedStudio(res.studio);
-          setStudioSerial(res.studio.serial_number || ''); // Pre-fill but readonly
+          setStudioSerial(res.studio.serial_number || ""); // Pre-fill but readonly
         }
       } else {
-        setError('קישור ההזמנה אינו תקין או פג תוקף. תועבר להרשמה רגילה.');
+        setError("קישור ההזמנה אינו תקין או פג תוקף. תועבר להרשמה רגילה.");
       }
     } catch (err) {
-      logger.error('Error validating token', err);
-      setError('שגיאה באימות ההזמנה. אנא נסה שנית.');
+      logger.error("Error validating token", err);
+      setError("שגיאה באימות ההזמנה. אנא נסה שנית.");
     } finally {
       setValidationLoading(false);
     }
   };
 
   const getTitle = () => {
-    if (view === 'login') return 'כניסה למערכת';
-    if (view === 'forgot') return 'איפוס סיסמה';
-    if (invitedRole === 'ADMIN') return 'הרשמת מנהל סטודיו';
-    if (invitedRole === 'INSTRUCTOR') return 'הרשמת מדריך';
-    return 'הרשמת תלמיד / הורה';
+    if (view === "login") return "כניסה למערכת";
+    if (view === "forgot") return "איפוס סיסמה";
+    if (invitedRole === "ADMIN") return "הרשמת מנהל סטודיו";
+    if (invitedRole === "INSTRUCTOR") return "הרשמת מדריך";
+    return "הרשמת תלמיד / הורה";
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -83,11 +104,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
 
     try {
       await AuthService.forgotPassword(email);
-      setMessage('אם קיים משתמש עם כתובת המייל הזו, נשלח קישור לאיפוס סיסמה.');
+      setMessage("אם קיים משתמש עם כתובת המייל הזו, נשלח קישור לאיפוס סיסמה.");
     } catch (err: any) {
-      logger.error('Reset password error:', err);
+      logger.error("Reset password error:", err);
       // Always show generic message for security (don't reveal if email exists)
-      setMessage('אם קיים משתמש עם כתובת המייל הזו, נשלח קישור לאיפוס סיסמה.');
+      setMessage("אם קיים משתמש עם כתובת המייל הזו, נשלח קישור לאיפוס סיסמה.");
     } finally {
       setLoading(false);
     }
@@ -95,7 +116,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (view === 'forgot') {
+    if (view === "forgot") {
       return handleForgotPassword(e);
     }
 
@@ -104,7 +125,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
     setMessage(null);
 
     try {
-      if (view === 'login') {
+      if (view === "login") {
         // Login via backend API
         await AuthService.login(email, password);
         // Notify parent component of successful auth
@@ -124,20 +145,23 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
         if (inviteToken) {
           try {
             await InvitationService.accept(inviteToken);
-            setMessage('ההרשמה הסתיימה בהצלחה! חשבונך שודרג בהתאם להזמנה.');
+            setMessage("ההרשמה הסתיימה בהצלחה! חשבונך שודרג בהתאם להזמנה.");
           } catch (acceptError) {
-            logger.error('Failed to accept invite', acceptError);
-            setError('ההרשמה בוצעה אך הייתה שגיאה בקבלת ההזמנה. אנא פנה למנהל המערכת.');
+            logger.error("Failed to accept invite", acceptError);
+            setError(
+              "ההרשמה בוצעה אך הייתה שגיאה בקבלת ההזמנה. אנא פנה למנהל המערכת."
+            );
           }
         } else {
-          setMessage('ההרשמה בוצעה בהצלחה!');
+          setMessage("ההרשמה בוצעה בהצלחה!");
         }
 
         // Notify parent component
         onAuthSuccess?.();
       }
     } catch (err: any) {
-      const errorMsg = err.response?.data?.error || err.message || 'אירעה שגיאה בתהליך האימות';
+      const errorMsg =
+        err.response?.data?.error || err.message || "אירעה שגיאה בתהליך האימות";
       setError(errorMsg);
     } finally {
       setLoading(false);
@@ -145,9 +169,23 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans" dir="rtl">
+    <div
+      className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans"
+      dir="rtl"
+    >
+      <Helmet>
+        <title>התחברות | Classly</title>
+        <meta
+          name="description"
+          content="התחבר למערכת ניהול הסטודיו של Classly"
+        />
+        <meta name="robots" content="noindex" />
+        <link
+          rel="canonical"
+          href="https://classly-studio-management.uk/auth"
+        />
+      </Helmet>
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
-
         {/* Header */}
         <div className="bg-indigo-600 p-8 text-center relative">
           <h1 className="text-3xl font-bold text-white mb-2">Classly</h1>
@@ -155,49 +193,76 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
           {invitedRole && (
             <div className="absolute top-4 right-4 bg-yellow-400 text-yellow-900 text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1">
               <User size={12} />
-              {invitedRole === 'ADMIN' ? 'הזמנת מנהל' : 'הזמנת מדריך'}
+              {invitedRole === "ADMIN" ? "הזמנת מנהל" : "הזמנת מדריך"}
             </div>
           )}
         </div>
 
         <div className="p-8">
-          {view !== 'forgot' && (
+          {view !== "forgot" && (
             <div className="flex justify-center mb-8 bg-slate-100 p-1 rounded-lg">
               <button
-                onClick={() => { setView('login'); setError(null); setMessage(null); }}
-                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${view === 'login' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                  }`}
+                onClick={() => {
+                  setView("login");
+                  setError(null);
+                  setMessage(null);
+                }}
+                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                  view === "login"
+                    ? "bg-white text-indigo-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
               >
                 התחברות
               </button>
               <button
-                onClick={() => { if (!inviteToken) setView('register'); setError(null); setMessage(null); }}
-                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${view === 'register' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                  }`}
+                onClick={() => {
+                  if (!inviteToken) setView("register");
+                  setError(null);
+                  setMessage(null);
+                }}
+                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                  view === "register"
+                    ? "bg-white text-indigo-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
               >
-                {inviteToken ? 'הרשמה (מוזמן)' : 'הרשמה'}
+                {inviteToken ? "הרשמה (מוזמן)" : "הרשמה"}
               </button>
             </div>
           )}
 
           <form onSubmit={handleAuth} className="space-y-4">
-
             {/* Context Message for Invites */}
-            {view === 'register' && inviteToken && (
+            {view === "register" && inviteToken && (
               <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-lg mb-4 text-center">
                 <p className="text-sm text-indigo-800 font-medium">
-                  {invitedRole === 'INSTRUCTOR' ? 'הוזמנת להצטרף כצוות הוראה' : 'הוזמנת לנהל את הסטודיו'}
+                  {invitedRole === "INSTRUCTOR"
+                    ? "הוזמנת להצטרף כצוות הוראה"
+                    : "הוזמנת לנהל את הסטודיו"}
                 </p>
-                {invitedStudio && <p className="text-xs text-indigo-600 mt-1">עבור: {invitedStudio.name}</p>}
+                {invitedStudio && (
+                  <p className="text-xs text-indigo-600 mt-1">
+                    עבור: {invitedStudio.name}
+                  </p>
+                )}
               </div>
             )}
 
-            {view === 'register' && (
+            {view === "register" && (
               <>
                 <div className="space-y-1">
-                  <label htmlFor="fullname-input" className="text-sm font-medium text-slate-700">שם מלא</label>
+                  <label
+                    htmlFor="fullname-input"
+                    className="text-sm font-medium text-slate-700"
+                  >
+                    שם מלא
+                  </label>
                   <div className="relative">
-                    <User className="absolute right-3 top-3 text-slate-400" size={18} />
+                    <User
+                      className="absolute right-3 top-3 text-slate-400"
+                      size={18}
+                    />
                     <input
                       id="fullname-input"
                       type="text"
@@ -211,9 +276,17 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                 </div>
 
                 <div className="space-y-1">
-                  <label htmlFor="phone-input" className="text-sm font-medium text-slate-700">טלפון</label>
+                  <label
+                    htmlFor="phone-input"
+                    className="text-sm font-medium text-slate-700"
+                  >
+                    טלפון
+                  </label>
                   <div className="relative">
-                    <Phone className="absolute right-3 top-3 text-slate-400" size={18} />
+                    <Phone
+                      className="absolute right-3 top-3 text-slate-400"
+                      size={18}
+                    />
                     <input
                       id="phone-input"
                       type="tel"
@@ -227,9 +300,17 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                 </div>
 
                 <div className="space-y-1">
-                  <label htmlFor="studio-input" className="text-sm font-medium text-slate-700">מספר סטודיו</label>
+                  <label
+                    htmlFor="studio-input"
+                    className="text-sm font-medium text-slate-700"
+                  >
+                    מספר סטודיו
+                  </label>
                   <div className="relative">
-                    <Building className="absolute right-3 top-3 text-slate-400" size={18} />
+                    <Building
+                      className="absolute right-3 top-3 text-slate-400"
+                      size={18}
+                    />
                     <input
                       id="studio-input"
                       type="text"
@@ -237,19 +318,31 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                       value={studioSerial}
                       onChange={(e) => setStudioSerial(e.target.value)}
                       readOnly={!!inviteToken} // Readonly if invited
-                      className={`w-full pr-10 pl-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all ${inviteToken ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''}`}
+                      className={`w-full pr-10 pl-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all ${inviteToken ? "bg-slate-100 text-slate-500 cursor-not-allowed" : ""}`}
                       placeholder="הזן מספר סטודיו"
                     />
                   </div>
-                  {!inviteToken && <p className="text-xs text-slate-400">יש לקבל את המספר הזה מבעל הסטודיו</p>}
+                  {!inviteToken && (
+                    <p className="text-xs text-slate-400">
+                      יש לקבל את המספר הזה מבעל הסטודיו
+                    </p>
+                  )}
                 </div>
               </>
             )}
 
             <div className="space-y-1">
-              <label htmlFor="email-input" className="text-sm font-medium text-slate-700">דואר אלקטרוני</label>
+              <label
+                htmlFor="email-input"
+                className="text-sm font-medium text-slate-700"
+              >
+                דואר אלקטרוני
+              </label>
               <div className="relative">
-                <Mail className="absolute right-3 top-3 text-slate-400" size={18} />
+                <Mail
+                  className="absolute right-3 top-3 text-slate-400"
+                  size={18}
+                />
                 <input
                   id="email-input"
                   type="email"
@@ -263,14 +356,23 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
               </div>
             </div>
 
-            {view !== 'forgot' && (
+            {view !== "forgot" && (
               <div className="space-y-1">
                 <div className="flex justify-between items-center">
-                  <label htmlFor="password-input" className="text-sm font-medium text-slate-700">סיסמה</label>
-                  {view === 'login' && (
+                  <label
+                    htmlFor="password-input"
+                    className="text-sm font-medium text-slate-700"
+                  >
+                    סיסמה
+                  </label>
+                  {view === "login" && (
                     <button
                       type="button"
-                      onClick={() => { setView('forgot'); setError(null); setMessage(null); }}
+                      onClick={() => {
+                        setView("forgot");
+                        setError(null);
+                        setMessage(null);
+                      }}
                       className="text-xs text-indigo-600 hover:text-indigo-800"
                     >
                       שכחת סיסמה?
@@ -278,10 +380,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                   )}
                 </div>
                 <div className="relative">
-                  <Lock className="absolute right-3 top-3 text-slate-400" size={18} />
+                  <Lock
+                    className="absolute right-3 top-3 text-slate-400"
+                    size={18}
+                  />
                   <input
                     id="password-input"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -294,7 +399,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute left-3 top-3 text-slate-400 hover:text-slate-600 focus:outline-none"
-                    aria-label={showPassword ? 'הסתר סיסמה' : 'הצג סיסמה'}
+                    aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -325,20 +430,26 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
               ) : (
                 <>
                   {getTitle()}
-                  {view !== 'forgot' && <ArrowRight size={18} className="rotate-180" />}
+                  {view !== "forgot" && (
+                    <ArrowRight size={18} className="rotate-180" />
+                  )}
                 </>
               )}
             </button>
-            
-            {view === 'forgot' && (
-               <button
-               type="button"
-               onClick={() => { setView('login'); setError(null); setMessage(null); }}
-               className="w-full text-slate-500 text-sm py-2 hover:text-slate-700 flex items-center justify-center gap-1"
-             >
-               <ArrowLeft size={14} />
-               חזרה להתחברות
-             </button>
+
+            {view === "forgot" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setView("login");
+                  setError(null);
+                  setMessage(null);
+                }}
+                className="w-full text-slate-500 text-sm py-2 hover:text-slate-700 flex items-center justify-center gap-1"
+              >
+                <ArrowLeft size={14} />
+                חזרה להתחברות
+              </button>
             )}
           </form>
         </div>

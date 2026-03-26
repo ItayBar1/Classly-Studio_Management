@@ -1,5 +1,6 @@
 import { prisma } from "../config/prisma";
 import { logger } from "../logger";
+import { AppError } from "../utils/AppError";
 
 export class EnrollmentService {
   /**
@@ -11,7 +12,7 @@ export class EnrollmentService {
     classId: string,
     status: "ACTIVE" | "PENDING" = "ACTIVE",
     paymentStatus: "PAID" | "PENDING" | "OVERDUE" = "PAID",
-    notes?: string,
+    notes?: string
   ) {
     const serviceLogger = logger.child({
       service: "EnrollmentService",
@@ -19,7 +20,7 @@ export class EnrollmentService {
     });
     serviceLogger.info(
       { studioId, studentId, classId, status, paymentStatus },
-      "Enrolling student to class",
+      "Enrolling student to class"
     );
 
     // 1. Fetch course details (capacity and pricing)
@@ -58,9 +59,9 @@ export class EnrollmentService {
     if (existing) {
       serviceLogger.warn(
         { studentId, classId },
-        "Student already enrolled in course",
+        "Student already enrolled in course"
       );
-      throw new Error("Student is already enrolled in this course");
+      throw new AppError("Student is already enrolled in this course", 409);
     }
 
     // --- FREE COURSE LOGIC ---
@@ -188,7 +189,7 @@ export class EnrollmentService {
    */
   static async verifyInstructorClass(
     instructorId: string,
-    classId: string,
+    classId: string
   ): Promise<boolean> {
     const serviceLogger = logger.child({
       service: "EnrollmentService",
@@ -196,7 +197,7 @@ export class EnrollmentService {
     });
     serviceLogger.info(
       { instructorId, classId },
-      "Verifying instructor ownership of class",
+      "Verifying instructor ownership of class"
     );
 
     const data = await prisma.classes.findUnique({

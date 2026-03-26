@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { apiClient, setStoredToken, setStoredUser } from '../services/api';
-import { Lock, Loader2, Eye, EyeOff } from 'lucide-react';
+import React, { useState } from "react";
+import { apiClient, setStoredUser } from "../services/api";
+import { Lock, Loader2, Eye, EyeOff } from "lucide-react";
 
 interface ResetPasswordProps {
   onSuccess: () => void;
 }
 
 export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess }) => {
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -20,48 +20,52 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess }) => {
     setError(null);
 
     if (password.length < 8) {
-      setError('הסיסמה חייבת להכיל לפחות 8 תווים');
+      setError("הסיסמה חייבת להכיל לפחות 8 תווים");
       setLoading(false);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('הסיסמאות אינן תואמות');
+      setError("הסיסמאות אינן תואמות");
       setLoading(false);
       return;
     }
 
     try {
       const params = new URLSearchParams(window.location.search);
-      const tokenFromUrl = params.get('token');
+      const tokenFromUrl = params.get("token");
 
       if (!tokenFromUrl) {
-        setError('קישור האיפוס אינו תקין — חסר טוקן בכתובת.');
+        setError("קישור האיפוס אינו תקין — חסר טוקן בכתובת.");
         setLoading(false);
         return;
       }
 
-      const response = await apiClient.post('/auth/reset-password', { 
-        token: tokenFromUrl, 
-        password 
+      const response = await apiClient.post("/auth/reset-password", {
+        token: tokenFromUrl,
+        password,
       });
 
-      // Save token and user details using centralized storage helpers for auto login
-      if (response.data.token && response.data.user) {
-        setStoredToken(response.data.token);
+      // Server sets the HttpOnly cookie; cache the user profile for the UI
+      if (response.data.user) {
         setStoredUser(response.data.user);
       }
 
-        onSuccess();
+      onSuccess();
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'אירעה שגיאה בעדכון הסיסמה');
+      setError(
+        err.response?.data?.error || err.message || "אירעה שגיאה בעדכון הסיסמה"
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans" dir="rtl">
+    <div
+      className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans"
+      dir="rtl"
+    >
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 p-8">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-slate-900">איפוס סיסמה</h2>
@@ -70,12 +74,20 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess }) => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
-            <label htmlFor="new-password" className="text-sm font-medium text-slate-700">סיסמה חדשה</label>
+            <label
+              htmlFor="new-password"
+              className="text-sm font-medium text-slate-700"
+            >
+              סיסמה חדשה
+            </label>
             <div className="relative">
-              <Lock className="absolute right-3 top-3 text-slate-400" size={18} />
+              <Lock
+                className="absolute right-3 top-3 text-slate-400"
+                size={18}
+              />
               <input
                 id="new-password"
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -88,7 +100,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess }) => {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute left-3 top-3 text-slate-400 hover:text-slate-600 focus:outline-none"
-                aria-label={showPassword ? 'הסתר סיסמה' : 'הצג סיסמה'}
+                aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -96,12 +108,20 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess }) => {
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="confirm-password" className="text-sm font-medium text-slate-700">אימות סיסמה</label>
+            <label
+              htmlFor="confirm-password"
+              className="text-sm font-medium text-slate-700"
+            >
+              אימות סיסמה
+            </label>
             <div className="relative">
-              <Lock className="absolute right-3 top-3 text-slate-400" size={18} />
+              <Lock
+                className="absolute right-3 top-3 text-slate-400"
+                size={18}
+              />
               <input
                 id="confirm-password"
-                type={showConfirmPassword ? 'text' : 'password'}
+                type={showConfirmPassword ? "text" : "password"}
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -113,7 +133,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess }) => {
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="absolute left-3 top-3 text-slate-400 hover:text-slate-600 focus:outline-none"
-                aria-label={showConfirmPassword ? 'הסתר סיסמה' : 'הצג סיסמה'}
+                aria-label={showConfirmPassword ? "הסתר סיסמה" : "הצג סיסמה"}
               >
                 {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -131,7 +151,11 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess }) => {
             disabled={loading}
             className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed"
           >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : 'עדכן סיסמה'}
+            {loading ? (
+              <Loader2 className="animate-spin" size={20} />
+            ) : (
+              "עדכן סיסמה"
+            )}
           </button>
         </form>
       </div>

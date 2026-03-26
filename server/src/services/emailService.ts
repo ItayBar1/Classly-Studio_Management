@@ -1,8 +1,8 @@
-import nodemailer from 'nodemailer';
-import { environment } from '../config/env';
-import { logger } from '../logger';
+import nodemailer from "nodemailer";
+import { environment } from "../config/env";
+import { logger } from "../logger";
 
-const emailLog = logger.child({ service: 'EmailService' });
+const emailLog = logger.child({ service: "EmailService" });
 
 /**
  * Creates a nodemailer transporter.
@@ -12,7 +12,9 @@ const createTransporter = () => {
   const { smtp } = environment;
 
   if (!smtp.host || !smtp.user || !smtp.pass) {
-    emailLog.warn('SMTP not configured. Emails will be logged to console instead of sent.');
+    emailLog.warn(
+      "SMTP not configured. Emails will be logged to console instead of sent."
+    );
     return null;
   }
 
@@ -35,29 +37,37 @@ export class EmailService {
    * In development: falls back to logging the link if SMTP is not configured.
    * In production: throws an error if SMTP is missing (never exposes tokens in logs).
    */
-  static async sendPasswordResetEmail(to: string, resetToken: string): Promise<void> {
-    const resetUrl = `${environment.frontendUrl}/reset-password?token=${resetToken}`;
+  static async sendPasswordResetEmail(
+    to: string,
+    resetToken: string
+  ): Promise<void> {
+    const resetUrl = `${environment.clientUrl}/reset-password?token=${resetToken}`;
 
     if (!transporter) {
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === "development") {
         emailLog.info(
           { to, resetUrl },
-          '📧 SMTP not configured — Password reset link (use this for testing):'
+          "📧 SMTP not configured — Password reset link (use this for testing):"
         );
         console.log(`\n🔗 Password Reset Link for ${to}:\n   ${resetUrl}\n`);
         return;
       }
 
       // Production: refuse to leak tokens — throw instead
-      emailLog.error({ to }, 'SMTP not configured. Cannot send password reset email.');
-      throw new Error('Email service is not configured. Please contact support.');
+      emailLog.error(
+        { to },
+        "SMTP not configured. Cannot send password reset email."
+      );
+      throw new Error(
+        "Email service is not configured. Please contact support."
+      );
     }
 
     try {
       await transporter.sendMail({
         from: environment.smtp.from || `"Classly" <${environment.smtp.user}>`,
         to,
-        subject: 'Classly - איפוס סיסמה',
+        subject: "Classly - איפוס סיסמה",
         html: `
           <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="background-color: #4f46e5; padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
@@ -81,12 +91,14 @@ export class EmailService {
         `,
       });
 
-      emailLog.info({ to }, 'Password reset email sent successfully');
+      emailLog.info({ to }, "Password reset email sent successfully");
     } catch (error) {
-      emailLog.error({ err: error, to }, 'Failed to send password reset email');
+      emailLog.error({ err: error, to }, "Failed to send password reset email");
       // Only log the URL as fallback in development — never in production
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`\n🔗 Fallback — Password Reset Link for ${to}:\n   ${resetUrl}\n`);
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          `\n🔗 Fallback — Password Reset Link for ${to}:\n   ${resetUrl}\n`
+        );
       }
       throw error;
     }

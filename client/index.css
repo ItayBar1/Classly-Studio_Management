@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom utilities previously declared inline in index.html */
+@layer utilities {
+  .neon-text-purple {
+    text-shadow:
+      0 0 10px #b026ff,
+      0 0 20px #b026ff;
+  }
+
+  .neon-text-blue {
+    text-shadow:
+      0 0 10px #00d2ff,
+      0 0 20px #00d2ff;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    background: rgba(26, 22, 37, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+body {
+  font-family: "Heebo", "Inter", sans-serif;
+}
+
+/* Respect the OS "Reduce motion" accessibility preference (A6) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

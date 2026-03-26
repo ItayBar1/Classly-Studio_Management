@@ -1,11 +1,15 @@
 // client/types/types.ts
 
 // Enum definitions matching the Database
-export type UserRole = 'ADMIN' | 'INSTRUCTOR' | 'STUDENT' | 'PARENT';
-export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
-export type EnrollmentStatus = 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED';
-export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
-export type ClassLevel = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'ALL_LEVELS';
+export type UserRole = "ADMIN" | "INSTRUCTOR" | "STUDENT" | "PARENT";
+export type UserStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
+export type EnrollmentStatus = "ACTIVE" | "PAUSED" | "COMPLETED" | "CANCELLED";
+export type PaymentStatus = "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED";
+export type ClassLevel =
+  | "BEGINNER"
+  | "INTERMEDIATE"
+  | "ADVANCED"
+  | "ALL_LEVELS";
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 // Base User Interface
@@ -25,8 +29,8 @@ export interface User {
 // Student Interface (Extends User)
 export interface Student extends User {
   // Fields specific to student views or joined data
-  enrolledClass?: string; // For display in tables
-  joinDate?: string;      // Usually mapped from created_at
+  enrolledClasses?: string[]; // Array of enrolled class names
+  joinDate?: string; // Usually mapped from created_at
   parent_id?: string | null;
 }
 
@@ -44,13 +48,14 @@ export interface ClassSession {
   name: string;
   description?: string | null;
   instructor_id: string;
-  instructor?: {           // Joined data from API
+  instructor?: {
+    // Joined data from API
     full_name: string;
     profile_image_url?: string | null;
   };
   day_of_week: DayOfWeek;
-  start_time: string;      // Format: "HH:MM"
-  end_time: string;        // Format: "HH:MM"
+  start_time: string; // Format: "HH:MM"
+  end_time: string; // Format: "HH:MM"
   max_capacity: number;
   current_enrollment: number;
   level: ClassLevel;
@@ -90,7 +95,7 @@ export interface DashboardStats {
   activeClasses: number;
   avgAttendance: number;
   chartData: Array<{
-    name: string;     // e.g., "Sunday" or "Jan"
+    name: string; // e.g., "Sunday" or "Jan"
     revenue: number;
     attendance: number;
   }>;

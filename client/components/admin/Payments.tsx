@@ -1,27 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { PaymentService } from '../../services/api';
-import { PaymentRecord } from '../../types/types';
-import { 
-  CreditCard, 
-  Calendar, 
-  Search, 
-  Download, 
-  Plus, 
-  X, 
-  Loader2, 
-  CheckCircle, 
+import React, { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  Elements,
+  PaymentElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
+import { PaymentService } from "../../services/api";
+import { PaymentRecord } from "../../types/types";
+import {
+  CreditCard,
+  Calendar,
+  Search,
+  Download,
+  Plus,
+  X,
+  Loader2,
+  CheckCircle,
   AlertCircle,
   TrendingUp,
-  DollarSign
-} from 'lucide-react';
+  DollarSign,
+} from "lucide-react";
 
 // Load Stripe
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
+const stripePromise = loadStripe(
+  import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || ""
+);
 
 // --- Checkout Form Component (Stripe Elements) ---
-const CheckoutForm: React.FC<{ onSuccess: () => void; onError: (msg: string) => void }> = ({ onSuccess, onError }) => {
+const CheckoutForm: React.FC<{
+  onSuccess: () => void;
+  onError: (msg: string) => void;
+}> = ({ onSuccess, onError }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
@@ -36,19 +47,19 @@ const CheckoutForm: React.FC<{ onSuccess: () => void; onError: (msg: string) => 
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: window.location.origin + '/payment/success',
+        return_url: window.location.origin + "/payment/success",
       },
-      redirect: 'if_required'
+      redirect: "if_required",
     });
 
     if (error) {
-      onError(error.message || 'אירעה שגיאה בעיבוד התשלום');
+      onError(error.message || "אירעה שגיאה בעיבוד התשלום");
       setProcessing(false);
-    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+    } else if (paymentIntent && paymentIntent.status === "succeeded") {
       onSuccess();
       setProcessing(false);
     } else {
-      onError('התשלום לא הושלם. אנא נסה שנית.');
+      onError("התשלום לא הושלם. אנא נסה שנית.");
       setProcessing(false);
     }
   };
@@ -63,8 +74,12 @@ const CheckoutForm: React.FC<{ onSuccess: () => void; onError: (msg: string) => 
         disabled={!stripe || processing}
         className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200"
       >
-        {processing ? <Loader2 className="animate-spin" /> : <CreditCard size={20} />}
-        {processing ? 'מעבד תשלום...' : 'בצע תשלום מאובטח'}
+        {processing ? (
+          <Loader2 className="animate-spin" />
+        ) : (
+          <CreditCard size={20} />
+        )}
+        {processing ? "מעבד תשלום..." : "בצע תשלום מאובטח"}
       </button>
     </form>
   );
@@ -77,9 +92,13 @@ interface PaymentModalProps {
   refreshData: () => void;
 }
 
-const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, refreshData }) => {
-  const [amount, setAmount] = useState<string>('');
-  const [description, setDescription] = useState('');
+const PaymentModal: React.FC<PaymentModalProps> = ({
+  isOpen,
+  onClose,
+  refreshData,
+}) => {
+  const [amount, setAmount] = useState<string>("");
+  const [description, setDescription] = useState("");
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [loadingSecret, setLoadingSecret] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,8 +107,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, refreshDat
   // Reset when opening/closing
   useEffect(() => {
     if (isOpen) {
-      setAmount('');
-      setDescription('');
+      setAmount("");
+      setDescription("");
       setClientSecret(null);
       setError(null);
       setSuccess(false);
@@ -98,7 +117,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, refreshDat
 
   const initiatePayment = async () => {
     if (!amount || Number(amount) <= 0) {
-      setError('אנא הזן סכום תקין לתשלום');
+      setError("אנא הזן סכום תקין לתשלום");
       return;
     }
 
@@ -108,14 +127,14 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, refreshDat
     try {
       const data = await PaymentService.createIntent({
         amount: Number(amount),
-        currency: 'ils',
-        description
+        currency: "ils",
+        description,
       });
 
       setClientSecret(data.clientSecret);
     } catch (err: any) {
       console.error(err);
-      setError('לא ניתן ליצור בקשת תשלום. אנא נסה שנית.');
+      setError("לא ניתן ליצור בקשת תשלום. אנא נסה שנית.");
     } finally {
       setLoadingSecret(false);
     }
@@ -124,18 +143,25 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, refreshDat
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-right" dir="rtl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-right"
+      dir="rtl"
+    >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-fadeIn flex flex-col max-h-[90vh]">
-        
         {/* Modal Header */}
         <div className="bg-slate-900 p-6 flex justify-between items-center text-white shrink-0">
           <div>
             <h3 className="text-xl font-bold flex items-center gap-2">
               <CreditCard className="text-indigo-400" /> תשלום חדש
             </h3>
-            <p className="text-slate-400 text-sm mt-1">סליקה מאובטחת באמצעות Stripe</p>
+            <p className="text-slate-400 text-sm mt-1">
+              סליקה מאובטחת באמצעות Stripe
+            </p>
           </div>
-          <button onClick={onClose} className="hover:bg-slate-800 p-2 rounded-full transition-colors">
+          <button
+            onClick={onClose}
+            className="hover:bg-slate-800 p-2 rounded-full transition-colors"
+          >
             <X size={20} />
           </button>
         </div>
@@ -146,10 +172,17 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, refreshDat
               <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle size={40} />
               </div>
-              <h4 className="text-2xl font-bold text-slate-800 mb-2">התשלום בוצע בהצלחה!</h4>
-              <p className="text-slate-500 mb-6">קבלה נשלחה לכתובת המייל שלך.</p>
-              <button 
-                onClick={() => { onClose(); refreshData(); }}
+              <h4 className="text-2xl font-bold text-slate-800 mb-2">
+                התשלום בוצע בהצלחה!
+              </h4>
+              <p className="text-slate-500 mb-6">
+                קבלה נשלחה לכתובת המייל שלך.
+              </p>
+              <button
+                onClick={() => {
+                  onClose();
+                  refreshData();
+                }}
                 className="bg-slate-900 text-white px-8 py-3 rounded-lg font-medium hover:bg-slate-800"
               >
                 חזור לאזור האישי
@@ -161,9 +194,14 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, refreshDat
               {!clientSecret ? (
                 <div className="space-y-5">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">סכום לתשלום (₪)</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      סכום לתשלום (₪)
+                    </label>
                     <div className="relative">
-                      <DollarSign className="absolute right-3 top-3 text-slate-400" size={18} />
+                      <DollarSign
+                        className="absolute right-3 top-3 text-slate-400"
+                        size={18}
+                      />
                       <input
                         type="number"
                         min="1"
@@ -176,7 +214,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, refreshDat
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">עבור (אופציונלי)</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      עבור (אופציונלי)
+                    </label>
                     <input
                       type="text"
                       value={description}
@@ -197,7 +237,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, refreshDat
                     disabled={loadingSecret}
                     className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 mt-4"
                   >
-                    {loadingSecret ? <Loader2 className="animate-spin" /> : 'המשך לפרטי אשראי'}
+                    {loadingSecret ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      "המשך לפרטי אשראי"
+                    )}
                   </button>
                 </div>
               ) : (
@@ -205,23 +249,32 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, refreshDat
                 <div className="animate-fadeIn">
                   <div className="flex justify-between items-center mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
                     <span className="text-slate-500 text-sm">סכום לתשלום:</span>
-                    <span className="text-xl font-bold text-slate-900">₪{amount}</span>
+                    <span className="text-xl font-bold text-slate-900">
+                      ₪{amount}
+                    </span>
                   </div>
-                  
-                  <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' }, locale: 'he' }}>
-                    <CheckoutForm 
-                      onSuccess={() => setSuccess(true)} 
-                      onError={(msg) => setError(msg)} 
+
+                  <Elements
+                    stripe={stripePromise}
+                    options={{
+                      clientSecret,
+                      appearance: { theme: "stripe" },
+                      locale: "he",
+                    }}
+                  >
+                    <CheckoutForm
+                      onSuccess={() => setSuccess(true)}
+                      onError={(msg) => setError(msg)}
                     />
                   </Elements>
-                  
+
                   {error && (
                     <div className="bg-red-50 text-red-600 p-3 rounded-lg flex items-center gap-2 text-sm mt-4">
                       <AlertCircle size={16} /> {error}
                     </div>
                   )}
-                  
-                  <button 
+
+                  <button
                     onClick={() => setClientSecret(null)}
                     className="text-slate-400 hover:text-slate-600 text-sm mt-4 w-full text-center"
                   >
@@ -244,24 +297,23 @@ export const Payments: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [stats, setStats] = useState({ totalPaid: 0, lastMonth: 0 });
 
-const fetchPayments = async () => {
+  const fetchPayments = async () => {
     try {
       setLoading(true);
-      
+
       const data = await PaymentService.getAll();
       setPayments(data);
-        
+
       const total = data
-        .filter(p => p.status === 'COMPLETED')
+        .filter((p) => p.status === "COMPLETED")
         .reduce((sum, p) => sum + p.amount_ils, 0);
-          
+
       setStats({
         totalPaid: total,
-        lastMonth: 0 
+        lastMonth: 0,
       });
-
     } catch (err) {
-      console.error('Error fetching payments:', err);
+      console.error("Error fetching payments:", err);
     } finally {
       setLoading(false);
     }
@@ -273,29 +325,61 @@ const fetchPayments = async () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'SUCCEEDED': return <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold">שולם</span>;
-      case 'PENDING': return <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs font-bold">ממתין</span>;
-      case 'FAILED': return <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-bold">נכשל</span>;
-      case 'REFUNDED': return <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-bold">זוכה</span>;
-      default: return <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded-full text-xs font-bold">{status}</span>;
+      case "SUCCEEDED":
+        return (
+          <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold">
+            שולם
+          </span>
+        );
+      case "PENDING":
+        return (
+          <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs font-bold">
+            ממתין
+          </span>
+        );
+      case "FAILED":
+        return (
+          <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-bold">
+            נכשל
+          </span>
+        );
+      case "REFUNDED":
+        return (
+          <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-bold">
+            זוכה
+          </span>
+        );
+      default:
+        return (
+          <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded-full text-xs font-bold">
+            {status}
+          </span>
+        );
     }
   };
 
   return (
     <div className="space-y-6">
-      <PaymentModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        refreshData={fetchPayments} 
+      <Helmet>
+        <title>תשלומים | Classly</title>
+      </Helmet>
+      <PaymentModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        refreshData={fetchPayments}
       />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">תשלומים וחשבוניות</h2>
-          <p className="text-slate-500">נהל את התשלומים והצג היסטוריית חיובים</p>
+          <h2 className="text-2xl font-bold text-slate-800">
+            תשלומים וחשבוניות
+          </h2>
+          <p className="text-slate-500">
+            נהל את התשלומים והצג היסטוריית חיובים
+          </p>
         </div>
-        <button 
+        <button
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg"
         >
@@ -308,8 +392,12 @@ const fetchPayments = async () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
           <div>
-            <p className="text-slate-500 text-sm font-medium">סה"כ שולם (הצטברות)</p>
-            <h3 className="text-2xl font-bold text-slate-800 mt-1">₪{stats.totalPaid.toLocaleString()}</h3>
+            <p className="text-slate-500 text-sm font-medium">
+              סה"כ שולם (הצטברות)
+            </p>
+            <h3 className="text-2xl font-bold text-slate-800 mt-1">
+              ₪{stats.totalPaid.toLocaleString()}
+            </h3>
           </div>
           <div className="bg-green-50 p-3 rounded-lg text-green-600">
             <TrendingUp size={24} />
@@ -330,7 +418,10 @@ const fetchPayments = async () => {
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="relative w-full md:w-80">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Search
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+              size={18}
+            />
             <input
               type="text"
               placeholder="חפש לפי מספר חשבונית..."
@@ -348,31 +439,58 @@ const fetchPayments = async () => {
           <table className="w-full text-right border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">תאריך</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">מספר חשבונית</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">שיטת תשלום</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">סכום</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">סטטוס</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">קבלה</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">
+                  תאריך
+                </th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">
+                  מספר חשבונית
+                </th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">
+                  שיטת תשלום
+                </th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">
+                  סכום
+                </th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">
+                  סטטוס
+                </th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">
+                  קבלה
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                 <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-500"><Loader2 className="animate-spin h-6 w-6 mx-auto mb-2" />טוען נתונים...</td></tr>
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-6 py-12 text-center text-slate-500"
+                  >
+                    <Loader2 className="animate-spin h-6 w-6 mx-auto mb-2" />
+                    טוען נתונים...
+                  </td>
+                </tr>
               ) : payments.length > 0 ? (
                 payments.map((payment) => (
-                  <tr key={payment.id} className="hover:bg-slate-50 transition-colors">
+                  <tr
+                    key={payment.id}
+                    className="hover:bg-slate-50 transition-colors"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                       <div className="flex items-center gap-2">
                         <Calendar size={14} className="text-slate-400" />
-                        {new Date(payment.created_at).toLocaleDateString('he-IL')}
+                        {new Date(payment.created_at).toLocaleDateString(
+                          "he-IL"
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-800">
-                      {payment.invoice_number || '-'}
+                      {payment.invoice_number || "-"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                      {payment.payment_method === 'STRIPE' ? 'אשראי' : payment.payment_method}
+                      {payment.payment_method === "STRIPE"
+                        ? "אשראי"
+                        : payment.payment_method}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">
                       ₪{payment.amount_ils.toLocaleString()}
@@ -389,7 +507,10 @@ const fetchPayments = async () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                  <td
+                    colSpan={6}
+                    className="px-6 py-12 text-center text-slate-500"
+                  >
                     <div className="flex flex-col items-center justify-center">
                       <CreditCard className="h-10 w-10 text-slate-300 mb-2" />
                       <p className="font-medium">לא נמצאו תשלומים</p>

@@ -1,0 +1,15 @@
+# docker-compose.override.yml — local development overrides
+# This file is picked up automatically by `docker compose up`.
+# It is NOT committed to the production server.
+#
+# Changes from docker-compose.yml:
+#   - frontend: mounts nginx.dev.conf (HTTP-only) over the production config
+#   - frontend: removes the letsencrypt / certbot volumes (no TLS locally)
+#   - frontend: exposes only port 80
+
+services:
+  frontend:
+    ports:
+      - "80:80"
+    volumes:
+      - ./client/nginx.dev.conf:/etc/nginx/conf.d/default.conf:ro

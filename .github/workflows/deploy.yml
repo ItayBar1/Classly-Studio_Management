@@ -2,7 +2,7 @@ name: Production Docker Deploy
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   deploy:
@@ -22,8 +22,11 @@ jobs:
 
       - name: Build and Run
         run: |
+          # כיבוי ומחיקה של קונטיינרים קיימים תחת הפרויקט כדי לשחרר שמות תפוסים
+          docker compose --project-name classly-studio --file docker-compose.yml down
+
           # שימוש בשם הפרויקט המדויק שמצאנו ב-Volume ls
-          docker compose --project-name classly-studio up -d --build
+          docker compose --project-name classly-studio --file docker-compose.yml up -d --build
 
       - name: Cleanup old Docker images
         run: |
