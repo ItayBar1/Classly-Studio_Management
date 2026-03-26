@@ -94,7 +94,7 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: classly-tunnel
     restart: always
-    command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}
+    command: tunnel --no-autoupdate run --protocol http2 --token ${CF_TUNNEL_TOKEN}
 
 volumes:
   postgres_data:
