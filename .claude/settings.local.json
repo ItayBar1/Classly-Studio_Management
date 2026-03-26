@@ -7,7 +7,8 @@
       "Bash(npm test:*)",
       "Bash(curl -si http://localhost/)",
       "Bash(curl:*)",
-      "Bash(npx jest:*)"
+      "Bash(npx jest:*)",
+      "Bash(find client/src -name *.tsx)"
     ]
   }
 }
