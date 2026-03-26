@@ -1,9 +1,5 @@
-import React, { useState, useEffect } from "react";
-import {
-  Clock,
-  Calendar,
-  MapPin,
-} from "lucide-react";
+import React from "react";
+import { Clock, Calendar, MapPin } from "lucide-react";
 
 interface ClassSession {
   id: string;
@@ -34,15 +30,6 @@ export const ClassCard: React.FC<ClassCardProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const [, setActiveMenuId] = useState<string | null>(null);
-
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = () => setActiveMenuId(null);
-    window.addEventListener("click", handleClickOutside);
-    return () => window.removeEventListener("click", handleClickOutside);
-  }, []);
-
   const getLevelBadgeColor = (level: string) => {
     const normalizedLevel = level?.toUpperCase();
     switch (normalizedLevel) {
@@ -112,7 +99,10 @@ export const ClassCard: React.FC<ClassCardProps> = ({
         {/* Middle row: Location and Instructor */}
         <div className="grid grid-cols-2 gap-2 py-3 border-y border-slate-50 dark:border-slate-800/50">
           <div className="flex items-center gap-2 text-sm text-slate-600 min-w-0 dark:text-slate-400">
-            <MapPin size={14} className="text-slate-400 flex-shrink-0 dark:text-slate-500" />
+            <MapPin
+              size={14}
+              className="text-slate-400 flex-shrink-0 dark:text-slate-500"
+            />
             <span className="truncate">{session.room}</span>
           </div>
           {session.instructor && (
@@ -128,7 +118,9 @@ export const ClassCard: React.FC<ClassCardProps> = ({
         {/* Bottom row: Capacity */}
         <div className="space-y-2">
           <div className="flex justify-between text-xs font-bold">
-            <span className="text-slate-500 dark:text-slate-400">תפוסת שיעור</span>
+            <span className="text-slate-500 dark:text-slate-400">
+              תפוסת שיעור
+            </span>
             <span
               className={
                 session.students >= session.capacity

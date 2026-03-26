@@ -145,12 +145,12 @@ export const ClassSchedule: React.FC = () => {
       </div>
 
       {/* Day Tabs */}
-      <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-100 flex overflow-x-auto dark:bg-slate-900 dark:border-slate-800/10">
+      <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-100 flex overflow-x-auto gap-1 scrollbar-hide dark:bg-slate-900 dark:border-slate-800/10">
         {DAYS_ARRAY.map((day) => (
           <button
             key={day}
             onClick={() => setSelectedDay(day)}
-            className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+            className={`flex-shrink-0 md:flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
               selectedDay === day
                 ? "bg-indigo-50 text-indigo-700 shadow-sm dark:bg-indigo-600 dark:text-white"
                 : "text-slate-500 hover:bg-slate-50 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200"
