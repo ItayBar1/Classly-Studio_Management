@@ -55,7 +55,10 @@ describe("AuthController", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    req = { body: {} };
+    req = {
+      body: {},
+      logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() } as any,
+    };
     res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
@@ -100,6 +103,24 @@ describe("AuthController", () => {
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({
         error: "Invalid email or password",
+      });
+    });
+
+    it("returns 403 if user is suspended", async () => {
+      req.body = { email: "test@test.com", password: "password123" };
+      mockPrisma.users.findUnique.mockResolvedValue({
+        id: "user1",
+        email: "test@test.com",
+        password_hash: "$2b$stored_hash",
+        role: "STUDENT",
+        status: "SUSPENDED",
+      });
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      await AuthController.login(req as Request, res as Response, next);
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        error: "Account is suspended",
       });
     });
 

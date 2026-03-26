@@ -274,7 +274,7 @@ export interface Database {
             | "CASH"
             | null;
           transzilla_transaction_id: string | null;
-          status: "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | null;
+          status: "PENDING" | "SUCCEEDED" | "FAILED" | "REFUNDED" | null;
           invoice_number: string | null;
           invoice_url: string | null;
           due_date: string;
@@ -300,7 +300,7 @@ export interface Database {
             | "CASH"
             | null;
           transzilla_transaction_id?: string | null;
-          status?: "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | null;
+          status?: "PENDING" | "SUCCEEDED" | "FAILED" | "REFUNDED" | null;
           invoice_number?: string | null;
           invoice_url?: string | null;
           due_date: string;
@@ -326,7 +326,7 @@ export interface Database {
             | "CASH"
             | null;
           transzilla_transaction_id?: string | null;
-          status?: "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | null;
+          status?: "PENDING" | "SUCCEEDED" | "FAILED" | "REFUNDED" | null;
           invoice_number?: string | null;
           invoice_url?: string | null;
           due_date?: string;

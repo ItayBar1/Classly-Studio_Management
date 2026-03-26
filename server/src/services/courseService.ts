@@ -1,5 +1,6 @@
 import { prisma } from "../config/prisma";
 import { logger } from "../logger";
+import { AppError } from "../utils/AppError";
 
 type CourseFilters = {
   category_id?: string | number;
@@ -30,7 +31,7 @@ export class CourseService {
     });
     serviceLogger.info({ userRole, filters }, "Fetching all courses");
 
-    const where: any = {};
+    const where: { is_active?: boolean; category_id?: string } = {};
 
     // If student, only show active courses
     if (userRole === "STUDENT") {
@@ -76,7 +77,7 @@ export class CourseService {
 
     // Filter out full courses in JS
     const availableCourses = data.filter(
-      (course) => (course.current_enrollment || 0) < course.max_capacity,
+      (course) => (course.current_enrollment || 0) < course.max_capacity
     );
 
     return availableCourses;
@@ -103,7 +104,7 @@ export class CourseService {
 
     if (!data) {
       serviceLogger.error({ id }, "Course not found");
-      throw new Error("Course not found");
+      throw new AppError("Course not found", 404);
     }
     return data;
   }
@@ -132,12 +133,14 @@ export class CourseService {
 
     const dataToSave = {
       ...courseData,
-      start_time: typeof courseData.start_time === 'string' 
-        ? formatTimeForPrisma(courseData.start_time) 
-        : courseData.start_time,
-      end_time: typeof courseData.end_time === 'string' 
-        ? formatTimeForPrisma(courseData.end_time) 
-        : courseData.end_time,
+      start_time:
+        typeof courseData.start_time === "string"
+          ? formatTimeForPrisma(courseData.start_time)
+          : courseData.start_time,
+      end_time:
+        typeof courseData.end_time === "string"
+          ? formatTimeForPrisma(courseData.end_time)
+          : courseData.end_time,
     };
 
     const data = await prisma.classes.create({
@@ -156,12 +159,14 @@ export class CourseService {
 
     const dataToUpdate = {
       ...updates,
-      start_time: typeof updates.start_time === 'string' 
-        ? formatTimeForPrisma(updates.start_time) 
-        : updates.start_time,
-      end_time: typeof updates.end_time === 'string' 
-        ? formatTimeForPrisma(updates.end_time) 
-        : updates.end_time,
+      start_time:
+        typeof updates.start_time === "string"
+          ? formatTimeForPrisma(updates.start_time)
+          : updates.start_time,
+      end_time:
+        typeof updates.end_time === "string"
+          ? formatTimeForPrisma(updates.end_time)
+          : updates.end_time,
     };
 
     const data = await prisma.classes.update({

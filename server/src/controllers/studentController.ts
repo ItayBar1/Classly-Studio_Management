@@ -1,11 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import { StudentService } from "../services/studentService";
-import { logger } from "../logger";
 
 export const StudentController = {
   getAll: async (req: Request, res: Response, next: NextFunction) => {
-    const requestLog = req.logger || logger.child({ controller: "StudentController", method: "getAll" });
-    requestLog.info({ params: req.params, query: req.query }, "Controller entry");
+    const requestLog = req.logger!;
+    requestLog.info(
+      { params: req.params, query: req.query },
+      "Controller entry"
+    );
     try {
       if (!req.studioId) {
         res.status(400).json({ error: "Studio ID is missing" });
@@ -27,11 +29,14 @@ export const StudentController = {
   },
 
   getById: async (req: Request, res: Response, next: NextFunction) => {
-    const requestLog = req.logger || logger.child({ controller: "StudentController", method: "getById" });
+    const requestLog = req.logger!;
     requestLog.info({ params: req.params }, "Controller entry");
     try {
       const student = await StudentService.getById(req.params.id);
-      requestLog.info({ studentId: req.params.id }, "Fetched student successfully");
+      requestLog.info(
+        { studentId: req.params.id },
+        "Fetched student successfully"
+      );
       res.json(student);
     } catch (error) {
       requestLog.error({ err: error }, "Error fetching student by id");
@@ -40,11 +45,14 @@ export const StudentController = {
   },
 
   getByInstructor: async (req: Request, res: Response, next: NextFunction) => {
-    const requestLog = req.logger || logger.child({ controller: "StudentController", method: "getByInstructor" });
+    const requestLog = req.logger!;
     requestLog.info({ userId: req.user!.id }, "Controller entry");
     try {
       const students = await StudentService.getByInstructor(req.user!.id);
-      requestLog.info({ count: students.length }, "Fetched instructor students successfully");
+      requestLog.info(
+        { count: students.length },
+        "Fetched instructor students successfully"
+      );
       res.json(students);
     } catch (error) {
       requestLog.error({ err: error }, "Error fetching instructor students");
@@ -56,7 +64,7 @@ export const StudentController = {
    * Soft delete a student
    */
   async delete(req: Request, res: Response, next: NextFunction) {
-    const requestLog = req.logger || logger.child({ controller: "StudentController", method: "delete" });
+    const requestLog = req.logger!;
     requestLog.info({ params: req.params }, "Controller entry");
     try {
       const { id } = req.params;
@@ -81,16 +89,22 @@ export const StudentController = {
   },
 
   create: async (req: Request, res: Response, next: NextFunction) => {
-    const requestLog = req.logger || logger.child({ controller: "StudentController", method: "create" });
-    requestLog.info({ body: req.body, studioId: req.studioId }, "Controller entry");
+    const requestLog = req.logger!;
+    requestLog.info(
+      { body: req.body, studioId: req.studioId },
+      "Controller entry"
+    );
     try {
       if (!req.studioId) {
-         res.status(400).json({ error: "Studio ID is missing from request" });
-         return;
+        res.status(400).json({ error: "Studio ID is missing from request" });
+        return;
       }
-      
+
       const newStudent = await StudentService.create(req.studioId, req.body);
-      requestLog.info({ studentId: newStudent?.id }, "Student created successfully");
+      requestLog.info(
+        { studentId: newStudent?.id },
+        "Student created successfully"
+      );
       res.status(201).json(newStudent);
     } catch (error: any) {
       requestLog.error({ err: error }, "Error creating student");

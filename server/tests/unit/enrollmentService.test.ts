@@ -36,6 +36,29 @@ describe("EnrollmentService", () => {
     jest.clearAllMocks();
   });
 
+  describe("getCourseInfo", () => {
+    it("returns course name and price", async () => {
+      mockPrisma.classes.findUnique.mockResolvedValue({
+        name: "Yoga",
+        price_ils: 120,
+      });
+
+      const info = await EnrollmentService.getCourseInfo("class-1");
+      expect(info).toEqual({ name: "Yoga", price: 120 });
+      expect(mockPrisma.classes.findUnique).toHaveBeenCalledWith({
+        where: { id: "class-1" },
+        select: { name: true, price_ils: true },
+      });
+    });
+
+    it("throws 404 if course not found", async () => {
+      mockPrisma.classes.findUnique.mockResolvedValue(null);
+      await expect(
+        EnrollmentService.getCourseInfo("nonexistent")
+      ).rejects.toThrow("Course not found");
+    });
+  });
+
   describe("enrollStudent", () => {
     it("throws if course is not found", async () => {
       mockPrisma.classes.findUnique.mockResolvedValue(null);
@@ -127,6 +150,43 @@ describe("EnrollmentService", () => {
         })
       );
       expect(result.enrollment.status).toBe("ACTIVE");
+    });
+
+    it("uses tx client when tx parameter is provided", async () => {
+      const mockTx = {
+        classes: {
+          findUnique: jest.fn().mockResolvedValue({
+            max_capacity: 10,
+            current_enrollment: 3,
+            price_ils: 50,
+            name: "Pilates",
+          }),
+        },
+        enrollments: {
+          findFirst: jest.fn().mockResolvedValue(null),
+          create: jest.fn().mockResolvedValue({
+            id: "tx-enroll-1",
+            studio_id: "studio-1",
+            student_id: "student-1",
+            class_id: "class-1",
+            status: "PENDING",
+            payment_status: "PENDING",
+          }),
+        },
+      };
+
+      await EnrollmentService.enrollStudent(
+        "studio-1",
+        "student-1",
+        "class-1",
+        "PENDING",
+        "PENDING",
+        undefined,
+        mockTx as any
+      );
+
+      expect(mockTx.enrollments.create).toHaveBeenCalled();
+      expect(mockPrisma.enrollments.create).not.toHaveBeenCalled();
     });
   });
 

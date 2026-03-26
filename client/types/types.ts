@@ -4,7 +4,7 @@
 export type UserRole = "ADMIN" | "INSTRUCTOR" | "STUDENT" | "PARENT";
 export type UserStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
 export type EnrollmentStatus = "ACTIVE" | "PAUSED" | "COMPLETED" | "CANCELLED";
-export type PaymentStatus = "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED";
+export type PaymentStatus = "PENDING" | "SUCCEEDED" | "FAILED" | "REFUNDED";
 export type ClassLevel =
   | "BEGINNER"
   | "INTERMEDIATE"
