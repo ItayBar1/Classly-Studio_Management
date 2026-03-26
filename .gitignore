@@ -48,3 +48,4 @@ coverage
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+.claude/settings.local.json

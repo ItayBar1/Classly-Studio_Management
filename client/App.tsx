@@ -249,6 +249,12 @@ function App() {
     }
   };
 
+  // useMemo MUST be called before any early returns to satisfy Rules of Hooks
+  const tabContent = useMemo(
+    () => getComponentForTab(activeTab),
+    [activeTab, userRole]
+  );
+
   if (loading)
     return (
       <div className="h-screen flex items-center justify-center">
@@ -290,11 +296,6 @@ function App() {
       </Suspense>
     );
   }
-
-  const tabContent = useMemo(
-    () => getComponentForTab(activeTab),
-    [activeTab, userRole]
-  );
 
   return (
     <div
