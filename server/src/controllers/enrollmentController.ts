@@ -147,7 +147,7 @@ export class EnrollmentController {
         message: "Registration initiated, proceed to payment",
         clientSecret: paymentIntent.clientSecret,
         enrollmentId: enrollment.id,
-        amount: courseInfo.price,
+        amount: Number(courseInfo.price),
       });
     } catch (error: any) {
       // Convert third-party 401 errors (e.g., from Stripe) to 500 server errors

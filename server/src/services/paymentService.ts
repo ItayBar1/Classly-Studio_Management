@@ -5,9 +5,7 @@ import { logger } from "../logger";
 import { environment } from "../config/env";
 import { AppError } from "../utils/AppError";
 
-const stripe = new Stripe(environment.stripe.secretKey || "", {
-  apiVersion: "2026-02-25.clover",
-});
+const stripe = new Stripe(environment.stripe.secretKey || "");
 
 export class PaymentService {
   /**

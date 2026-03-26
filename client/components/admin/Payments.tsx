@@ -305,7 +305,7 @@ export const Payments: React.FC = () => {
       setPayments(data);
 
       const total = data
-        .filter((p) => p.status === "SUCCEEDED")
+        .filter((p) => p.status === "SUCCEEDED" || p.status === "COMPLETED")
         .reduce((sum, p) => sum + p.amount_ils, 0);
 
       setStats({

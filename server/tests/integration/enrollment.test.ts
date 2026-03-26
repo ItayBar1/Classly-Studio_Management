@@ -75,6 +75,13 @@ const mockPrisma = prisma as any;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { PaymentService } = require("../../src/services/paymentService");
 
+/** Simulates a Prisma Decimal so that Number(mock) works correctly. */
+const mockDecimal = (n: number) => ({
+  toNumber: () => n,
+  valueOf: () => n,
+  toString: () => String(n),
+});
+
 describe("POST /api/enrollments/register (self-register)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -84,7 +91,7 @@ describe("POST /api/enrollments/register (self-register)", () => {
     // getCourseInfo lookup
     mockPrisma.classes.findUnique.mockResolvedValue({
       name: "Yoga",
-      price_ils: { toNumber: () => 100 },
+      price_ils: mockDecimal(100),
     });
 
     PaymentService.createIntent.mockResolvedValue({
@@ -102,7 +109,7 @@ describe("POST /api/enrollments/register (self-register)", () => {
           findUnique: jest.fn().mockResolvedValue({
             max_capacity: 20,
             current_enrollment: 5,
-            price_ils: 100,
+            price_ils: mockDecimal(100),
             name: "Yoga",
           }),
         },
@@ -129,7 +136,7 @@ describe("POST /api/enrollments/register (self-register)", () => {
     // getCourseInfo lookup
     mockPrisma.classes.findUnique.mockResolvedValue({
       name: "Free Intro",
-      price_ils: { toNumber: () => 0 },
+      price_ils: mockDecimal(0),
       max_capacity: 20,
       current_enrollment: 5,
     });
@@ -162,7 +169,7 @@ describe("POST /api/enrollments/register (self-register)", () => {
   it("returns 409 for duplicate enrollment", async () => {
     mockPrisma.classes.findUnique.mockResolvedValue({
       name: "Yoga",
-      price_ils: { toNumber: () => 0 },
+      price_ils: mockDecimal(0),
       max_capacity: 20,
       current_enrollment: 5,
     });
@@ -179,7 +186,7 @@ describe("POST /api/enrollments/register (self-register)", () => {
     // Use a free course so enrollStudent runs directly (not inside $transaction)
     mockPrisma.classes.findUnique.mockResolvedValue({
       name: "Yoga",
-      price_ils: { toNumber: () => 0 },
+      price_ils: mockDecimal(0),
       max_capacity: 10,
       current_enrollment: 10,
     });
@@ -195,7 +202,7 @@ describe("POST /api/enrollments/register (self-register)", () => {
   it("does not call $transaction when Stripe fails", async () => {
     mockPrisma.classes.findUnique.mockResolvedValue({
       name: "Yoga",
-      price_ils: { toNumber: () => 100 },
+      price_ils: mockDecimal(100),
     });
 
     PaymentService.createIntent.mockRejectedValue(new Error("Stripe down"));
