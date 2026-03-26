@@ -92,7 +92,7 @@ services:
 
   cf-tunnel:
     image: cloudflare/cloudflared:latest
-    container_name: cf-tunnel
+    container_name: classly-tunnel
     restart: always
     command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}
 
