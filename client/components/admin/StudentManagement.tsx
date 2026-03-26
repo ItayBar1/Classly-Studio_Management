@@ -138,7 +138,8 @@ export const StudentManagement: React.FC = () => {
 
     if (selectedClass !== "הכל") {
       result = result.filter(
-        (student) => student.enrolledClass === selectedClass
+        (student) =>
+          student.enrolledClass?.split(", ").includes(selectedClass) ?? false
       );
     }
 

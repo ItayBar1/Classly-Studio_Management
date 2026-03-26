@@ -15,7 +15,7 @@ export const StudentService = {
     studioId: string,
     page: number = 1,
     limit: number = 50,
-    search: string = "",
+    search: string = ""
   ) {
     const serviceLogger = logger.child({
       service: "StudentService",
@@ -23,7 +23,7 @@ export const StudentService = {
     });
     serviceLogger.info(
       { studioId, page, limit, search },
-      "Fetching students list",
+      "Fetching students list"
     );
 
     const skip = (page - 1) * limit;
@@ -45,12 +45,31 @@ export const StudentService = {
         where,
         skip,
         take: limit,
+        include: {
+          enrollments_as_student: {
+            where: { status: { in: ["ACTIVE", "PENDING"] } },
+            select: { class: { select: { name: true } } },
+          },
+        },
       }),
       prisma.users.count({ where }),
     ]);
 
+    const studentsWithClass = data.map(
+      ({ enrollments_as_student, ...student }) => {
+        const classNames = [
+          ...new Set(
+            enrollments_as_student
+              .map((e) => e.class?.name)
+              .filter((n): n is string => !!n)
+          ),
+        ];
+        return { ...student, enrolledClass: classNames.join(", ") };
+      }
+    );
+
     serviceLogger.info({ count }, "Students fetched successfully");
-    return { data, count };
+    return { data: studentsWithClass, count };
   },
 
   async getById(id: string) {
@@ -131,7 +150,7 @@ export const StudentService = {
     });
     serviceLogger.info(
       { studioId, email: studentData.email },
-      "Creating student",
+      "Creating student"
     );
 
     const { email, full_name, phone_number, password } = studentData;
@@ -187,7 +206,7 @@ export const StudentService = {
 
     if (user.role !== "STUDENT") {
       throw new Error(
-        "Cannot delete a user who is not a student via this endpoint",
+        "Cannot delete a user who is not a student via this endpoint"
       );
     }
 
