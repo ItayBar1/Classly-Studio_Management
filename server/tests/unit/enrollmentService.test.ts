@@ -31,6 +31,13 @@ jest.mock("../../src/logger", () => ({
 // Alias for ergonomic access to mock functions in test bodies.
 const mockPrisma = prisma as any;
 
+/** Simulates a Prisma Decimal so that Number(mock) works correctly. */
+const mockDecimal = (n: number) => ({
+  toNumber: () => n,
+  valueOf: () => n,
+  toString: () => String(n),
+});
+
 describe("EnrollmentService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -40,11 +47,12 @@ describe("EnrollmentService", () => {
     it("returns course name and price", async () => {
       mockPrisma.classes.findUnique.mockResolvedValue({
         name: "Yoga",
-        price_ils: 120,
+        price_ils: mockDecimal(120),
       });
 
       const info = await EnrollmentService.getCourseInfo("class-1");
-      expect(info).toEqual({ name: "Yoga", price: 120 });
+      expect(info.name).toBe("Yoga");
+      expect(Number(info.price)).toBe(120);
       expect(mockPrisma.classes.findUnique).toHaveBeenCalledWith({
         where: { id: "class-1" },
         select: { name: true, price_ils: true },
@@ -71,7 +79,7 @@ describe("EnrollmentService", () => {
       mockPrisma.classes.findUnique.mockResolvedValue({
         max_capacity: 10,
         current_enrollment: 10,
-        price_ils: 50,
+        price_ils: mockDecimal(50),
         name: "Yoga class",
       });
       await expect(
@@ -83,7 +91,7 @@ describe("EnrollmentService", () => {
       mockPrisma.classes.findUnique.mockResolvedValue({
         max_capacity: 10,
         current_enrollment: 5,
-        price_ils: 50,
+        price_ils: mockDecimal(50),
         name: "Yoga class",
       });
       mockPrisma.enrollments.findFirst.mockResolvedValue({ id: "enroll-1" });
@@ -97,7 +105,7 @@ describe("EnrollmentService", () => {
       mockPrisma.classes.findUnique.mockResolvedValue({
         max_capacity: 10,
         current_enrollment: 5,
-        price_ils: 50,
+        price_ils: mockDecimal(50),
         name: "Yoga class",
       });
       mockPrisma.enrollments.findFirst.mockResolvedValue(null);
@@ -125,7 +133,7 @@ describe("EnrollmentService", () => {
       mockPrisma.classes.findUnique.mockResolvedValue({
         max_capacity: 10,
         current_enrollment: 5,
-        price_ils: 0,
+        price_ils: mockDecimal(0),
         name: "Free class",
       });
       mockPrisma.enrollments.findFirst.mockResolvedValue(null);
@@ -158,7 +166,7 @@ describe("EnrollmentService", () => {
           findUnique: jest.fn().mockResolvedValue({
             max_capacity: 10,
             current_enrollment: 3,
-            price_ils: 50,
+            price_ils: mockDecimal(50),
             name: "Pilates",
           }),
         },
