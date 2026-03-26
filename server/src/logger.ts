@@ -31,7 +31,7 @@ if (usePrettyPrint) {
 targets.push({
   target: "pino-loki",
   options: {
-    batching: false, // Disabled temporarily for debugging JSON structure
+    batching: true,
     interval: 5,
     host: environment.lokiUrl,
     labels: { application: "classly-backend" },
