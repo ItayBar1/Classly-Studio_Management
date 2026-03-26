@@ -5,6 +5,7 @@ import { BottomNav } from "./components/BottomNav";
 import { Loader2 } from "lucide-react";
 import { AuthService, UserService, getStoredUser } from "./services/api";
 import type { User } from "./types/types";
+import { initializeTheme } from "./utils/theme";
 
 // --- Lazy Load Components (Code Splitting) ---
 

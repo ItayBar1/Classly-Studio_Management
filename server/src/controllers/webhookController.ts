@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import Stripe from 'stripe';
 import { PaymentService } from '../services/paymentService';
 import { logger } from '../logger';
 
@@ -23,9 +24,13 @@ export class WebhookController {
             switch (event.type) {
                 case 'payment_intent.succeeded':
                     // eslint-disable-next-line no-case-declarations
-                    const paymentIntent = event.data.object as { id: string };
+                    const paymentIntent = event.data.object as Stripe.PaymentIntent;
+                    // eslint-disable-next-line no-case-declarations
+                    const latestChargeId = typeof paymentIntent.latest_charge === 'string'
+                        ? paymentIntent.latest_charge
+                        : paymentIntent.latest_charge?.id ?? null;
                     requestLog.info({ paymentIntentId: paymentIntent.id }, 'Payment succeeded event received');
-                    await PaymentService.handlePaymentSuccess(paymentIntent.id);
+                    await PaymentService.handlePaymentSuccess(paymentIntent.id, latestChargeId);
                     break;
 
                 case 'payment_intent.payment_failed':

@@ -144,6 +144,7 @@ describe("PaymentService", () => {
         enrollment_id: "enroll_123",
         status: "SUCCEEDED",
       });
+      mockPrisma.enrollments.updateMany.mockResolvedValue({ count: 1 });
       mockPrisma.enrollments.findUnique.mockResolvedValue({
         id: "enroll_123",
         payment_status: "PENDING",
@@ -167,7 +168,7 @@ describe("PaymentService", () => {
         })
       );
 
-      expect(mockPrisma.enrollments.update).toHaveBeenCalledWith(
+      expect(mockPrisma.enrollments.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: "enroll_123" },
           data: expect.objectContaining({
@@ -194,6 +195,7 @@ describe("PaymentService", () => {
         enrollment_id: "enroll_123",
         status: "SUCCEEDED",
       });
+      mockPrisma.enrollments.updateMany.mockResolvedValue({ count: 1 });
       // But enrollment was not updated yet
       mockPrisma.enrollments.findUnique.mockResolvedValue({
         id: "enroll_123",
@@ -203,7 +205,7 @@ describe("PaymentService", () => {
       const result = await PaymentService.confirmPayment("pi_already_success");
 
       expect(mockPrisma.payments.updateMany).toHaveBeenCalled();
-      expect(mockPrisma.enrollments.update).toHaveBeenCalledWith(
+      expect(mockPrisma.enrollments.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: "enroll_123" },
           data: expect.objectContaining({

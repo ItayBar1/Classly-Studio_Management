@@ -1,6 +1,6 @@
 import axios from "axios";
 import { logger } from "./logger";
-import {
+import type {
   User,
   Student,
   ClassSession,
@@ -70,8 +70,11 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
+    const statusCode = error.response?.status;
+    const requestUrl = error.config?.url || '';
+
     logger.error(
-      `API Error: ${error.response?.status} from ${error.config?.url}`,
+      `API Error: ${statusCode} from ${requestUrl}`,
       {
         responseData: error.response?.data,
         message: error.message,

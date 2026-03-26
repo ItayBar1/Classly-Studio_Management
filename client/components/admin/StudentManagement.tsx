@@ -505,6 +505,15 @@ export const StudentManagement: React.FC = () => {
                               className="absolute left-0 top-full mt-1 w-52 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-50 animate-fadeIn dark:bg-slate-800 dark:border-slate-700 max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:top-auto max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:mt-0 max-sm:border-x-0 max-sm:border-b-0 max-sm:shadow-[0_-8px_30px_rgba(0,0,0,0.12)] max-sm:pb-6"
                               onClick={(e) => e.stopPropagation()}
                             >
+                              <div className="hidden max-sm:flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+                                <span className="font-semibold text-slate-800 dark:text-slate-100">פעולות לתלמיד</span>
+                                <button
+                                  onClick={() => setOpenMenuId(null)}
+                                  className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                                >
+                                  סגור
+                                </button>
+                              </div>
                               <button
                                 onClick={() => {
                                   setEnrollModalStudent(student);
