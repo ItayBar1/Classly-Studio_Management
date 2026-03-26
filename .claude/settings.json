@@ -12,7 +12,9 @@
       "Bash(npx husky:*)",
       "Bash(npx lint-staged:*)",
       "Bash(npx tsc:*)",
-      "Bash(npx vitest:*)"
+      "Bash(npx vitest:*)",
+      "Bash(npx eslint:*)",
+      "Bash(git:*)"
     ]
   }
 }
