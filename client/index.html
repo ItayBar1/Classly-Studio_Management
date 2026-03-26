@@ -1,52 +1,71 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="he" dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
+
     <title>Classly | מערכת ניהול סטודיו חכמה</title>
-    <meta name="description" content="מערכת מתקדמת לניהול סטודיו לחוגים. פתרון חכם להרשמה מקוונת לשיעורים, ניהול תלמידים, מעקב תשלומים ומערכת שעות דינמית." />
-    <meta name="keywords" content="ניהול סטודיו, הרשמה לחוגים, מערכת שעות, סטודיו למחול, פילאטיס, ניהול תלמידים" />
+    <meta
+      name="description"
+      content="מערכת מתקדמת לניהול סטודיו לחוגים. פתרון חכם להרשמה מקוונת לשיעורים, ניהול תלמידים, מעקב תשלומים ומערכת שעות דינמית."
+    />
+    <meta
+      name="keywords"
+      content="ניהול סטודיו, הרשמה לחוגים, מערכת שעות, סטודיו למחול, פילאטיס, ניהול תלמידים"
+    />
     <meta name="robots" content="index, follow" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 fill=%22%234f46e5%22>❖</text></svg>" />
-    
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 fill=%22%234f46e5%22>❖</text></svg>"
+    />
+
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://classly-studio-management.uk/" />
     <meta property="og:title" content="Classly | ניהול סטודיו חכם" />
-    <meta property="og:description" content="המערכת המושלמת לניהול הסטודיו שלך. הרשמה דיגיטלית, סליקה וניהול לקוחות במקום אחד." />
+    <meta
+      property="og:description"
+      content="המערכת המושלמת לניהול הסטודיו שלך. הרשמה דיגיטלית, סליקה וניהול לקוחות במקום אחד."
+    />
+    <meta
+      property="og:image"
+      content="https://classly-studio-management.uk/og-image.svg"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta property="og:site_name" content="Classly" />
     <meta property="og:locale" content="he_IL" />
 
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Classly | ניהול סטודיו חכם" />
+    <meta
+      name="twitter:description"
+      content="המערכת המושלמת לניהול הסטודיו שלך. הרשמה דיגיטלית, סליקה וניהול לקוחות במקום אחד."
+    />
+    <meta
+      name="twitter:image"
+      content="https://classly-studio-management.uk/og-image.svg"
+    />
+
+    <!-- Dark-mode FOUC prevention — must stay inline and run before first paint -->
     <script>
-      // Apply saved theme before first paint to prevent flash
-      (function() {
-        var t = localStorage.getItem('classly_theme');
-        if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark');
+      (function () {
+        var t = localStorage.getItem("classly_theme");
+        if (
+          t === "dark" ||
+          (!t && window.matchMedia("(prefers-color-scheme: dark)").matches)
+        ) {
+          document.documentElement.classList.add("dark");
         }
       })();
     </script>
-    <script>
-      window.tailwind = { config: { darkMode: 'class' } };
-    </script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-      body {
-        font-family: 'Inter', sans-serif;
-      }
-    </style>
-    
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@^19.2.3",
-        "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-        "react/": "https://esm.sh/react@^19.2.3/",
-        "recharts": "https://esm.sh/recharts@^3.6.0",
-        "lucide-react": "https://esm.sh/lucide-react@^0.561.0"
-      }
-    }
-    </script>
+
+    <!-- Google Fonts (Heebo for Hebrew, Inter for Latin) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="root"></div>

@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { allowedCorsOrigins } from "./config/env";
@@ -28,8 +29,38 @@ export const app = express();
 // so that express-rate-limit can see the real user IP address.
 app.set("trust proxy", 1);
 
-// Security Middleware
-app.use(helmet());
+// Security Middleware — explicit CSP (SEC2)
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        // 'unsafe-inline' remains for the dark-mode FOUC prevention script in index.html.
+        // That script cannot be moved to a file (it must run before first paint).
+        // All other inline scripts and CDN dependencies have been removed in Phase 3.
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://js.stripe.com"],
+        styleSrc: [
+          "'self'",
+          "'unsafe-inline'", // Required for Google Fonts injected CSS
+          "https://fonts.googleapis.com",
+        ],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: [
+          "'self'",
+          "data:", // Inline SVG favicon
+          "https://images.unsplash.com",
+        ],
+        connectSrc: ["'self'", "https://api.stripe.com"],
+        frameSrc: [
+          "https://js.stripe.com", // Stripe Elements renders inside iframes
+        ],
+        frameAncestors: ["'none'"], // Equivalent to X-Frame-Options: DENY (modern)
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+  })
+);
 
 // Rate Limiting to prevent brute-force attacks
 const limiter = rateLimit({
@@ -42,15 +73,40 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Parse cookies (required for HttpOnly JWT cookie auth)
+app.use(cookieParser());
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      // allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      if (allowedCorsOrigins.indexOf(origin) === -1) {
-        const msg =
-          "The CORS policy for this site does not allow access from the specified Origin.";
-        return callback(new Error(msg), false);
+      const isProd = process.env.NODE_ENV === "production";
+
+      // No Origin header: always allowed (non-browser callers like Stripe webhooks,
+      // health probes, curl). CORS is a browser mechanism — blocking no-Origin
+      // provides zero security value and breaks webhook processing.
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // In production only the production domain is whitelisted.
+      // In development the full allowedCorsOrigins list (localhost variants) is used.
+      const allowed: string[] = isProd
+        ? ([process.env.CLIENT_URL].filter(Boolean) as string[])
+        : allowedCorsOrigins;
+
+      if (isProd && allowed.length === 0) {
+        throw new Error(
+          "CLIENT_URL env var is not set — all browser CORS requests will be blocked in production"
+        );
+      }
+
+      if (!allowed.includes(origin)) {
+        return callback(
+          new Error(
+            "The CORS policy for this site does not allow access from the specified Origin."
+          ),
+          false
+        );
       }
       return callback(null, true);
     },

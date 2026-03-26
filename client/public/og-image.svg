@@ -1,0 +1,40 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#120e1c"/>
+      <stop offset="100%" stop-color="#1a1625"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="30%" cy="20%" r="50%">
+      <stop offset="0%" stop-color="#b026ff" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#b026ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="70%" cy="80%" r="50%">
+      <stop offset="0%" stop-color="#00d2ff" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#00d2ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow1)"/>
+  <rect width="1200" height="630" fill="url(#glow2)"/>
+
+  <!-- Card border -->
+  <rect x="60" y="60" width="1080" height="510" rx="24" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+
+  <!-- Brand name -->
+  <text x="600" y="270" font-family="Inter, Helvetica, sans-serif" font-size="100" font-weight="900" fill="white" text-anchor="middle" letter-spacing="6">Classly</text>
+
+  <!-- Purple accent line -->
+  <rect x="460" y="295" width="280" height="3" rx="2" fill="url(#glow1)"/>
+  <rect x="460" y="295" width="280" height="3" rx="2" fill="#b026ff" opacity="0.8"/>
+
+  <!-- Hebrew tagline -->
+  <text x="600" y="370" font-family="Arial, sans-serif" font-size="34" fill="#b026ff" text-anchor="middle">מערכת ניהול סטודיו חכמה</text>
+
+  <!-- Subtitle -->
+  <text x="600" y="430" font-family="Inter, Helvetica, sans-serif" font-size="22" fill="#9ca3af" text-anchor="middle">הרשמה דיגיטלית · סליקה · ניהול לקוחות</text>
+
+  <!-- Domain -->
+  <text x="600" y="530" font-family="Inter, Helvetica, sans-serif" font-size="18" fill="#4f46e5" text-anchor="middle">classly-studio-management.uk</text>
+</svg>

@@ -51,7 +51,7 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
-      target: builder  # <--- זה גורם לדוקר לעצור בשלב ה-node:20-alpine AS builder
+      target: builder # <--- זה גורם לדוקר לעצור בשלב ה-node:20-alpine AS builder
     container_name: classly-tools
     env_file:
       - ./server/.env
@@ -60,7 +60,7 @@ services:
     # אנחנו לא צריכים ports או restart לכלים זמניים
 
   frontend:
-    build: 
+    build:
       context: ./client
       args:
         - VITE_API_URL=${VITE_API_URL:-http://localhost:5000/api}
@@ -69,12 +69,36 @@ services:
     restart: always
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - letsencrypt:/etc/letsencrypt:ro # TLS certificates (read-only)
+      - certbot_webroot:/var/www/certbot:ro # ACME challenge files (read-only)
     env_file:
       - ./client/.env
     depends_on:
       - backend
 
+  # Certbot — obtains and renews Let's Encrypt certificates.
+  # Initial issuance: docker compose run --rm certbot certonly --webroot
+  #   --webroot-path /var/www/certbot
+  #   -d classly-studio-management.uk -d www.classly-studio-management.uk
+  #   --email <your-email> --agree-tos --no-eff-email
+  # Renewal (run via cron or manually): docker compose run --rm certbot renew
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot_webroot:/var/www/certbot
+
+  cf-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: classly-tunnel
+    restart: always
+    command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}
+
 volumes:
   postgres_data:
   loki_data:
   grafana_data:
+  letsencrypt:
+  certbot_webroot:

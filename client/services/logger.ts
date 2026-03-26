@@ -1,6 +1,4 @@
-import { getStoredToken } from '../utils/storage';
-
-type LogLevel = 'info' | 'warn' | 'error';
+type LogLevel = "info" | "warn" | "error";
 
 /**
  * Logger service for consistent log formatting and production filtering.
@@ -14,60 +12,68 @@ class Logger {
    * @param data Optional data object to log
    */
   private log(level: LogLevel, message: string, data?: any) {
-    if (import.meta.env.PROD && level === 'info') {
+    if (import.meta.env.PROD && level === "info") {
       return; // Skip info logs in production if desired
     }
 
-    const timestamp = new Date().toISOString();
-    const payload = data !== undefined 
-      ? (typeof data === 'object' && data !== null && !Array.isArray(data) ? { ...data } : { value: data }) 
-      : undefined;
+    const timestamp = new Date().toLocaleString("en-IL", {
+      timeZone: "Asia/Jerusalem",
+      hour12: false,
+    });
+    const payload =
+      data !== undefined
+        ? typeof data === "object" && data !== null && !Array.isArray(data)
+          ? { ...data }
+          : { value: data }
+        : undefined;
 
     // Sanitize payload
     if (payload) {
-        if (payload.password) payload.password = '***';
-        if (payload.token) payload.token = '***';
-        if (payload.access_token) payload.access_token = '***';
+      if (payload.password) payload.password = "***";
+      if (payload.token) payload.token = "***";
+      if (payload.access_token) payload.access_token = "***";
     }
 
-    // Send to backend bridge
+    // Send to backend bridge.
+    // /logs is excluded from the 401-reload interceptor in api.ts, so a 401
+    // response here (unauthenticated user) is silently dropped rather than
+    // triggering a page reload.
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || '/api';
-      const token = getStoredToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      const apiUrl = import.meta.env.VITE_API_URL || "/api";
 
       fetch(`${apiUrl}/logs`, {
-        method: 'POST',
-        headers,
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           level,
           message,
-          context: payload
-        })
+          context: payload,
+        }),
       }).catch((err) => {
         // Prevent recursive logging
-        console.error('Failed to send log to server:', err);
+        console.error("Failed to send log to server:", err);
       });
-    } catch(err) {
-      console.error('Failed to prepare log for server:', err);
+    } catch (err) {
+      console.error("Failed to prepare log for server:", err);
     } // End frontend log bridge
 
-    console[level](`[${timestamp}] [${level.toUpperCase()}] ${message}`, payload || '');
+    console[level](
+      `[${timestamp}] [${level.toUpperCase()}] ${message}`,
+      payload || ""
+    );
   }
 
   info(message: string, data?: any) {
-    this.log('info', message, data);
+    this.log("info", message, data);
   }
 
   warn(message: string, data?: any) {
-    this.log('warn', message, data);
+    this.log("warn", message, data);
   }
 
   error(message: string, data?: any) {
-    this.log('error', message, data);
+    this.log("error", message, data);
   }
 }
 

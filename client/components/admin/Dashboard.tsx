@@ -1,22 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { 
-  Users, 
-  DollarSign, 
-  CalendarCheck, 
+import React, { useEffect, useState } from "react";
+import { Helmet } from "react-helmet-async";
+import {
+  Users,
+  DollarSign,
+  CalendarCheck,
   TrendingUp,
-  Loader2
-} from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+  Loader2,
+} from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   LineChart,
-  Line
-} from 'recharts';
+  Line,
+} from "recharts";
 import { DashboardService } from "../../services/api";
 import { DAY_NAMES_HE } from "../../utils/dateUtils";
 
@@ -26,14 +27,18 @@ interface ChartData {
   attendance: number;
 }
 
-
-
 const StatCard = ({ title, value, subtext, icon: Icon, color }: any) => (
   <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-start justify-between hover:shadow-md transition-shadow dark:bg-slate-900 dark:border-slate-800">
     <div>
-      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
-      <h3 className="text-2xl font-bold text-slate-800 mt-1 dark:text-slate-100">{value}</h3>
-      <p className={`text-xs mt-2 font-medium ${subtext.includes('+') ? 'text-green-600 dark:text-green-400' : 'text-slate-400 dark:text-slate-500'}`}>
+      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+        {title}
+      </p>
+      <h3 className="text-2xl font-bold text-slate-800 mt-1 dark:text-slate-100">
+        {value}
+      </h3>
+      <p
+        className={`text-xs mt-2 font-medium ${subtext.includes("+") ? "text-green-600 dark:text-green-400" : "text-slate-400 dark:text-slate-500"}`}
+      >
         {subtext}
       </p>
     </div>
@@ -50,31 +55,31 @@ export const Dashboard: React.FC = () => {
     totalStudents: 0,
     monthlyRevenue: 0,
     activeClasses: 0,
-    avgAttendance: 0
+    avgAttendance: 0,
   });
   const [chartData, setChartData] = useState<ChartData[]>([]);
 
-useEffect(() => {
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const data = await DashboardService.getAdminStats();
-      setStats({
-        totalStudents: data.totalStudents,
-        monthlyRevenue: data.monthlyRevenue,
-        activeClasses: data.activeClasses,
-        avgAttendance: data.avgAttendance
-      });
-      setChartData(data.chartData);
-    } catch (error) {
-      console.error('Failed to load dashboard:', error);
-      setError('שגיאה בטעינת הנתונים. אנא נסה שוב מאוחר יותר.');
-    } finally {
-      setLoading(false);
-    }
-  };
-  loadData();
-}, []);
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const data = await DashboardService.getAdminStats();
+        setStats({
+          totalStudents: data.totalStudents,
+          monthlyRevenue: data.monthlyRevenue,
+          activeClasses: data.activeClasses,
+          avgAttendance: data.avgAttendance,
+        });
+        setChartData(data.chartData);
+      } catch (error) {
+        console.error("Failed to load dashboard:", error);
+        setError("שגיאה בטעינת הנתונים. אנא נסה שוב מאוחר יותר.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   if (loading) {
     return (
@@ -100,59 +105,78 @@ useEffect(() => {
 
   return (
     <div className="space-y-6">
+      <Helmet>
+        <title>לוח בקרה | Classly</title>
+      </Helmet>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">מבט על</h2>
-          <p className="text-slate-500 dark:text-slate-400">ברוך שובך, מנהל המערכת.</p>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+            מבט על
+          </h2>
+          <p className="text-slate-500 dark:text-slate-400">
+            ברוך שובך, מנהל המערכת.
+          </p>
         </div>
         <div className="text-sm text-slate-500 bg-slate-100 px-4 py-2 rounded-full dark:bg-slate-800 dark:text-slate-400">
-          {new Date().toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          {new Date().toLocaleDateString("he-IL", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
+        <StatCard
           title='סה"כ תלמידים'
-          value={stats.totalStudents.toLocaleString()} 
-          subtext="רשומות פעילות" 
-          icon={Users} 
-          color="bg-blue-500" 
+          value={stats.totalStudents.toLocaleString()}
+          subtext="רשומות פעילות"
+          icon={Users}
+          color="bg-blue-500"
         />
-        <StatCard 
-          title="הכנסות החודש" 
-          value={`₪${stats.monthlyRevenue.toLocaleString()}`} 
-          subtext="חודש נוכחי" 
-          icon={DollarSign} 
-          color="bg-green-500" 
+        <StatCard
+          title="הכנסות החודש"
+          value={`₪${stats.monthlyRevenue.toLocaleString()}`}
+          subtext="חודש נוכחי"
+          icon={DollarSign}
+          color="bg-green-500"
         />
-        <StatCard 
-          title="שיעורים פעילים" 
-          value={stats.activeClasses} 
-          subtext="רצים כעת במערכת" 
-          icon={CalendarCheck} 
-          color="bg-indigo-500" 
+        <StatCard
+          title="שיעורים פעילים"
+          value={stats.activeClasses}
+          subtext="רצים כעת במערכת"
+          icon={CalendarCheck}
+          color="bg-indigo-500"
         />
-        <StatCard 
-          title="ממוצע נוכחות" 
-          value={stats.avgAttendance} 
-          subtext="ממוצע ליום (7 ימים)" 
-          icon={TrendingUp} 
-          color="bg-orange-500" 
+        <StatCard
+          title="ממוצע נוכחות"
+          value={stats.avgAttendance}
+          subtext="ממוצע ליום (7 ימים)"
+          icon={TrendingUp}
+          color="bg-orange-500"
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800">
-          <h3 className="text-lg font-bold text-slate-800 mb-4 dark:text-slate-100">מגמת הכנסות (7 ימים אחרונים)</h3>
+          <h3 className="text-lg font-bold text-slate-800 mb-4 dark:text-slate-100">
+            מגמת הכנסות (7 ימים אחרונים)
+          </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="name" stroke="#94a3b8" />
                 <YAxis stroke="#94a3b8" />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', textAlign: 'right' }}
-                  formatter={(value: number) => [`₪${value}`, 'הכנסות']}
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: "none",
+                    boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                    textAlign: "right",
+                  }}
+                  formatter={(value: number) => [`₪${value}`, "הכנסות"]}
                 />
                 <Bar dataKey="revenue" fill="#6366f1" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -161,18 +185,31 @@ useEffect(() => {
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800">
-          <h3 className="text-lg font-bold text-slate-800 mb-4 dark:text-slate-100">נוכחות שבועית</h3>
+          <h3 className="text-lg font-bold text-slate-800 mb-4 dark:text-slate-100">
+            נוכחות שבועית
+          </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="name" stroke="#94a3b8" />
                 <YAxis stroke="#94a3b8" />
-                <Tooltip 
-                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', textAlign: 'right' }}
-                   formatter={(value: number) => [value, 'נוכחים']}
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: "none",
+                    boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                    textAlign: "right",
+                  }}
+                  formatter={(value: number) => [value, "נוכחים"]}
                 />
-                <Line type="monotone" dataKey="attendance" stroke="#f97316" strokeWidth={2} dot={{ r: 4 }} />
+                <Line
+                  type="monotone"
+                  dataKey="attendance"
+                  stroke="#f97316"
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
