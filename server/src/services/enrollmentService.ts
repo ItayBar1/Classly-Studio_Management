@@ -1,5 +1,6 @@
 import { prisma } from "../config/prisma";
 import { logger } from "../logger";
+import { AppError } from "../utils/AppError";
 
 export class EnrollmentService {
   /**
@@ -60,12 +61,7 @@ export class EnrollmentService {
         { studentId, classId },
         "Student already enrolled in course"
       );
-      const alreadyEnrolledError: any = new Error(
-        "Student is already enrolled in this course"
-      );
-      alreadyEnrolledError.statusCode = 409;
-      alreadyEnrolledError.isOperational = true;
-      throw alreadyEnrolledError;
+      throw new AppError("Student is already enrolled in this course", 409);
     }
 
     // --- FREE COURSE LOGIC ---

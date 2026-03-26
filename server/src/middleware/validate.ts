@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { ZodSchema } from "zod";
 import sanitizeHtml from "sanitize-html";
+import { ValidationError } from "../utils/AppError";
 
 // Fields that must never be sanitized — they are opaque secrets that are
 // only hashed or compared server-side and never rendered back to the client.
@@ -59,12 +60,9 @@ export function validate(schema: ZodSchema) {
     const result = schema.safeParse(req.body);
     if (!result.success) {
       const firstError = result.error.errors[0];
-      const err: NodeJS.ErrnoException = Object.assign(
-        new Error(firstError.message),
-        {
-          status: 400,
-          field: firstError.path.join("."),
-        }
+      const err = new ValidationError(
+        firstError.message,
+        firstError.path.join(".")
       );
       return next(err);
     }

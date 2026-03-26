@@ -31,7 +31,7 @@ describe("validate middleware", () => {
     validate(schema)(req, mockRes(), mockNext);
     const [err] = mockNext.mock.calls[0];
     expect(err).toBeInstanceOf(Error);
-    expect((err as any).status).toBe(400);
+    expect((err as any).statusCode).toBe(400);
   });
 
   it("calls next(error) when field type is wrong", () => {
@@ -40,7 +40,7 @@ describe("validate middleware", () => {
     validate(schemaWithNum)(req, mockRes(), mockNext);
     const [err] = mockNext.mock.calls[0];
     expect(err).toBeInstanceOf(Error);
-    expect((err as any).status).toBe(400);
+    expect((err as any).statusCode).toBe(400);
   });
 });
 

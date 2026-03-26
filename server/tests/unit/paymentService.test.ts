@@ -17,6 +17,7 @@ jest.mock("../../src/config/prisma", () => {
     enrollments: {
       findUnique: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
     },
     $transaction: jest.fn(async (cb: any) => await cb(prismaClient)),
   };
@@ -170,7 +171,7 @@ describe("PaymentService", () => {
 
       expect(mockPrisma.enrollments.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: "enroll_123" },
+          where: expect.objectContaining({ id: "enroll_123" }),
           data: expect.objectContaining({
             status: "ACTIVE",
             payment_status: "PAID",
@@ -207,7 +208,7 @@ describe("PaymentService", () => {
       expect(mockPrisma.payments.updateMany).toHaveBeenCalled();
       expect(mockPrisma.enrollments.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: "enroll_123" },
+          where: expect.objectContaining({ id: "enroll_123" }),
           data: expect.objectContaining({
             status: "ACTIVE",
             payment_status: "PAID",

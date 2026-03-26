@@ -81,11 +81,11 @@ app.use(
     origin: (origin, callback) => {
       const isProd = process.env.NODE_ENV === "production";
 
-      // No Origin header: allowed in dev (curl, Postman, local sims), blocked in prod.
+      // No Origin header: always allowed (non-browser callers like Stripe webhooks,
+      // health probes, curl). CORS is a browser mechanism — blocking no-Origin
+      // provides zero security value and breaks webhook processing.
       if (!origin) {
-        return isProd
-          ? callback(new Error("Origin header required"), false)
-          : callback(null, true);
+        return callback(null, true);
       }
 
       // In production only the production domain is whitelisted.
