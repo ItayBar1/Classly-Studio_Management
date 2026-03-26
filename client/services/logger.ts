@@ -34,7 +34,10 @@ class Logger {
       if (payload.access_token) payload.access_token = "***";
     }
 
-    // Send to backend bridge
+    // Send to backend bridge.
+    // /logs is excluded from the 401-reload interceptor in api.ts, so a 401
+    // response here (unauthenticated user) is silently dropped rather than
+    // triggering a page reload.
     try {
       const apiUrl = import.meta.env.VITE_API_URL || "/api";
 

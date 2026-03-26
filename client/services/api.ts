@@ -43,12 +43,15 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Auth endpoints that should NOT trigger auto-logout on 401
+// Endpoints that should NOT trigger auto-logout on 401.
+// Includes auth routes (caller handles credential errors) and the log
+// bridge (unauthenticated users can still generate loggable errors).
 const AUTH_PATHS = [
   "/auth/login",
   "/auth/register",
   "/auth/forgot-password",
   "/auth/reset-password",
+  "/logs",
 ];
 
 /**
@@ -81,10 +84,14 @@ apiClient.interceptors.response.use(
       );
 
       if (!isAuthRequest) {
-        // Cookie expired on a protected route — clear cached user and reload.
-        // On reload, GET /api/auth/me will return 401, showing the login screen.
-        removeStoredUser();
-        window.location.reload();
+        // Only reload if the user had an active session (stored user exists).
+        // If there is no stored user, this is an unauthenticated visitor hitting
+        // /api/auth/me on load — let the caller's catch block handle it normally.
+        // Reloading here would create an infinite reload loop for unauthenticated users.
+        if (getStoredUser()) {
+          removeStoredUser();
+          window.location.reload();
+        }
       }
     }
     return Promise.reject(error);
