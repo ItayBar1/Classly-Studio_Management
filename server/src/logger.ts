@@ -33,7 +33,7 @@ targets.push({
   options: {
     batching: false, // Disabled temporarily for debugging JSON structure
     interval: 5,
-    host: "http://loki:3100", // Log storage in Docker internal network
+    host: environment.lokiUrl,
     labels: { application: "classly-backend" },
     propsToLabels: ["service"],
   },
