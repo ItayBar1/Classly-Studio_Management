@@ -74,18 +74,16 @@ export const StudentManagement: React.FC = () => {
     null
   );
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click (pointerdown unifies mouse + touch)
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+    const handleClickOutside = (e: PointerEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpenMenuId(null);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside);
+    document.addEventListener("pointerdown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
+      document.removeEventListener("pointerdown", handleClickOutside);
     };
   }, []);
 
@@ -358,8 +356,163 @@ export const StudentManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+      {/* Mobile Card View */}
+      <div className="space-y-3 md:hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="animate-spin h-6 w-6 text-slate-400" />
+            <span className="mr-2 text-slate-500 dark:text-slate-400">
+              טוען נתונים...
+            </span>
+          </div>
+        ) : displayedStudents.length > 0 ? (
+          displayedStudents.map((student) => (
+            <div
+              key={student.id}
+              className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 space-y-3 dark:bg-slate-900 dark:border-slate-800"
+            >
+              {/* Top row: avatar + name + status + actions */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-10 w-10 flex-shrink-0 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm dark:bg-indigo-900/50 dark:text-indigo-400">
+                    {student.profile_image_url ? (
+                      <img
+                        src={student.profile_image_url}
+                        alt={`${student.full_name}`}
+                        className="h-10 w-10 rounded-full"
+                      />
+                    ) : (
+                      student.full_name?.charAt(0) || "?"
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-900 truncate dark:text-slate-100">
+                      {student.full_name}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      מזהה: {student.id.substring(0, 6)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span
+                    className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${getStatusColor(student.status as EnrollmentStatus)}`}
+                  >
+                    {STATUS_TRANSLATION[student.status as EnrollmentStatus] ||
+                      student.status}
+                  </span>
+                  <div
+                    className="relative"
+                    ref={openMenuId === student.id ? menuRef : undefined}
+                  >
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setOpenMenuId(
+                          openMenuId === student.id ? null : student.id
+                        );
+                      }}
+                      className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors dark:hover:text-indigo-400 dark:hover:bg-slate-800"
+                    >
+                      <MoreVertical size={16} />
+                    </button>
+                    {openMenuId === student.id && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-40"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuId(null);
+                          }}
+                        />
+                        <div
+                          className="fixed bottom-0 left-0 w-full rounded-t-2xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)] border-t border-slate-200 py-1 pb-6 z-50 animate-fadeIn dark:bg-slate-800 dark:border-slate-700"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+                            <span className="font-semibold text-slate-800 dark:text-slate-100">
+                              פעולות לתלמיד
+                            </span>
+                            <button
+                              onClick={() => setOpenMenuId(null)}
+                              className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                            >
+                              סגור
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setEnrollModalStudent(student);
+                              setOpenMenuId(null);
+                            }}
+                            className="w-full text-right px-4 py-3 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-3 transition-colors dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-indigo-400"
+                          >
+                            <BookOpen size={16} /> רישום לקורסים
+                          </button>
+                          <button
+                            onClick={() => {
+                              setUnenrollModalStudent(student);
+                              setOpenMenuId(null);
+                            }}
+                            className="w-full text-right px-4 py-3 text-sm text-slate-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 transition-colors dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-orange-400"
+                          >
+                            <UserMinus size={16} /> הסרה מקורסים
+                          </button>
+                          <div className="border-t border-slate-100 my-1 dark:border-slate-700" />
+                          <button
+                            onClick={() => handleRemoveFromStudio(student.id)}
+                            disabled={deletingStudentId === student.id}
+                            className="w-full text-right px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-500/10"
+                          >
+                            {deletingStudentId === student.id ? (
+                              <Loader2 className="animate-spin" size={16} />
+                            ) : (
+                              <Trash2 size={16} />
+                            )}
+                            הסרה מהסטודיו
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {/* Classes */}
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                {student.enrolledClasses?.join(", ") || "לא רשום לשיעורים"}
+              </p>
+              {/* Contact + date */}
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                <span className="flex items-center gap-1">
+                  <Mail size={12} /> {student.email}
+                </span>
+                {student.phone_number ? (
+                  <span className="flex items-center gap-1">
+                    <Phone size={12} /> {student.phone_number}
+                  </span>
+                ) : null}
+                <span>
+                  הצטרף:{" "}
+                  {student.created_at
+                    ? new Date(student.created_at).toLocaleDateString("he-IL")
+                    : "-"}
+                </span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+            <Search className="h-10 w-10 text-slate-300 dark:text-slate-600 mb-2 mx-auto" />
+            <p className="font-medium">
+              {searchTerm ? "לא נמצאו תוצאות לחיפוש זה" : "לא נמצאו תלמידים"}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden md:block bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden dark:bg-slate-900 dark:border-slate-800">
         <div className="overflow-x-auto">
           <table className="w-full text-right border-collapse">
             <thead>
@@ -489,81 +642,46 @@ export const StudentManagement: React.FC = () => {
                           <MoreVertical size={18} />
                         </button>
 
-                        {/* Dropdown Menu / Bottom Sheet */}
+                        {/* Dropdown Menu */}
                         {openMenuId === student.id && (
-                          <>
-                            {/* Mobile Backdrop */}
-                            <div
-                              className="fixed inset-0 z-40 sm:hidden"
-                              onClick={(e) => {
-                                e.stopPropagation();
+                          <div
+                            className="absolute left-0 top-full mt-1 w-52 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-50 animate-fadeIn dark:bg-slate-800 dark:border-slate-700"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              onClick={() => {
+                                setEnrollModalStudent(student);
                                 setOpenMenuId(null);
                               }}
-                            />
-                            <div
-                              className="absolute left-0 top-full mt-1 w-52 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-50 animate-fadeIn dark:bg-slate-800 dark:border-slate-700 max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:top-auto max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:mt-0 max-sm:border-x-0 max-sm:border-b-0 max-sm:shadow-[0_-8px_30px_rgba(0,0,0,0.12)] max-sm:pb-6"
-                              onClick={(e) => e.stopPropagation()}
+                              className="w-full text-right px-4 py-2.5 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2 transition-colors dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-indigo-400"
                             >
-                              <div className="hidden max-sm:flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
-                                <span className="font-semibold text-slate-800 dark:text-slate-100">
-                                  פעולות לתלמיד
-                                </span>
-                                <button
-                                  onClick={() => setOpenMenuId(null)}
-                                  className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                                >
-                                  סגור
-                                </button>
-                              </div>
-                              <button
-                                onClick={() => {
-                                  setEnrollModalStudent(student);
-                                  setOpenMenuId(null);
-                                }}
-                                className="w-full text-right px-4 py-3 sm:py-2.5 text-sm sm:text-base text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-3 sm:gap-2 transition-colors dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-indigo-400"
-                              >
-                                <BookOpen
-                                  size={16}
-                                  className="sm:w-[15px] sm:h-[15px]"
-                                />
-                                רישום לקורסים
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setUnenrollModalStudent(student);
-                                  setOpenMenuId(null);
-                                }}
-                                className="w-full text-right px-4 py-3 sm:py-2.5 text-sm sm:text-base text-slate-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 sm:gap-2 transition-colors dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-orange-400"
-                              >
-                                <UserMinus
-                                  size={16}
-                                  className="sm:w-[15px] sm:h-[15px]"
-                                />
-                                הסרה מקורסים
-                              </button>
-                              <div className="border-t border-slate-100 my-1 dark:border-slate-700" />
-                              <button
-                                onClick={() =>
-                                  handleRemoveFromStudio(student.id)
-                                }
-                                disabled={deletingStudentId === student.id}
-                                className="w-full text-right px-4 py-3 sm:py-2.5 text-sm sm:text-base text-red-600 hover:bg-red-50 flex items-center gap-3 sm:gap-2 transition-colors disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-500/10"
-                              >
-                                {deletingStudentId === student.id ? (
-                                  <Loader2
-                                    className="animate-spin sm:w-[15px] sm:h-[15px]"
-                                    size={16}
-                                  />
-                                ) : (
-                                  <Trash2
-                                    size={16}
-                                    className="sm:w-[15px] sm:h-[15px]"
-                                  />
-                                )}
-                                הסרה מהסטודיו
-                              </button>
-                            </div>
-                          </>
+                              <BookOpen size={15} />
+                              רישום לקורסים
+                            </button>
+                            <button
+                              onClick={() => {
+                                setUnenrollModalStudent(student);
+                                setOpenMenuId(null);
+                              }}
+                              className="w-full text-right px-4 py-2.5 text-sm text-slate-700 hover:bg-orange-50 hover:text-orange-700 flex items-center gap-2 transition-colors dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-orange-400"
+                            >
+                              <UserMinus size={15} />
+                              הסרה מקורסים
+                            </button>
+                            <div className="border-t border-slate-100 my-1 dark:border-slate-700" />
+                            <button
+                              onClick={() => handleRemoveFromStudio(student.id)}
+                              disabled={deletingStudentId === student.id}
+                              className="w-full text-right px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-500/10"
+                            >
+                              {deletingStudentId === student.id ? (
+                                <Loader2 className="animate-spin" size={15} />
+                              ) : (
+                                <Trash2 size={15} />
+                              )}
+                              הסרה מהסטודיו
+                            </button>
+                          </div>
                         )}
                       </div>
                     </td>
@@ -589,9 +707,11 @@ export const StudentManagement: React.FC = () => {
             </tbody>
           </table>
         </div>
+      </div>
 
-        {/* Pagination Controls */}
-        <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex items-center justify-between dark:bg-slate-800/50 dark:border-slate-800">
+      {/* Pagination Controls */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800">
+        <div className="px-4 sm:px-6 py-4 flex items-center justify-between dark:border-slate-800">
           <button
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
