@@ -1,8 +1,21 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma";
 import { logger } from "../logger";
 import { AppError } from "../utils/AppError";
 
 export class EnrollmentService {
+  /**
+   * Lightweight course info lookup for pre-flight validation.
+   */
+  static async getCourseInfo(classId: string) {
+    const course = await prisma.classes.findUnique({
+      where: { id: classId },
+      select: { name: true, price_ils: true },
+    });
+    if (!course) throw new AppError("Course not found", 404);
+    return { name: course.name, price: course.price_ils };
+  }
+
   /**
    * Enroll a student to a class.
    */
@@ -12,7 +25,8 @@ export class EnrollmentService {
     classId: string,
     status: "ACTIVE" | "PENDING" = "ACTIVE",
     paymentStatus: "PAID" | "PENDING" | "OVERDUE" = "PAID",
-    notes?: string
+    notes?: string,
+    tx?: Prisma.TransactionClient
   ) {
     const serviceLogger = logger.child({
       service: "EnrollmentService",
@@ -23,8 +37,10 @@ export class EnrollmentService {
       "Enrolling student to class"
     );
 
+    const db = tx ?? prisma;
+
     // 1. Fetch course details (capacity and pricing)
-    const course = await prisma.classes.findUnique({
+    const course = await db.classes.findUnique({
       where: { id: classId },
       select: {
         max_capacity: true,
@@ -37,17 +53,17 @@ export class EnrollmentService {
 
     if (!course) {
       serviceLogger.error({ classId }, "Course not found during enrollment");
-      throw new Error("Course not found");
+      throw new AppError("Course not found", 404);
     }
 
     // 2. Validate capacity
     if ((course.current_enrollment || 0) >= course.max_capacity) {
       serviceLogger.warn({ classId }, "Course is full");
-      throw new Error("Course is full");
+      throw new AppError("Course is full", 409);
     }
 
     // 3. Prevent duplicate enrollment
-    const existing = await prisma.enrollments.findFirst({
+    const existing = await db.enrollments.findFirst({
       where: {
         student_id: studentId,
         class_id: classId,
@@ -71,7 +87,7 @@ export class EnrollmentService {
     const finalPaymentStatus = isFree ? "PAID" : paymentStatus;
 
     // 4. Create enrollment
-    const enrollment = await prisma.enrollments.create({
+    const enrollment = await db.enrollments.create({
       data: {
         studio_id: studioId,
         student_id: studentId,
@@ -175,7 +191,7 @@ export class EnrollmentService {
 
     if (!enrollment) {
       serviceLogger.warn({ enrollmentId }, "Enrollment not found");
-      throw new Error("Enrollment not found");
+      throw new AppError("Enrollment not found", 404);
     }
 
     await prisma.enrollments.update({

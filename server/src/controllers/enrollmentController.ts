@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from "express";
 import { EnrollmentService } from "../services/enrollmentService";
 import { PaymentService } from "../services/paymentService";
 import { prisma } from "../config/prisma";
-import { logger } from "../logger";
 
 export class EnrollmentController {
   // Admin enrolls a student manually
@@ -11,12 +10,7 @@ export class EnrollmentController {
     res: Response,
     next: NextFunction
   ) {
-    const requestLog =
-      req.logger ||
-      logger.child({
-        controller: "EnrollmentController",
-        method: "adminEnrollStudent",
-      });
+    const requestLog = req.logger!;
     requestLog.info(
       { body: req.body, studioId: req.user!.studio_id },
       "Controller entry"
@@ -26,7 +20,9 @@ export class EnrollmentController {
       const studioId = req.user!.studio_id;
 
       if (!studioId) {
-        return res.status(400).json({ error: "Studio ID is missing from user profile" });
+        return res
+          .status(400)
+          .json({ error: "Studio ID is missing from user profile" });
       }
 
       if (!studentId || !classId) {
@@ -57,70 +53,52 @@ export class EnrollmentController {
 
   /**
    * Handles self-registration for a student into a class.
-   * This is a critical business flow involving 4 main steps:
-   * 1. Create a PENDING enrollment record.
-   * 2. Handle FREE courses (skip payment) or create a Stripe Payment Intent.
-   * 3. Create a PENDING local payment record.
-   * 4. Return client secret to the frontend.
-   * 
-   * If any step fails after the enrollment is created, a rollback is attempted 
-   * to cancel the pending enrollment (mark it as CANCELLED) and prevent orphaned records.
-   * 
-   * @param req Express Request containing user ID in req.user and classId in req.body
-   * @param res Express Response to send back payment initialization details
-   * @param next Express NextFunction for error handling
+   *
+   * Flow:
+   * 1. Pre-flight: validate course exists and get pricing (fail-fast).
+   * 2. Free course → enroll directly, no Stripe.
+   * 3. Paid course → create Stripe intent first (external, outside DB tx),
+   *    then atomically create enrollment + payment record inside a prisma.$transaction.
+   *    If Stripe fails, no DB writes occur. If the DB tx fails, the Stripe intent
+   *    is abandoned (Stripe auto-expires unused intents).
    */
   static async studentSelfRegister(
     req: Request,
     res: Response,
     next: NextFunction
   ) {
-    const requestLog =
-      req.logger ||
-      logger.child({
-        controller: "EnrollmentController",
-        method: "studentSelfRegister",
-      });
+    const requestLog = req.logger!;
     requestLog.info(
       { userId: req.user!.id, body: req.body },
       "Controller entry"
     );
 
-    // Variable to track if enrollment was created, allowing rollback on error
-    let createdEnrollmentId: string | null = null;
+    const studentId = req.user!.id;
+    const studioId = req.user!.studio_id;
+
+    if (!studioId) {
+      return res
+        .status(400)
+        .json({ error: "Studio ID is missing from user profile" });
+    }
+    const { classId } = req.body;
+
+    if (!classId) {
+      return res.status(400).json({ error: "Class ID is required" });
+    }
 
     try {
-      const studentId = req.user!.id;
-      const studioId = req.user!.studio_id;
+      // 1. Pre-flight: validate course exists and get pricing (fails fast before Stripe)
+      const courseInfo = await EnrollmentService.getCourseInfo(classId);
 
-      if (!studioId) {
-        return res.status(400).json({ error: "Studio ID is missing from user profile" });
-      }
-      const { classId } = req.body;
-
-      if (!classId) {
-        return res.status(400).json({ error: "Class ID is required" });
-      }
-
-      // 1. Create a PENDING enrollment and collect pricing
-      const { enrollment, courseDetails } =
-        await EnrollmentService.enrollStudent(
+      // 2. Free course path — no Stripe, no payment record
+      if (courseInfo.price.toNumber() === 0) {
+        const { enrollment } = await EnrollmentService.enrollStudent(
           studioId,
           studentId,
           classId,
-          "PENDING", // Enrollment status awaiting confirmation
-          "PENDING" // Payment status awaiting payment
-        );
-
-      // Capture ID for potential rollback
-      createdEnrollmentId = enrollment.id;
-
-      // --- FREE COURSE HANDLING ---
-      // If the course is free, we skip payment processing entirely
-      if (courseDetails.price.toNumber() === 0) {
-        requestLog.info(
-          { enrollmentId: enrollment.id },
-          "Free course registration completed automatically"
+          "ACTIVE",
+          "PAID"
         );
         return res.status(201).json({
           message: "Registration completed successfully",
@@ -129,89 +107,55 @@ export class EnrollmentController {
           amount: 0,
         });
       }
-      // ----------------------------
 
-      // 2. Create a Stripe Payment Intent (ONLY if price > 0)
+      // 3. Paid course — Stripe first, then atomic DB transaction
       const paymentIntent = await PaymentService.createIntent(
-        courseDetails.price.toNumber(),
+        courseInfo.price.toNumber(),
         "ils",
-        `Registration for ${courseDetails.name}`,
-        {
-          enrollment_id: enrollment.id,
-          student_id: studentId,
-          class_id: classId,
-        }
+        `Registration for ${courseInfo.name}`,
+        { student_id: studentId, class_id: classId }
       );
 
-      // 3. Create a PENDING payment record locally
-      // Ensures confirmPayment has a backing record
-      await PaymentService.createPaymentRecord({
-        studioId: studioId,
-        studentId: studentId,
-        enrollmentId: enrollment.id,
-        amount: courseDetails.price.toNumber(),
-        stripePaymentIntentId: paymentIntent.id,
+      const { enrollment } = await prisma.$transaction(async (tx) => {
+        const { enrollment } = await EnrollmentService.enrollStudent(
+          studioId,
+          studentId,
+          classId,
+          "PENDING",
+          "PENDING",
+          undefined,
+          tx
+        );
+        await PaymentService.createPaymentRecord(
+          {
+            studioId,
+            studentId,
+            enrollmentId: enrollment.id,
+            amount: courseInfo.price.toNumber(),
+            stripePaymentIntentId: paymentIntent.id,
+          },
+          tx
+        );
+        return { enrollment };
       });
 
-      // 4. Return client secret to the client
       requestLog.info(
         { enrollmentId: enrollment.id, paymentIntentId: paymentIntent.id },
         "Self registration initiated"
       );
       res.status(201).json({
         message: "Registration initiated, proceed to payment",
-        clientSecret: paymentIntent.clientSecret, // Consumed by Stripe Elements on the client
+        clientSecret: paymentIntent.clientSecret,
         enrollmentId: enrollment.id,
-        amount: courseDetails.price,
+        amount: courseInfo.price,
       });
     } catch (error: any) {
-      requestLog.error(
-        { err: error },
-        "Error during student self registration"
-      );
-
-      // --- Rollback Logic ---
-      if (createdEnrollmentId) {
-        requestLog.warn(
-          { enrollmentId: createdEnrollmentId },
-          "Rolling back enrollment due to process failure"
-        );
-        try {
-          await EnrollmentService.cancelEnrollment(createdEnrollmentId);
-          requestLog.info(
-            { enrollmentId: createdEnrollmentId },
-            "Rollback successful: Enrollment cancelled"
-          );
-        } catch (rollbackError) {
-          requestLog.error(
-            { err: rollbackError, enrollmentId: createdEnrollmentId },
-            "CRITICAL: Failed to rollback enrollment after error"
-          );
-
-          // Attach rollback failure information to the original error
-          if (error && typeof error === "object") {
-            (error as any).rollbackFailed = true;
-            (error as any).rollbackError = rollbackError;
-            (error as any).rollbackEnrollmentId = createdEnrollmentId;
-          } else {
-            error = {
-              originalError: error,
-              rollbackFailed: true,
-              rollbackError,
-              rollbackEnrollmentId: createdEnrollmentId,
-            };
-          }
-        }
-      }
-      // ----------------------
-
       // Convert third-party 401 errors (e.g., from Stripe) to 500 server errors
       // This prevents the client-side app from forcefully logging out the user
-      if (error && error.statusCode === 401) {
+      if (error?.statusCode === 401) {
         error.statusCode = 500;
         error.message = "שגיאה בהתחברות לשירות התשלומים. אנא פנה להנהלה.";
       }
-
       next(error);
     }
   }
@@ -222,18 +166,12 @@ export class EnrollmentController {
     res: Response,
     next: NextFunction
   ) {
-    const requestLog =
-      req.logger ||
-      logger.child({
-        controller: "EnrollmentController",
-        method: "getMyEnrollments",
-      });
+    const requestLog = req.logger!;
     requestLog.info({ userId: req.user!.id }, "Controller entry");
     try {
       const studentId = req.user!.id;
-      const enrollments = await EnrollmentService.getStudentEnrollments(
-        studentId
-      );
+      const enrollments =
+        await EnrollmentService.getStudentEnrollments(studentId);
       requestLog.info(
         { count: enrollments?.length },
         "Fetched student enrollments"
@@ -251,12 +189,7 @@ export class EnrollmentController {
     res: Response,
     next: NextFunction
   ) {
-    const requestLog =
-      req.logger ||
-      logger.child({
-        controller: "EnrollmentController",
-        method: "getClassEnrollments",
-      });
+    const requestLog = req.logger!;
     requestLog.info(
       { params: req.params, userId: req.user!.id },
       "Controller entry"
@@ -272,11 +205,9 @@ export class EnrollmentController {
           classId
         );
         if (!isOwner) {
-          return res
-            .status(403)
-            .json({
-              error: "Not authorized to view enrollments for this class",
-            });
+          return res.status(403).json({
+            error: "Not authorized to view enrollments for this class",
+          });
         }
       }
 
@@ -298,13 +229,11 @@ export class EnrollmentController {
     res: Response,
     next: NextFunction
   ) {
-    const requestLog =
-      req.logger ||
-      logger.child({
-        controller: "EnrollmentController",
-        method: "cancelEnrollment",
-      });
-    requestLog.info({ params: req.params, userId: req.user!.id }, "Controller entry");
+    const requestLog = req.logger!;
+    requestLog.info(
+      { params: req.params, userId: req.user!.id },
+      "Controller entry"
+    );
     try {
       const { id } = req.params;
 
@@ -325,13 +254,16 @@ export class EnrollmentController {
             { enrollmentId: id, studentId: req.user!.id },
             "IDOR attempt: student tried to cancel another student's enrollment"
           );
-          return res.status(403).json({ error: "Not authorized to cancel this enrollment" });
+          return res
+            .status(403)
+            .json({ error: "Not authorized to cancel this enrollment" });
         }
 
         // Status check: students can only cancel PENDING enrollments
         if (enrollment.status !== "PENDING") {
           return res.status(403).json({
-            error: "Only pending enrollments can be cancelled. Please contact your studio admin.",
+            error:
+              "Only pending enrollments can be cancelled. Please contact your studio admin.",
           });
         }
       }
@@ -350,16 +282,12 @@ export class EnrollmentController {
     res: Response,
     next: NextFunction
   ) {
-    const requestLog =
-      req.logger ||
-      logger.child({
-        controller: "EnrollmentController",
-        method: "getStudentEnrollments",
-      });
+    const requestLog = req.logger!;
     requestLog.info({ params: req.params }, "Controller entry");
     try {
       const { studentId } = req.params;
-      const enrollments = await EnrollmentService.getStudentEnrollments(studentId);
+      const enrollments =
+        await EnrollmentService.getStudentEnrollments(studentId);
       requestLog.info(
         { count: enrollments?.length },
         "Fetched student enrollments for admin"

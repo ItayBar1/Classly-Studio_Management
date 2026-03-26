@@ -1,16 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import { InvitationService } from "../services/invitationService";
-import { logger } from "../logger";
+
 import { environment } from "../config/env";
 
 export class InvitationController {
   static async createInvite(req: Request, res: Response, next: NextFunction) {
-    const requestLog =
-      req.logger ||
-      logger.child({
-        controller: "InvitationController",
-        method: "createInvite",
-      });
+    const requestLog = req.logger!;
     try {
       const { role } = req.body;
       const creatorId = req.user?.id;
@@ -18,7 +13,7 @@ export class InvitationController {
       const userRole = req.user?.role;
       let studioId = req.user?.studio_id;
 
-      logger.info(
+      requestLog.info(
         { creatorId, userRole, studioId },
         "Creating invite request received"
       );
@@ -55,12 +50,7 @@ export class InvitationController {
   }
 
   static async validateInvite(req: Request, res: Response, next: NextFunction) {
-    const requestLog =
-      req.logger ||
-      logger.child({
-        controller: "InvitationController",
-        method: "validateInvite",
-      });
+    const requestLog = req.logger!;
     const { token } = req.params;
 
     if (!token) {
@@ -86,12 +76,7 @@ export class InvitationController {
   }
 
   static async acceptInvite(req: Request, res: Response, next: NextFunction) {
-    const requestLog =
-      req.logger ||
-      logger.child({
-        controller: "InvitationController",
-        method: "acceptInvite",
-      });
+    const requestLog = req.logger!;
     try {
       const { token } = req.body;
       const userId = req.user?.id;

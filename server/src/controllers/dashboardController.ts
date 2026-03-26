@@ -1,15 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import { DashboardService } from "../services/dashboardService";
-import { logger } from "../logger";
 
 export const DashboardController = {
   getAdminStats: async (req: Request, res: Response, next: NextFunction) => {
-    const requestLog =
-      req.logger ||
-      logger.child({
-        controller: "DashboardController",
-        method: "getAdminStats",
-      });
+    const requestLog = req.logger!;
     requestLog.info({ studioId: req.studioId }, "Controller entry");
     try {
       if (!req.studioId) {
@@ -30,12 +24,7 @@ export const DashboardController = {
     res: Response,
     next: NextFunction
   ) => {
-    const requestLog =
-      req.logger ||
-      logger.child({
-        controller: "DashboardController",
-        method: "getInstructorStats",
-      });
+    const requestLog = req.logger!;
     requestLog.info({ userId: req.user!.id }, "Controller entry");
     try {
       const stats = await DashboardService.getInstructorStats(req.user!.id);

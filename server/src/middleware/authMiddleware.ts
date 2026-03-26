@@ -29,6 +29,7 @@ export const authenticateUser = async (
     // 2. Fetch user profile from database
     const userData = await prisma.users.findUnique({
       where: { id: decoded.userId },
+      select: { id: true, role: true, studio_id: true, status: true },
     });
 
     if (!userData) {
