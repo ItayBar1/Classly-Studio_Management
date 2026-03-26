@@ -17,7 +17,7 @@ router.use(authenticateUser);
  * @desc    Get all payment history
  * @access  Admin
  */
-router.get("/", requireRole(["admin", "instructor"]), PaymentController.getAll);
+router.get("/", requireRole(["ADMIN", "INSTRUCTOR"]), PaymentController.getAll);
 
 /**
  * @route   POST /api/payment/create-intent

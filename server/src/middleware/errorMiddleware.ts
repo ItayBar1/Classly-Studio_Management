@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { logger } from "../logger";
-import { AppError } from "../utils/AppError";
+import { AppError, ValidationError } from "../utils/AppError";
 
 const errorHandler = (
   err: Error,
@@ -28,6 +28,14 @@ const errorHandler = (
   const message = appErr.isOperational
     ? err.message
     : "Something went wrong on the server.";
+
+  if (err instanceof ValidationError) {
+    return res.status(statusCode).json({
+      status: "error",
+      message,
+      field: err.field,
+    });
+  }
 
   res.status(statusCode).json({
     status: "error",

@@ -1,5 +1,7 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma";
 import { logger } from "../logger";
+import { AppError } from "../utils/AppError";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -28,7 +30,7 @@ export const StudentService = {
 
     const skip = (page - 1) * limit;
 
-    const where: any = {
+    const where: Prisma.usersWhereInput = {
       role: "STUDENT",
       studio_id: studioId,
     };
@@ -64,7 +66,7 @@ export const StudentService = {
               .filter((n): n is string => !!n)
           ),
         ];
-        return { ...student, enrolledClass: classNames.join(", ") };
+        return { ...student, enrolledClasses: classNames };
       }
     );
 
@@ -85,7 +87,7 @@ export const StudentService = {
 
     if (!data) {
       serviceLogger.error({ id }, "Student not found");
-      throw new Error("Student not found");
+      throw new AppError("Student not found", 404);
     }
     return data;
   },
@@ -201,12 +203,13 @@ export const StudentService = {
 
     if (!user) {
       serviceLogger.error({ studentId }, "Student not found during delete");
-      throw new Error("Student not found");
+      throw new AppError("Student not found", 404);
     }
 
     if (user.role !== "STUDENT") {
-      throw new Error(
-        "Cannot delete a user who is not a student via this endpoint"
+      throw new AppError(
+        "Cannot delete a user who is not a student via this endpoint",
+        403
       );
     }
 

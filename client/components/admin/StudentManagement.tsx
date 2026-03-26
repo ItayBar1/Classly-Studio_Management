@@ -138,8 +138,7 @@ export const StudentManagement: React.FC = () => {
 
     if (selectedClass !== "הכל") {
       result = result.filter(
-        (student) =>
-          student.enrolledClass?.split(", ").includes(selectedClass) ?? false
+        (student) => student.enrolledClasses?.includes(selectedClass) ?? false
       );
     }
 
@@ -182,7 +181,7 @@ export const StudentManagement: React.FC = () => {
     const rows = filteredAndSortedStudents.map((student) => [
       student.id,
       student.full_name,
-      student.enrolledClass || "-",
+      student.enrolledClasses?.join(", ") || "-",
       STATUS_TRANSLATION[student.status],
       student.email,
       student.phone_number || "-",
@@ -436,7 +435,7 @@ export const StudentManagement: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">
-                      {student.enrolledClass || "-"}
+                      {student.enrolledClasses?.join(", ") ?? ""}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -506,7 +505,9 @@ export const StudentManagement: React.FC = () => {
                               onClick={(e) => e.stopPropagation()}
                             >
                               <div className="hidden max-sm:flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
-                                <span className="font-semibold text-slate-800 dark:text-slate-100">פעולות לתלמיד</span>
+                                <span className="font-semibold text-slate-800 dark:text-slate-100">
+                                  פעולות לתלמיד
+                                </span>
                                 <button
                                   onClick={() => setOpenMenuId(null)}
                                   className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"

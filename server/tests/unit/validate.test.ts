@@ -32,6 +32,7 @@ describe("validate middleware", () => {
     const [err] = mockNext.mock.calls[0];
     expect(err).toBeInstanceOf(Error);
     expect((err as any).statusCode).toBe(400);
+    expect((err as any).field).toBe("email");
   });
 
   it("calls next(error) when field type is wrong", () => {
@@ -41,6 +42,7 @@ describe("validate middleware", () => {
     const [err] = mockNext.mock.calls[0];
     expect(err).toBeInstanceOf(Error);
     expect((err as any).statusCode).toBe(400);
+    expect((err as any).field).toBe("count");
   });
 });
 

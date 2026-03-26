@@ -94,6 +94,12 @@ app.use(
         ? ([process.env.CLIENT_URL].filter(Boolean) as string[])
         : allowedCorsOrigins;
 
+      if (isProd && allowed.length === 0) {
+        throw new Error(
+          "CLIENT_URL env var is not set — all browser CORS requests will be blocked in production"
+        );
+      }
+
       if (!allowed.includes(origin)) {
         return callback(
           new Error(
