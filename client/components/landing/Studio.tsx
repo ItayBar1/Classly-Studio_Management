@@ -1,71 +1,94 @@
-import React from "react";
+import React, { useState } from "react";
 
-const studioImages = [
+// rendering-hoist-jsx: static data defined at module level, not inside component
+const studios = [
   {
-    src: "https://lh3.googleusercontent.com/aida-public/AB6AXuDwUXRetI9w9ea4-totNBlKptSs05gER-VN3P181HIP6Yf-Pw8UkMZ8M6Qzjvyt-bBKssdXGhDDWDtUN22EeC87VnJDNWgNedEMMD5VDTX9sBJ3uN8wEUQMSOZnD1gUwPzyfEjHnwOBqSn1VgCnwMmYo5JRcuoyNfasGImKD75qVR2rGgBl1-pMTveSVqpYv6jCz92PjRiO5CsPlLHwYOAEg3UXqJz1bHxhf0eMv4EJMUUysUafzUobEVVLLTnugVmdIuqN_tOPqTg",
-    alt: "Studio",
-    featured: false,
-  },
-  {
-    src: "https://lh3.googleusercontent.com/aida-public/AB6AXuALGHisSq8X1-Rdv8pPj_AvgWWg4SncuWDmExQLeUKfx6w6aMrIYGCQq4auW4VcFM0ycvMO21gPwksHR1g3BYDRdM1e9bdJ7tXt1JIihawM9HbJn3K85jKzAOrTaJr23QJkb50EOgY8w32OnbmxC3ufYF4lRYU8lNHUSkwwVYGbdKSk8aRR4_UwznOxVbEXMVxHXNCsazVosxdFlye-PfLey3TFxdrtDdRzTl1GheMsU-oCB3fPr0hTweh0EtyQSau_heOgfrc2t0o",
-    alt: "Tel Aviv Studio",
-    featured: true,
     name: "סטודיו תל אביב",
+    label: "תל אביב",
+    src: "https://lh3.googleusercontent.com/aida-public/AB6AXuALGHisSq8X1-Rdv8pPj_AvgWWg4SncuWDmExQLeUKfx6w6aMrIYGCQq4auW4VcFM0ycvMO21gPwksHR1g3BYDRdM1e9bdJ7tXt1JIihawM9HbJn3K85jKzAOrTaJr23QJkb50EOgY8w32OnbmxC3ufYF4lRYU8lNHUSkwwVYGbdKSk8aRR4_UwznOxVbEXMVxHXNCsazVosxdFlye-PfLey3TFxdrtDdRzTl1GheMsU-oCB3fPr0hTweh0EtyQSau_heOgfrc2t0o",
   },
   {
-    src: "https://lh3.googleusercontent.com/aida-public/AB6AXuCzngjpT4u_BY0ffAAjLt6DNvyVUGG1eUZCFguwsmBXF9bJVXf2X41bp0wFcJRWvIGvfh38P3hLjsG1mafqrfO6l0_EEfu1C-REjIeUfVgvP0MQaR9biCtuBl36w9aOX4VSw9H9cpIKlIsSc1vmnYX2jjb1V_AqK_tyozqL_9EN31YYwUnREp2Lh4c_jLNlCEFDSuJ6sSTQusXfzdjva-p0r89GbuN6a7uA8tApPwVxtrZhMYuVGM_bTJwFNMrQCkmgn4BupyhxRPg",
-    alt: "Studio",
-    featured: false,
+    name: "סטודיו הרצליה",
+    label: "הרצליה",
+    src: "https://lh3.googleusercontent.com/aida-public/AB6AXuDwUXRetI9w9ea4-totNBlKptSs05gER-VN3P181HIP6Yf-Pw8UkMZ8M6Qzjvyt-bBKssdXGhDDWDtUN22EeC87VnJDNWgNedEMMD5VDTX9sBJ3uN8wEUQMSOZnD1gUwPzyfEjHnwOBqSn1VgCnwMmYo5JRcuoyNfasGImKD75qVR2rGgBl1-pMTveSVqpYv6jCz92PjRiO5CsPlLHwYOAEg3UXqJz1bHxhf0eMv4EJMUUysUafzUobEVVLLTnugVmdIuqN_tOPqTg",
   },
   {
+    name: "סטודיו חיפה",
+    label: "חיפה",
+    src: "https://lh3.googleusercontent.com/aida-public/AB6AXuCzngjpT4u_BY0ffAAjLt6DNvyVUGG1eUZCFguwsmBXF9bJVXf2X41bp0wFcJRWvIWvfh38P3hLjsG1mafqrfO6l0_EEfu1C-REjIeUfVgvP0MQaR9biCtuBl36w9aOX4VSw9H9cpIKlIsSc1vmnYX2jjb1V_AqK_tyozqL_9EN31YYwUnREp2Lh4c_jLNlCEFDSuJ6sSTQusXfzdjva-p0r89GbuN6a7uA8tApPwVxtrZhMYuVGM_bTJwFNMrQCkmgn4BupyhxRPg",
+  },
+  {
+    name: "סטודיו ירושלים",
+    label: "ירושלים",
     src: "https://lh3.googleusercontent.com/aida-public/AB6AXuCNOJWAVJUSauDdU8PHdnJGPhprP-OZRhbEmdG2tqtce5SV-Y_U_JXjniTQgobZuSe-dT-y1fpdHhfIqxJgFGrrXz8g2qIr28mmC2v-oUS8MM8ztVr1OEVvVhcippLO7ikAyS1-oomvedyPmgrV8AmdlShlYuhjrEnY-Odh1YlXnM8QPIazoRuVXZWMrwkamstJBkG8SEl81xvmB-lL3Y35zuSo-bmWsJx9F0JBH_I5PMmQ24Ht3SJS9FNogxxH4yaxGE51qonGr3k",
-    alt: "Studio",
-    featured: false,
-    hiddenOnMobile: true,
   },
 ];
 
 const Studio: React.FC = () => {
+  const [active, setActive] = useState(0);
+
   return (
-    <section className="bg-panel-bg rounded-[2rem] p-8 border border-gray-800">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-2">הסטודיואים שלנו</h2>
-        <p className="text-gray-400 text-sm">בואו לרקוד באחד מהסניפים שלנו</p>
-      </div>
-      <div className="flex gap-4 justify-center items-end">
-        {studioImages.map((studio, i) =>
-          studio.featured ? (
-            <div
-              key={i}
-              className="rounded-xl overflow-hidden border-2 border-neon-purple shadow-neon-purple w-32 h-40 relative -translate-y-2 flex-shrink-0"
-            >
-              <img
-                alt={studio.alt}
-                className="w-full h-full object-cover"
-                src={studio.src}
-              />
-              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black to-transparent p-3 text-center">
-                <div className="font-bold text-sm mb-1">{studio.name}</div>
-                <button className="bg-neon-purple text-white text-xs px-3 py-1 rounded-full shadow-neon-purple">
-                  קראו עוד
-                </button>
-              </div>
+    <section className="bg-panel-bg rounded-[2rem] overflow-hidden border border-gray-800 transition-all duration-500">
+      {/* Spotlight viewer */}
+      <div className="relative h-[500px] w-full overflow-hidden">
+        {studios.map((studio, i) => (
+          <div
+            key={i}
+            className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+              i === active ? "opacity-100" : "opacity-0 pointer-events-none"
+            }`}
+          >
+            <img
+              src={studio.src}
+              alt={studio.name}
+              className="w-full h-full object-cover"
+              loading={i === 0 ? "eager" : "lazy"}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col items-center justify-center p-6 text-center">
+              <h3 className="text-4xl md:text-6xl font-black mb-4 tracking-tight drop-shadow-xl">
+                {studio.name}
+              </h3>
+              <button className="bg-neon-purple hover:bg-white hover:text-neon-purple px-10 py-4 rounded-full font-bold shadow-neon-purple transition-all duration-300 transform hover:scale-110">
+                קראו עוד
+              </button>
             </div>
-          ) : (
+          </div>
+        ))}
+      </div>
+
+      {/* Thumbnail nav strip */}
+      <div className="flex gap-4 p-4 md:p-8 bg-black/40 backdrop-blur-md justify-center items-center">
+        {studios.map((studio, i) => (
+          <button
+            key={i}
+            onClick={() => setActive(i)}
+            className="cursor-pointer group flex flex-col items-center gap-2"
+          >
             <div
-              key={i}
-              className={`rounded-xl overflow-hidden border border-gray-700 w-24 h-32 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition cursor-pointer flex-shrink-0${
-                studio.hiddenOnMobile ? " hidden md:block" : ""
+              className={`w-20 h-28 md:w-24 md:h-32 rounded-xl border-2 overflow-hidden transition-all duration-300 group-hover:scale-105 ${
+                i === active
+                  ? "border-neon-purple shadow-neon-purple"
+                  : "border-gray-700 group-hover:border-neon-purple"
               }`}
             >
               <img
-                alt={studio.alt}
-                className="w-full h-full object-cover"
                 src={studio.src}
+                alt={studio.label}
+                className="w-full h-full object-cover"
+                loading="lazy"
               />
             </div>
-          )
-        )}
+            <span
+              className={`text-xs md:text-sm transition-colors duration-300 ${
+                i === active
+                  ? "text-white"
+                  : "text-gray-400 group-hover:text-white"
+              }`}
+            >
+              {studio.label}
+            </span>
+          </button>
+        ))}
       </div>
     </section>
   );
