@@ -12,7 +12,13 @@
       "Bash(npx husky:*)",
       "Bash(npx lint-staged:*)",
       "Bash(npx tsc:*)",
-      "Bash(npx vitest:*)"
+      "Bash(npx vitest:*)",
+      "Bash(npx eslint:*)",
+      "Bash(git:*)",
+      "Bash(claude mcp:*)",
+      "Bash(python3:*)",
+      "Bash(docker compose up -d --build)",
+      "Bash(docker compose down)"
     ]
   }
 }
