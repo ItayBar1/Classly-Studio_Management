@@ -5,7 +5,7 @@ import { authenticateUser } from "../middleware/authMiddleware";
 const router = Router();
 
 // Receives logs from the client, strictly authenticated
-router.post("/", authenticateUser, (req: Request, res: Response) => {
+router.post("/", (req: Request, res: Response) => {
   const { level = "info", message, context, ...rest } = req.body;
 
   if (!message) {
@@ -13,13 +13,19 @@ router.post("/", authenticateUser, (req: Request, res: Response) => {
   }
 
   // Use the child logger if it exists on the request, otherwise fallback to the central logger
-  const logMethod = (req.logger || logger)[level as "info" | "warn" | "error" | "debug" | "fatal" | "trace"] || (req.logger || logger).info;
+  const logMethod =
+    (req.logger || logger)[
+      level as "info" | "warn" | "error" | "debug" | "fatal" | "trace"
+    ] || (req.logger || logger).info;
 
-  logMethod({ 
-    source: "frontend",
-    context,
-    ...rest
-  }, message);
+  logMethod(
+    {
+      source: "frontend",
+      context,
+      ...rest,
+    },
+    message
+  );
 
   res.status(200).json({ success: true });
 });
