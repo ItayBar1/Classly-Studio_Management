@@ -42,6 +42,8 @@ services:
     build: ./server
     container_name: classly-api
     restart: always
+    environment:
+      - NODE_ENV=production
     env_file:
       - ./server/.env
     depends_on:
