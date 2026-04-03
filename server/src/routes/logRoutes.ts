@@ -1,10 +1,9 @@
 import { Router, Request, Response } from "express";
 import { logger } from "../logger";
-import { authenticateUser } from "../middleware/authMiddleware";
 
 const router = Router();
 
-// Receives logs from the client, strictly authenticated
+// Receives logs from the client
 router.post("/", (req: Request, res: Response) => {
   const { level = "info", message, context, ...rest } = req.body;
 
@@ -12,13 +11,14 @@ router.post("/", (req: Request, res: Response) => {
     return res.status(400).json({ error: "Log message is required" });
   }
 
-  // Use the child logger if it exists on the request, otherwise fallback to the central logger
-  const logMethod =
-    (req.logger || logger)[
-      level as "info" | "warn" | "error" | "debug" | "fatal" | "trace"
-    ] || (req.logger || logger).info;
+  const logInstance = req.logger || logger;
+  const validLevels = ["info", "warn", "error", "debug", "fatal", "trace"];
 
-  logMethod(
+  const safeLevel = validLevels.includes(level)
+    ? (level as "info" | "warn" | "error" | "debug" | "fatal" | "trace")
+    : "info";
+
+  logInstance[safeLevel](
     {
       source: "frontend",
       context,
