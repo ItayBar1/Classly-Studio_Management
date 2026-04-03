@@ -21,6 +21,7 @@ import {
 } from "recharts";
 import { DashboardService } from "../../services/api";
 import { DAY_NAMES_HE } from "../../utils/dateUtils";
+import { API_ERRORS } from "../../constants/errors";
 
 interface ChartData {
   name: string;
@@ -81,7 +82,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onTabChange }) => {
         console.error("Failed to load dashboard:", error);
         if (
           error?.response?.status === 400 &&
-          error?.response?.data?.error === "Studio ID is missing"
+          error?.response?.data?.error === API_ERRORS.STUDIO_ID_MISSING
         ) {
           setNoStudio(true);
         } else {

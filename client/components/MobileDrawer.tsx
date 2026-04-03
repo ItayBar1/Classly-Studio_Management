@@ -1,14 +1,13 @@
-import React from 'react';
+import React from "react";
 import {
   LayoutDashboard,
   Calendar,
   Users,
   CreditCard,
-  Settings,
   LogOut,
   Search,
-  X
-} from 'lucide-react';
+  X,
+} from "lucide-react";
 
 interface MobileDrawerProps {
   activeTab: string;
@@ -19,62 +18,68 @@ interface MobileDrawerProps {
   onClose: () => void;
 }
 
-export const MobileDrawer: React.FC<MobileDrawerProps> = ({ activeTab, setActiveTab, onLogout, userRole, isOpen, onClose }) => {
+export const MobileDrawer: React.FC<MobileDrawerProps> = ({
+  activeTab,
+  setActiveTab,
+  onLogout,
+  userRole,
+  isOpen,
+  onClose,
+}) => {
   const allMenuItems = [
     {
-      id: 'dashboard',
-      label: 'לוח בקרה',
+      id: "dashboard",
+      label: "לוח בקרה",
       icon: LayoutDashboard,
-      roles: ['ADMIN', 'INSTRUCTOR', 'STUDENT']
+      roles: ["ADMIN", "INSTRUCTOR", "STUDENT"],
     },
     {
-      id: 'browse',
-      label: 'הרשמה לקורסים',
+      id: "browse",
+      label: "הרשמה לקורסים",
       icon: Search,
-      roles: ['STUDENT']
+      roles: ["STUDENT"],
     },
     {
-      id: 'schedule',
-      label: 'מערכת שעות',
+      id: "schedule",
+      label: "מערכת שעות",
       icon: Calendar,
-      roles: ['ADMIN', 'INSTRUCTOR']
+      roles: ["ADMIN", "INSTRUCTOR"],
     },
     {
-      id: 'students',
-      label: 'תלמידים',
+      id: "students",
+      label: "תלמידים",
       icon: Users,
-      roles: ['ADMIN', 'INSTRUCTOR']
+      roles: ["ADMIN", "INSTRUCTOR"],
     },
     {
-      id: 'payments',
-      label: 'תשלומים',
+      id: "payments",
+      label: "תשלומים",
       icon: CreditCard,
-      roles: ['ADMIN']
+      roles: ["ADMIN"],
     },
     {
-      id: 'administration',
-      label: 'ניהול',
+      id: "administration",
+      label: "ניהול",
       icon: Users,
-      roles: ['ADMIN', 'SUPER_ADMIN'],
-    },
-    {
-      id: 'settings',
-      label: 'הגדרות',
-      icon: Settings,
-      roles: ['ADMIN'],
+      roles: ["ADMIN", "SUPER_ADMIN"],
     },
   ];
 
-  const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
+  const menuItems = allMenuItems.filter((item) =>
+    item.roles.includes(userRole)
+  );
 
   return (
     <>
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-20" onClick={onClose}></div>
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-20"
+          onClick={onClose}
+        ></div>
       )}
       <div
         className={`fixed top-0 right-0 h-full w-64 bg-slate-900 text-white flex flex-col shadow-xl z-30 transform transition-transform duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
+          isOpen ? "translate-x-0" : "translate-x-full"
         }`}
         dir="rtl"
       >
@@ -95,10 +100,11 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ activeTab, setActive
                 setActiveTab(item.id);
                 onClose();
               }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${activeTab === item.id
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50'
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                }`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                activeTab === item.id
+                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/50"
+                  : "text-slate-400 hover:bg-slate-800 hover:text-white"
+              }`}
             >
               <item.icon size={20} />
               <span className="font-medium">{item.label}</span>
