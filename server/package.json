@@ -12,7 +12,7 @@
     "test:integration": "jest --runInBand --testPathPattern=tests/integration",
     "test:watch": "jest --watch",
     "typecheck": "tsc --noEmit",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "keywords": [],
   "author": "",
