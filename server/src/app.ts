@@ -60,6 +60,9 @@ app.use(limiter);
 // Parse cookies (required for HttpOnly JWT cookie auth)
 app.use(cookieParser());
 
+// Request logger MUST come before CORS so rejected requests are still logged.
+app.use(requestLogger);
+
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -72,6 +75,7 @@ app.use(
         return callback(null, true);
       }
 
+      // מנקה את משתנה הסביבה מרווחים ותווים נסתרים, ומסיר סלאש אחרון אם יש
       const clientUrl = (process.env.CLIENT_URL || "")
         .trim()
         .replace(/\/$/, "");
@@ -105,8 +109,6 @@ app.use(
     credentials: true,
   })
 );
-
-app.use(requestLogger);
 
 app.use(
   "/api/webhooks",
