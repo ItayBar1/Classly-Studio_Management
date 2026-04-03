@@ -72,7 +72,6 @@ app.use(
         return callback(null, true);
       }
 
-      // מנקה את משתנה הסביבה מרווחים ותווים נסתרים, ומסיר סלאש אחרון אם יש
       const clientUrl = (process.env.CLIENT_URL || "")
         .trim()
         .replace(/\/$/, "");
