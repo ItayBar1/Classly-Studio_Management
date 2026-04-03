@@ -9,7 +9,6 @@ import {
   Calendar,
   Users,
   CreditCard,
-  Settings,
   LogOut,
   Search,
   Sun,
@@ -73,7 +72,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       label: "ניהול",
       roles: ["ADMIN", "SUPER_ADMIN"],
     },
-    { id: "settings", icon: Settings, label: "הגדרות", roles: ["ADMIN"] },
   ];
 
   const menuItems = allMenuItems.filter((item) =>

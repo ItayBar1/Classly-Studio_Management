@@ -50,12 +50,6 @@ const Administration = lazy(() =>
     default: module.Administration,
   }))
 );
-const Settings = lazy(() =>
-  import("./components/admin/Settings").then((module) => ({
-    default: module.Settings,
-  }))
-);
-
 // Super Admin components (Named Exports)
 const PlatformAdministration = lazy(() =>
   import("./components/super-admin/PlatformAdministration").then((module) => ({
@@ -235,10 +229,6 @@ function App() {
       case "administration":
         if (userRole === "SUPER_ADMIN") return <PlatformAdministration />;
         if (userRole === "ADMIN") return <Administration />;
-        return <div>אין הרשאה</div>;
-
-      case "settings":
-        if (userRole === "ADMIN") return <Settings />;
         return <div>אין הרשאה</div>;
 
       case "browse":
