@@ -102,8 +102,9 @@ app.use(
 
       if (!allowed.includes(origin)) {
         return callback(
-          new Error(
-            "The CORS policy for this site does not allow access from the specified Origin."
+          new AppError(
+            "The CORS policy for this site does not allow access from the specified Origin.",
+            403
           ),
           false
         );
@@ -152,6 +153,7 @@ app.get("/api/health", (req, res) => {
 
 // Global Error Handler
 import errorHandler from "./middleware/errorMiddleware";
+import { AppError } from "./utils/AppError";
 app.use(errorHandler);
 
 export default app;
