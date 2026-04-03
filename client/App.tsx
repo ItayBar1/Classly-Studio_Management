@@ -213,7 +213,8 @@ function App() {
     switch (tabName) {
       case "dashboard":
         if (userRole === "SUPER_ADMIN") return <SuperAdminDashboard />;
-        if (userRole === "ADMIN") return <Dashboard />;
+        if (userRole === "ADMIN")
+          return <Dashboard onTabChange={setActiveTab} />;
         if (userRole === "INSTRUCTOR") return <InstructorDashboard />;
         return <StudentDashboard activeTab={activeTab} />;
 
