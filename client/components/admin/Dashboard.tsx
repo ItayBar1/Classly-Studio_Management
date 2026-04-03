@@ -6,6 +6,7 @@ import {
   CalendarCheck,
   TrendingUp,
   Loader2,
+  Building2,
 } from "lucide-react";
 import {
   BarChart,
@@ -48,9 +49,14 @@ const StatCard = ({ title, value, subtext, icon: Icon, color }: any) => (
   </div>
 );
 
-export const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onTabChange: (tab: string) => void;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ onTabChange }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [noStudio, setNoStudio] = useState(false);
   const [stats, setStats] = useState({
     totalStudents: 0,
     monthlyRevenue: 0,
@@ -71,9 +77,16 @@ export const Dashboard: React.FC = () => {
           avgAttendance: data.avgAttendance,
         });
         setChartData(data.chartData);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to load dashboard:", error);
-        setError("שגיאה בטעינת הנתונים. אנא נסה שוב מאוחר יותר.");
+        if (
+          error?.response?.status === 400 &&
+          error?.response?.data?.error === "Studio ID is missing"
+        ) {
+          setNoStudio(true);
+        } else {
+          setError("שגיאה בטעינת הנתונים. אנא נסה שוב מאוחר יותר.");
+        }
       } finally {
         setLoading(false);
       }
@@ -85,6 +98,31 @@ export const Dashboard: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-64 text-slate-400">
         <Loader2 className="animate-spin mr-2" /> טוען נתונים...
+      </div>
+    );
+  }
+
+  if (noStudio) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
+        <div className="p-4 bg-indigo-50 rounded-full dark:bg-indigo-900/30">
+          <Building2 className="text-indigo-500" size={40} />
+        </div>
+        <div>
+          <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1">
+            ברוך הבא ל-Classly!
+          </h3>
+          <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm">
+            הסטודיו שלך עדיין לא הוגדר. כדי להתחיל, עבור למסך הניהול וצור את
+            פרטי הסטודיו.
+          </p>
+        </div>
+        <button
+          onClick={() => onTabChange("administration")}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm px-5 py-2.5 rounded-lg transition-colors"
+        >
+          עבור להגדרת הסטודיו
+        </button>
       </div>
     );
   }
