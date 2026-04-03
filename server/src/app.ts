@@ -4,6 +4,9 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { allowedCorsOrigins } from "./config/env";
+import { requestLogger } from "./logger";
+import errorHandler from "./middleware/errorMiddleware";
+import { AppError } from "./utils/AppError";
 
 // Import Routes
 import authRoutes from "./routes/authRoutes";
@@ -20,41 +23,23 @@ import studioRoutes from "./routes/studioRoutes";
 import branchRoutes from "./routes/branchRoutes";
 import roomRoutes from "./routes/roomRoutes";
 import logRoutes from "./routes/logRoutes";
-import { requestLogger } from "./logger";
 
 export const app = express();
 
-// --- Fix for Vercel / Rate Limit ---
-// Vercel acts as a reverse proxy. We must trust the first proxy hop
-// so that express-rate-limit can see the real user IP address.
 app.set("trust proxy", 1);
 
-// Security Middleware — explicit CSP (SEC2)
 app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        // 'unsafe-inline' remains for the dark-mode FOUC prevention script in index.html.
-        // That script cannot be moved to a file (it must run before first paint).
-        // All other inline scripts and CDN dependencies have been removed in Phase 3.
         scriptSrc: ["'self'", "'unsafe-inline'", "https://js.stripe.com"],
-        styleSrc: [
-          "'self'",
-          "'unsafe-inline'", // Required for Google Fonts injected CSS
-          "https://fonts.googleapis.com",
-        ],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        imgSrc: [
-          "'self'",
-          "data:", // Inline SVG favicon
-          "https://images.unsplash.com",
-        ],
+        imgSrc: ["'self'", "data:", "https://images.unsplash.com"],
         connectSrc: ["'self'", "https://api.stripe.com"],
-        frameSrc: [
-          "https://js.stripe.com", // Stripe Elements renders inside iframes
-        ],
-        frameAncestors: ["'none'"], // Equivalent to X-Frame-Options: DENY (modern)
+        frameSrc: ["https://js.stripe.com"],
+        frameAncestors: ["'none'"],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
       },
@@ -62,7 +47,6 @@ app.use(
   })
 );
 
-// Rate Limiting to prevent brute-force attacks
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
@@ -88,22 +72,29 @@ app.use(
         return callback(null, true);
       }
 
-      // In production only the production domain is whitelisted.
-      // In development the full allowedCorsOrigins list (localhost variants) is used.
-      const allowed: string[] = isProd
-        ? ([process.env.CLIENT_URL].filter(Boolean) as string[])
-        : allowedCorsOrigins;
+      // מנקה את משתנה הסביבה מרווחים ותווים נסתרים, ומסיר סלאש אחרון אם יש
+      const clientUrl = (process.env.CLIENT_URL || "")
+        .trim()
+        .replace(/\/$/, "");
+      const wwwClientUrl = clientUrl.replace("https://", "https://www.");
 
-      if (isProd && allowed.length === 0) {
-        throw new Error(
-          "CLIENT_URL env var is not set — all browser CORS requests will be blocked in production"
+      const reqOrigin = origin.trim().replace(/\/$/, "");
+
+      const allowed: string[] = isProd
+        ? [clientUrl, wwwClientUrl].filter(Boolean)
+        : allowedCorsOrigins.map((o) => o.trim().replace(/\/$/, ""));
+
+      if (isProd && !clientUrl) {
+        return callback(
+          new AppError("CLIENT_URL env var is not set", 500),
+          false
         );
       }
 
-      if (!allowed.includes(origin)) {
+      if (!allowed.includes(reqOrigin)) {
         return callback(
           new AppError(
-            "The CORS policy for this site does not allow access from the specified Origin.",
+            `The CORS policy for this site does not allow access from the specified Origin: ${reqOrigin}`,
             403
           ),
           false
@@ -116,12 +107,8 @@ app.use(
   })
 );
 
-// Request logging
 app.use(requestLogger);
 
-// --- Critical Section for Webhooks ---
-// Configure the webhook before the global JSON parser.
-// express.raw() is required to preserve the original body for signature validation.
 app.use(
   "/api/webhooks",
   express.raw({ type: "application/json" }),
@@ -151,9 +138,4 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "OK", message: "Server is running 🚀" });
 });
 
-// Global Error Handler
-import errorHandler from "./middleware/errorMiddleware";
-import { AppError } from "./utils/AppError";
 app.use(errorHandler);
-
-export default app;
