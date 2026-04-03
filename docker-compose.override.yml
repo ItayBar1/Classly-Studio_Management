@@ -3,13 +3,19 @@
 # It is NOT committed to the production server.
 #
 # Changes from docker-compose.yml:
-#   - frontend: mounts nginx.dev.conf (HTTP-only) over the production config
-#   - frontend: removes the letsencrypt / certbot volumes (no TLS locally)
-#   - frontend: exposes only port 80
-
+#   - frontend: mounts nginx.dev.conf (HTTP-only, localhost) over the production config
+#   - frontend/backend/grafana: expose ports on localhost for dev convenience
 services:
   frontend:
     ports:
-      - "80:80"
+      - "127.0.0.1:80:80"
     volumes:
       - ./client/nginx.dev.conf:/etc/nginx/conf.d/default.conf:ro
+
+  backend:
+    ports:
+      - "127.0.0.1:5000:5000"
+
+  grafana:
+    ports:
+      - "127.0.0.1:3001:3000"

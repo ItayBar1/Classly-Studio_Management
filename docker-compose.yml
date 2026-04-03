@@ -8,32 +8,35 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: classly_db
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
       - ./studio_management_schema_setup.sql:/docker-entrypoint-initdb.d/setup.sql
+    networks:
+      - classly_net
+
   loki:
     image: grafana/loki:3.0.0
     container_name: classly-loki
-    ports:
-      - "3100:3100"
     volumes:
       - ./docker/loki/loki-config.yaml:/etc/loki/local-config.yaml
       - loki_data:/loki
     command: -config.file=/etc/loki/local-config.yaml
     restart: always
+    networks:
+      - classly_net
 
   grafana:
     image: grafana/grafana:11.0.0
     container_name: classly-grafana
-    ports:
-      - "3001:3000"
     volumes:
       - ./docker/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - grafana_data:/var/lib/grafana
     depends_on:
       - loki
     restart: always
+    networks:
+      - classly_net
 
   backend:
     build: ./server
@@ -41,23 +44,24 @@ services:
     restart: always
     env_file:
       - ./server/.env
-    ports:
-      - "5000:5000"
     depends_on:
       - db
+    networks:
+      - classly_net
 
-  # השירות החדש להרצת סקריפטים ותחזוקה
+  # שירות להרצת סקריפטים ותחזוקה (מיגרציות Prisma וכו')
   backend-tools:
     build:
       context: ./server
       dockerfile: Dockerfile
-      target: builder # <--- זה גורם לדוקר לעצור בשלב ה-node:20-alpine AS builder
+      target: builder
     container_name: classly-tools
     env_file:
       - ./server/.env
     depends_on:
       - db
-    # אנחנו לא צריכים ports או restart לכלים זמניים
+    networks:
+      - classly_net
 
   frontend:
     build:
@@ -67,38 +71,28 @@ services:
         - VITE_GRAFANA_URL=${VITE_GRAFANA_URL:-http://localhost:3001}
     container_name: classly-web
     restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - letsencrypt:/etc/letsencrypt:ro # TLS certificates (read-only)
-      - certbot_webroot:/var/www/certbot:ro # ACME challenge files (read-only)
     env_file:
       - ./client/.env
     depends_on:
       - backend
-
-  # Certbot — obtains and renews Let's Encrypt certificates.
-  # Initial issuance: docker compose run --rm certbot certonly --webroot
-  #   --webroot-path /var/www/certbot
-  #   -d classly-studio-management.uk -d www.classly-studio-management.uk
-  #   --email <your-email> --agree-tos --no-eff-email
-  # Renewal (run via cron or manually): docker compose run --rm certbot renew
-  certbot:
-    image: certbot/certbot:latest
-    volumes:
-      - letsencrypt:/etc/letsencrypt
-      - certbot_webroot:/var/www/certbot
+    networks:
+      - classly_net
 
   cf-tunnel:
     image: cloudflare/cloudflared:latest
     container_name: classly-tunnel
     restart: always
     command: tunnel --no-autoupdate run --protocol http2 --token ${CF_TUNNEL_TOKEN}
+    depends_on:
+      - frontend
+    networks:
+      - classly_net
 
 volumes:
   postgres_data:
   loki_data:
   grafana_data:
-  letsencrypt:
-  certbot_webroot:
+
+networks:
+  classly_net:
+    driver: bridge
