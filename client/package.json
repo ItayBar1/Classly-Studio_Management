@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "test": "vitest",
     "test:unit": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^5.4.1",
@@ -35,8 +36,11 @@
     "autoprefixer": "^10.4.27",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^5.2.0",
+    "husky": "^9.1.7",
     "jsdom": "^24.0.0",
+    "lint-staged": "^16.4.0",
     "postcss": "^8.5.8",
+    "prettier": "^3.8.1",
     "sharp": "^0.34.5",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.8.2",
