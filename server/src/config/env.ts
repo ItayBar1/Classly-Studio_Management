@@ -19,7 +19,6 @@ if (missing.length > 0 && process.env.NODE_ENV !== "test") {
 export const environment = {
   nodeEnv: process.env.NODE_ENV || "development",
   port: parseNumber(process.env.PORT, 5000),
-  vercel: Boolean(process.env.VERCEL),
   clientUrl: process.env.CLIENT_URL || "http://localhost:3000",
   logLevel: process.env.LOG_LEVEL || "info",
   lokiUrl: process.env.LOKI_URL || "http://loki:3100",
