@@ -28,6 +28,9 @@ export const app = express();
 
 app.set("trust proxy", 1);
 
+// Request logger MUST come before CORS so rejected requests are still logged.
+app.use(requestLogger);
+
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -59,9 +62,6 @@ app.use(limiter);
 
 // Parse cookies (required for HttpOnly JWT cookie auth)
 app.use(cookieParser());
-
-// Request logger MUST come before CORS so rejected requests are still logged.
-app.use(requestLogger);
 
 app.use(
   cors({
