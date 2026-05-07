@@ -9,10 +9,11 @@ import {
   ChevronLeft,
   Loader2,
 } from "lucide-react";
-import { CourseService, BranchService, RoomService } from "../../services/api";
-import { ClassSession, Branch, Room } from "../../types/types";
+import { CourseService, BranchService, RoomService, StudioService } from "../../services/api";
+import { ClassSession, Branch, Room, Studio } from "../../types/types";
 import { AddClassModal } from "./AddClassModal";
 import { ClassCard } from "../common/ClassCard";
+import { BaseModal } from "../common/BaseModal";
 import { DAY_MAP, DAYS_ARRAY, extractTime } from "../../utils/dateUtils";
 
 // --- Main Component ---
@@ -23,9 +24,11 @@ export const ClassSchedule: React.FC = () => {
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
   const [allRooms, setAllRooms] = useState<Room[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
+  const [studio, setStudio] = useState<Studio | null>(null);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<ClassSession | null>(null);
+  const [selectedViewClass, setSelectedViewClass] = useState<ClassSession | null>(null);
 
   const formatClassForDisplay = (cls: any) => {
     const startTimeStr = extractTime(cls.start_time);
@@ -44,6 +47,7 @@ export const ClassSchedule: React.FC = () => {
         ? cls.instructor.full_name.substring(0, 2).toUpperCase()
         : "?",
       startTime: startTimeStr,
+      endTime: endTimeStr,
       duration: duration,
       dayOfWeek: DAY_MAP[cls.day_of_week] || "ראשון",
       students: cls.current_enrollment || 0,
@@ -61,11 +65,16 @@ export const ClassSchedule: React.FC = () => {
   const fetchClassesAndBranches = async () => {
     try {
       setLoading(true);
-      const [coursesData, branchesData, roomsData] = await Promise.all([
+      const [coursesData, branchesData, roomsData, studioData] = await Promise.all([
         CourseService.getAll({ status: "active" }),
         BranchService.getAll(),
         RoomService.getAll(),
+        StudioService.getMyStudio()
       ]);
+
+      if (studioData) {
+        setStudio(studioData);
+      }
 
       if (branchesData && branchesData.length > 0) {
         setBranches(branchesData);
@@ -105,15 +114,34 @@ export const ClassSchedule: React.FC = () => {
     classes: filteredClasses.filter(cls => cls.room === room.name)
   }));
 
+  // Calendar configuration
+  const START_HOUR = studio?.schedule_start_hour ?? 7;
+  const END_HOUR = studio?.schedule_end_hour ?? 23;
+  const PIXELS_PER_MINUTE = 2; // 120px per hour
+  const HOUR_HEIGHT = 60 * PIXELS_PER_MINUTE;
+
+  const getTopOffset = (startTimeStr: string) => {
+    const [h, m] = startTimeStr.split(':').map(Number);
+    const totalMinutes = h * 60 + m;
+    const startOfDayMinutes = START_HOUR * 60;
+    return (totalMinutes - startOfDayMinutes) * PIXELS_PER_MINUTE;
+  };
+
+  const getHeight = (durationMins: number) => {
+    return durationMins * PIXELS_PER_MINUTE;
+  };
+
 
 
   const handleEdit = (classItem: any) => {
-    setEditingClass(classItem.original);
+    setSelectedViewClass(null); // Close view modal if open
+    setEditingClass(classItem.original || classItem);
     setIsModalOpen(true);
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    setSelectedViewClass(null); // Close view modal if open
 
     try {
       await CourseService.delete(id);
@@ -216,38 +244,73 @@ export const ClassSchedule: React.FC = () => {
             <Loader2 className="animate-spin mr-2" /> טוען מערכת שעות...
           </div>
         ) : filteredClasses.length > 0 || columns.length > 0 ? (
-          <div className="flex overflow-x-auto gap-4 pb-4 snap-x w-full scrollbar-hide">
-            {columns.map(col => (
-              <div key={col.id} className="flex-none w-full sm:w-[320px] lg:flex-1 lg:min-w-[300px] snap-center">
-                <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-t-xl border border-b-0 border-slate-200 dark:border-slate-700">
-                  <h3 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2">
-                    <MapPin size={16} className="text-indigo-500" />
-                    {col.name}
-                    <span className="text-xs bg-white dark:bg-slate-700 px-2 py-0.5 rounded-full text-slate-500 shadow-sm">
-                      {col.classes.length}
-                    </span>
-                  </h3>
+          <div className="flex bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden relative shadow-sm h-[800px]">
+            {/* Single scrolling container for both X and Y */}
+            <div className="flex-1 overflow-auto relative scrollbar-hide">
+              <div className="flex min-w-full">
+                
+                {/* Time Axis - Sticky to right */}
+                <div className="w-16 flex-shrink-0 bg-slate-50 dark:bg-slate-800/50 border-l border-slate-200 dark:border-slate-700 sticky right-0 z-40 shadow-[1px_0_5px_rgba(0,0,0,0.05)]">
+                  <div className="h-12 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-slate-50 dark:bg-slate-800/50 z-50"></div>
+                  <div className="relative w-full" style={{ height: (END_HOUR - START_HOUR) * HOUR_HEIGHT }}>
+                    {Array.from({ length: END_HOUR - START_HOUR + 1 }).map((_, i) => (
+                      <div key={i} className="absolute w-full text-center text-xs text-slate-500 font-medium" style={{ top: i * HOUR_HEIGHT - 8 }}>
+                        {String(START_HOUR + i).padStart(2, '0')}:00
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="bg-slate-50/50 dark:bg-slate-800/50 p-3 rounded-b-xl border border-slate-200 dark:border-slate-700 space-y-3 min-h-[300px]">
-                  {col.classes.length > 0 ? (
-                    col.classes.map(session => (
-                      <ClassCard
-                        key={session.id}
-                        session={session}
-                        isAdmin={true}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                      />
-                    ))
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-slate-400">
-                      <Calendar className="h-8 w-8 mb-2 opacity-20" />
-                      <span className="text-sm">אין שיעורים</span>
+
+                {/* Rooms */}
+                <div className="flex flex-1 min-w-max">
+                  {columns.map(col => (
+                    <div key={col.id} className="flex-1 min-w-[250px] border-l last:border-l-0 border-slate-200 dark:border-slate-800 relative bg-white dark:bg-slate-900">
+                      {/* Room Header - sticky */}
+                      <div className="h-12 sticky top-0 bg-slate-50 dark:bg-slate-800/90 backdrop-blur-sm z-30 border-b border-slate-200 dark:border-slate-700 flex items-center justify-center font-semibold text-sm text-slate-800 dark:text-slate-200 shadow-sm">
+                        <MapPin size={14} className="mr-1 text-indigo-500" /> {col.name}
+                        <span className="text-[10px] bg-white dark:bg-slate-700 px-1.5 py-0.5 rounded-full text-slate-500 shadow-sm mr-2">
+                          {col.classes.length}
+                        </span>
+                      </div>
+
+                      {/* Grid lines & Classes */}
+                      <div className="relative" style={{ height: (END_HOUR - START_HOUR) * HOUR_HEIGHT }}>
+                        {/* Horizontal Grid lines */}
+                        {Array.from({ length: END_HOUR - START_HOUR }).map((_, i) => (
+                          <div key={i} className="absolute w-full border-t border-slate-100 dark:border-slate-800/50" style={{ top: i * HOUR_HEIGHT }}></div>
+                        ))}
+
+                        {/* Half-hour Grid lines (dashed) */}
+                        {Array.from({ length: END_HOUR - START_HOUR }).map((_, i) => (
+                          <div key={`half-${i}`} className="absolute w-full border-t border-dashed border-slate-100 dark:border-slate-800/30" style={{ top: i * HOUR_HEIGHT + (HOUR_HEIGHT / 2) }}></div>
+                        ))}
+
+                        {/* Classes */}
+                        {col.classes.map(cls => (
+                          <div
+                            key={cls.id}
+                            className="absolute left-2 right-2 p-1 group transition-all"
+                            style={{
+                              top: getTopOffset(cls.startTime),
+                              height: getHeight(cls.duration)
+                            }}
+                          >
+                            <ClassCard
+                              session={cls}
+                              isAdmin={true}
+                              isCompact={true}
+                              onEdit={handleEdit}
+                              onDelete={handleDelete}
+                              onClick={() => setSelectedViewClass(cls)}
+                            />
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  )}
+                  ))}
                 </div>
               </div>
-            ))}
+            </div>
           </div>
         ) : (
           <div className="text-center py-16 bg-white rounded-xl border border-dashed border-slate-200 dark:bg-slate-900/50 dark:border-slate-700">
@@ -267,6 +330,25 @@ export const ClassSchedule: React.FC = () => {
           </div>
         )}
       </div>
+      {/* View Full Class Modal */}
+      <BaseModal
+        isOpen={!!selectedViewClass}
+        onClose={() => setSelectedViewClass(null)}
+        title="פרטי שיעור"
+        maxWidth="max-w-md"
+      >
+        {selectedViewClass && (
+          <div className="pt-2">
+            <ClassCard
+              session={selectedViewClass}
+              isAdmin={true}
+              isCompact={false}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          </div>
+        )}
+      </BaseModal>
     </div>
   );
 };

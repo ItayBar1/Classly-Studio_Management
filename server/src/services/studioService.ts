@@ -10,6 +10,8 @@ export interface CreateStudioDTO {
   address?: string;
   city?: string;
   branch_phone?: string;
+  schedule_start_hour?: number;
+  schedule_end_hour?: number;
 }
 
 export class StudioService {

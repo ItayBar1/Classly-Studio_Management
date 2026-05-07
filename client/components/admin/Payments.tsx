@@ -66,7 +66,7 @@ const CheckoutForm: React.FC<{
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-      <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+      <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
         <PaymentElement />
       </div>
       <button
@@ -147,9 +147,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-right"
       dir="rtl"
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-fadeIn flex flex-col max-h-[90vh]">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-fadeIn flex flex-col max-h-[90vh] border border-transparent dark:border-slate-800">
         {/* Modal Header */}
-        <div className="bg-slate-900 p-6 flex justify-between items-center text-white shrink-0">
+        <div className="bg-slate-900 dark:bg-slate-950 p-6 flex justify-between items-center text-white shrink-0 border-b dark:border-slate-800">
           <div>
             <h3 className="text-xl font-bold flex items-center gap-2">
               <CreditCard className="text-indigo-400" /> תשלום חדש
@@ -172,10 +172,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle size={40} />
               </div>
-              <h4 className="text-2xl font-bold text-slate-800 mb-2">
+              <h4 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">
                 התשלום בוצע בהצלחה!
               </h4>
-              <p className="text-slate-500 mb-6">
+              <p className="text-slate-500 dark:text-slate-400 mb-6">
                 קבלה נשלחה לכתובת המייל שלך.
               </p>
               <button
@@ -194,7 +194,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               {!clientSecret ? (
                 <div className="space-y-5">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       סכום לתשלום (₪)
                     </label>
                     <div className="relative">
@@ -207,21 +207,21 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                         min="1"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
-                        className="w-full pr-10 pl-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 text-lg font-medium"
+                        className="w-full pr-10 pl-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 text-lg font-medium dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                         placeholder="0.00"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       עבור (אופציונלי)
                     </label>
                     <input
                       type="text"
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                       placeholder="לדוגמה: שיעור פרטי / חודש ינואר"
                     />
                   </div>
@@ -247,9 +247,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               ) : (
                 // Step 2: Stripe Elements
                 <div className="animate-fadeIn">
-                  <div className="flex justify-between items-center mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <span className="text-slate-500 text-sm">סכום לתשלום:</span>
-                    <span className="text-xl font-bold text-slate-900">
+                  <div className="flex justify-between items-center mb-4 bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
+                    <span className="text-slate-500 dark:text-slate-400 text-sm">סכום לתשלום:</span>
+                    <span className="text-xl font-bold text-slate-900 dark:text-white">
                       ₪{amount}
                     </span>
                   </div>
@@ -276,7 +276,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
                   <button
                     onClick={() => setClientSecret(null)}
-                    className="text-slate-400 hover:text-slate-600 text-sm mt-4 w-full text-center"
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm mt-4 w-full text-center"
                   >
                     חזור ושינוי סכום
                   </button>
@@ -372,10 +372,10 @@ export const Payments: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
             תשלומים וחשבוניות
           </h2>
-          <p className="text-slate-500">
+          <p className="text-slate-500 dark:text-slate-400">
             נהל את התשלומים והצג היסטוריית חיובים
           </p>
         </div>
@@ -390,33 +390,33 @@ export const Payments: React.FC = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div>
-            <p className="text-slate-500 text-sm font-medium">
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
               סה"כ שולם (הצטברות)
             </p>
-            <h3 className="text-2xl font-bold text-slate-800 mt-1">
+            <h3 className="text-2xl font-bold text-slate-800 dark:text-white mt-1">
               ₪{stats.totalPaid.toLocaleString()}
             </h3>
           </div>
-          <div className="bg-green-50 p-3 rounded-lg text-green-600">
+          <div className="bg-green-50 dark:bg-green-900/30 p-3 rounded-lg text-green-600 dark:text-green-400">
             <TrendingUp size={24} />
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div>
-            <p className="text-slate-500 text-sm font-medium">יתרה לתשלום</p>
-            <h3 className="text-2xl font-bold text-slate-800 mt-1">₪0.00</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">יתרה לתשלום</p>
+            <h3 className="text-2xl font-bold text-slate-800 dark:text-white mt-1">₪0.00</h3>
           </div>
-          <div className="bg-indigo-50 p-3 rounded-lg text-indigo-600">
+          <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-lg text-indigo-600 dark:text-indigo-400">
             <DollarSign size={24} />
           </div>
         </div>
       </div>
 
       {/* Filters Table Area */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+        <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="relative w-full md:w-80">
             <Search
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -425,11 +425,11 @@ export const Payments: React.FC = () => {
             <input
               type="text"
               placeholder="חפש לפי מספר חשבונית..."
-              className="w-full pr-10 pl-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              className="w-full pr-10 pl-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-white"
             />
           </div>
           <div className="flex gap-2">
-            <button className="flex items-center gap-2 text-slate-600 bg-slate-50 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-100 transition-colors">
+            <button className="flex items-center gap-2 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
               <Download size={16} /> ייצוא
             </button>
           </div>
@@ -438,7 +438,7 @@ export const Payments: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-right border-collapse">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
+              <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">
                   תאריך
                 </th>
@@ -459,12 +459,12 @@ export const Payments: React.FC = () => {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-6 py-12 text-center text-slate-500"
+                    className="px-6 py-12 text-center text-slate-500 dark:text-slate-400"
                   >
                     <Loader2 className="animate-spin h-6 w-6 mx-auto mb-2" />
                     טוען נתונים...
@@ -474,9 +474,9 @@ export const Payments: React.FC = () => {
                 payments.map((payment) => (
                   <tr
                     key={payment.id}
-                    className="hover:bg-slate-50 transition-colors"
+                    className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">
                       <div className="flex items-center gap-2">
                         <Calendar size={14} className="text-slate-400" />
                         {new Date(payment.created_at).toLocaleDateString(
@@ -484,22 +484,22 @@ export const Payments: React.FC = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-800">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-800 dark:text-slate-100">
                       {payment.invoice_number || "-"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">
                       {payment.payment_method === "STRIPE"
                         ? "אשראי"
                         : payment.payment_method}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900 dark:text-slate-100">
                       ₪{payment.amount_ils.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(payment.status)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <button className="text-indigo-600 hover:text-indigo-800 font-medium text-xs">
+                      <button className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium text-xs">
                         הורד PDF
                       </button>
                     </td>

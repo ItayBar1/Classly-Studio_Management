@@ -122,6 +122,8 @@ export interface Studio {
   contact_phone?: string;
   website_url?: string;
   admin_id: string;
+  schedule_start_hour?: number;
+  schedule_end_hour?: number;
   created_at: string;
 }
 
