@@ -25,6 +25,7 @@ export const createClassSchema = z.object({
   room_id: z.string().uuid().optional().nullable(),
   age_range_min: z.number().int().min(0).optional(),
   age_range_max: z.number().int().min(0).optional(),
+  ignore_warnings: z.boolean().optional(),
 });
 
 export const updateClassSchema = createClassSchema.partial();

@@ -4,7 +4,7 @@ import { CourseService, UserService, BranchService, RoomService } from "../../se
 import { ClassSession, User, Branch, Room, ClassLevel } from "../../types/types";
 import { BaseModal } from "../common/BaseModal";
 import { FormInput, FormSelect } from "../common/FormFields";
-import { DAY_MAP } from "../../utils/dateUtils";
+import { DAY_MAP, extractTime } from "../../utils/dateUtils";
 
 interface AddClassModalProps {
     isOpen: boolean;
@@ -12,9 +12,10 @@ interface AddClassModalProps {
     onSuccess: (newClass: any) => void;
     editClass?: ClassSession | null;
     defaultDay?: number;
+    defaultBranchId?: string;
 }
 
-export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSuccess, editClass, defaultDay }) => {
+export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSuccess, editClass, defaultDay, defaultBranchId }) => {
     const [loading, setLoading] = useState(false);
     const [instructors, setInstructors] = useState<User[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
@@ -34,6 +35,7 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, o
     });
 
     const [error, setError] = useState<string | null>(null);
+    const [warningConfirmation, setWarningConfirmation] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen) {
@@ -56,11 +58,14 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, o
                             newData.instructor_id = instructorsData[0].id;
                         }
                         if (branchesData.length > 0 && !prev.branch_id) {
-                            const defaultBranchId = branchesData[0].id;
-                            newData.branch_id = defaultBranchId;
+                            const branchIdToUse = defaultBranchId && branchesData.some(branch => branch.id === defaultBranchId)
+                                ? defaultBranchId
+                                : branchesData[0].id;
+                                
+                            newData.branch_id = branchIdToUse;
 
                             // Auto-select room for default branch
-                            const defaultBranchRooms = roomsData.filter(r => r.branch_id === defaultBranchId);
+                            const defaultBranchRooms = roomsData.filter(room => room.branch_id === branchIdToUse);
                             if (defaultBranchRooms.length > 0) {
                                 newData.location_room = defaultBranchRooms[0].name;
                             }
@@ -83,8 +88,8 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, o
                 instructor_id: editClass.instructor_id || '',
                 branch_id: editClass.branch_id || '',
                 day_of_week: editClass.day_of_week,
-                start_time: editClass.start_time,
-                end_time: editClass.end_time,
+                start_time: extractTime(editClass.start_time),
+                end_time: extractTime(editClass.end_time),
                 max_capacity: editClass.max_capacity,
                 level: editClass.level,
                 price_ils: editClass.price_ils || 0,
@@ -104,14 +109,14 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, o
     }, [isOpen, editClass]);
 
     // Derived state: Filter rooms based on selected branch
-    const availableRooms = allRooms.filter(r => r.branch_id === formData.branch_id);
+    const availableRooms = allRooms.filter(room => room.branch_id === formData.branch_id);
 
     // Create options for selects
-    const branchOptions = branches.map(b => ({ value: b.id, label: b.name }));
-    const instructorOptions = instructors.map(i => ({ value: i.id, label: i.full_name }));
+    const branchOptions = branches.map(branch => ({ value: branch.id, label: branch.name }));
+    const instructorOptions = instructors.map(instructor => ({ value: instructor.id, label: instructor.full_name }));
     const dayOptions = Object.entries(DAY_MAP).map(([key, val]) => ({ value: key, label: val }));
     const roomOptions = availableRooms.length > 0
-        ? availableRooms.map(r => ({ value: r.name, label: r.name }))
+        ? availableRooms.map(room => ({ value: room.name, label: room.name }))
         : [{ value: 'אולם ראשי', label: 'אולם ראשי (ברירת מחדל)' }];
 
     const levelOptions = [
@@ -125,7 +130,7 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, o
     useEffect(() => {
         if (formData.branch_id && availableRooms.length > 0) {
             // Check if current room is valid for this branch, if not, switch to first available
-            const isCurrentRoomValid = availableRooms.some(r => r.name === formData.location_room);
+            const isCurrentRoomValid = availableRooms.some(room => room.name === formData.location_room);
             if (!isCurrentRoomValid) {
                 setFormData(prev => ({ ...prev, location_room: availableRooms[0].name }));
             }
@@ -133,10 +138,11 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, o
     }, [formData.branch_id, allRooms]);
 
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async (e?: React.FormEvent, forceSave = false) => {
+        if (e) e.preventDefault();
         setLoading(true);
         setError(null);
+        setWarningConfirmation(null);
 
         try {
             const newClassPayload = {
@@ -150,7 +156,8 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, o
                 level: formData.level,
                 price_ils: Number(formData.price_ils),
                 location_room: formData.location_room,
-                is_active: true
+                is_active: true,
+                ignore_warnings: forceSave
             };
 
             let result;
@@ -160,7 +167,7 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, o
                 result = await CourseService.create(newClassPayload);
             }
 
-            const instructorObj = instructors.find(i => i.id === formData.instructor_id);
+            const instructorObj = instructors.find(instructor => instructor.id === formData.instructor_id);
             const hydratedClass = {
                 ...result,
                 instructor: { full_name: instructorObj?.full_name || 'לא ידוע' }
@@ -172,7 +179,11 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, o
 
         } catch (err: any) {
             console.error(err);
-            setError(err.response?.data?.error || err.message || "שגיאה ביצירת השיעור");
+            if (err.response?.status === 409) {
+                setWarningConfirmation(err.response?.data?.message || "אזהרה: ישנה התנגשות אפשרית.");
+            } else {
+                setError(err.response?.data?.message || err.response?.data?.error || err.message || "שגיאה ביצירת השיעור");
+            }
         } finally {
             setLoading(false);
         }
@@ -248,11 +259,12 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, o
 
                     <FormSelect
                         label="חדר"
+                        required
                         options={roomOptions}
                         value={formData.location_room}
                         onChange={e => {
                             const selectedName = e.target.value;
-                            const roomObj = availableRooms.find(r => r.name === selectedName);
+                            const roomObj = availableRooms.find(room => room.name === selectedName);
                             setFormData({
                                 ...formData,
                                 location_room: selectedName,
@@ -305,6 +317,28 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, o
                 </div>
 
                 {error && <div className="text-red-500 text-sm bg-red-50 p-2 rounded dark:bg-red-500/10 dark:text-red-400">{error}</div>}
+
+                {warningConfirmation && (
+                    <div className="text-orange-700 text-sm bg-orange-50 p-3 rounded border border-orange-200 flex flex-col gap-2 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20">
+                        <span>{warningConfirmation}</span>
+                        <div className="flex gap-2 mt-1">
+                            <button 
+                                type="button" 
+                                onClick={() => handleSubmit(undefined, true)} 
+                                className="bg-orange-600 text-white px-3 py-1.5 rounded-md text-xs font-medium hover:bg-orange-700 transition-colors"
+                            >
+                                שמור בכל זאת
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => setWarningConfirmation(null)} 
+                                className="text-orange-600 px-3 py-1.5 text-xs font-medium hover:bg-orange-100 rounded-md transition-colors dark:hover:bg-orange-500/20"
+                            >
+                                ביטול
+                            </button>
+                        </div>
+                    </div>
+                )}
             </form>
         </BaseModal>
     );

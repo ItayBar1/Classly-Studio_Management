@@ -90,6 +90,15 @@ export class StudioService {
     return data; // Returns null if not found
   }
 
+  // Get Studio by Studio ID
+  static async getStudioById(studioId: string) {
+    const data = await prisma.studios.findUnique({
+      where: { id: studioId },
+    });
+
+    return data; // Returns null if not found
+  }
+
   // Update Studio
   static async updateStudio(
     studioId: string,

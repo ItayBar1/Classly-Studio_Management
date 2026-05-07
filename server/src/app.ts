@@ -52,7 +52,7 @@ app.use(
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 5000, // Increased for development. Limit each IP to 5000 requests per windowMs
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   // Explicitly validate trust proxy setting (optional but good for debugging)

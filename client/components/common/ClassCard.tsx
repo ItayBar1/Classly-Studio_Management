@@ -1,5 +1,5 @@
-import React from "react";
-import { Clock, Calendar, MapPin } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { Clock, Calendar, MapPin, MoreVertical, Edit2, Trash2 } from "lucide-react";
 
 interface ClassSession {
   id: string;
@@ -30,6 +30,19 @@ export const ClassCard: React.FC<ClassCardProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   const getLevelBadgeColor = (level: string) => {
     const normalizedLevel = level?.toUpperCase();
     switch (normalizedLevel) {
@@ -87,13 +100,56 @@ export const ClassCard: React.FC<ClassCardProps> = ({
               </span>
             </div>
           </div>
-          <span
-            className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-bold ${getLevelBadgeColor(
-              session.level
-            )}`}
-          >
-            {translateLevel(session.level)}
-          </span>
+          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            <div className="flex items-center gap-1">
+              <span
+                className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-bold ${getLevelBadgeColor(
+                  session.level
+                )}`}
+              >
+                {translateLevel(session.level)}
+              </span>
+              {isAdmin && (
+                <div className="relative" ref={menuRef}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsMenuOpen(!isMenuOpen);
+                    }}
+                    className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                  >
+                    <MoreVertical size={16} />
+                  </button>
+                  {isMenuOpen && (
+                    <div className="absolute left-0 top-full mt-1 w-32 bg-white rounded-lg shadow-lg border border-slate-100 py-1 z-10 dark:bg-slate-800 dark:border-slate-700">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsMenuOpen(false);
+                          onEdit?.(session);
+                        }}
+                        className="w-full text-right px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 dark:text-slate-200 dark:hover:bg-slate-700/50"
+                      >
+                        <Edit2 size={14} />
+                        עריכה
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsMenuOpen(false);
+                          setShowDeleteConfirm(true);
+                        }}
+                        className="w-full text-right px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 dark:text-red-400 dark:hover:bg-red-500/10"
+                      >
+                        <Trash2 size={14} />
+                        מחיקה
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Middle row: Location and Instructor */}
@@ -148,6 +204,44 @@ export const ClassCard: React.FC<ClassCardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden dark:bg-slate-900 border border-slate-100 dark:border-slate-800" onClick={e => e.stopPropagation()}>
+            <div className="p-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-red-100 text-red-500 flex items-center justify-center mx-auto mb-4 dark:bg-red-500/20">
+                <Trash2 size={24} />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2 dark:text-slate-100">האם אתה בטוח?</h3>
+              <p className="text-slate-500 text-sm mb-6 dark:text-slate-400">
+                האם למחוק את השיעור <strong>{session.name}</strong>? פעולה זו אינה הפיכה.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDeleteConfirm(false);
+                  }}
+                  className="flex-1 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                >
+                  לא
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDeleteConfirm(false);
+                    onDelete?.(session.id, e);
+                  }}
+                  className="flex-1 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
+                >
+                  כן
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
