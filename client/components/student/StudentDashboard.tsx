@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { BookOpen, CheckCircle, Loader2 } from "lucide-react";
 import { EnrollmentService } from "../../services/api";
+import { ClassCard } from "../common/ClassCard";
+import { PageHeader } from "../common/PageHeader";
+import { LoadingState, EmptyState } from "../common/StateDisplay";
+import { DAY_MAP, extractTime } from "../../utils/dateUtils";
 import { ClassSession } from "../../types/types";
-import { CourseCard } from "./CourseCard";
 
 interface StudentDashboardProps {
   activeTab?: string;
@@ -21,9 +24,24 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       const courses = data
         .map((enrollment: any) => {
           if (enrollment.class) {
+            const cls = enrollment.class;
             return {
-              ...enrollment.class,
-              id: enrollment.class.id || enrollment.class_id,
+              id: cls.id || enrollment.class_id,
+              name: cls.name,
+              dayName: DAY_MAP[cls.day_of_week] || "",
+              instructor: cls.instructor?.full_name || "מדריך לא ידוע",
+              startTime: extractTime(cls.start_time),
+              endTime: extractTime(cls.end_time),
+              duration: cls.duration || 60,
+              students: cls.current_enrollment || 0,
+              capacity: cls.max_capacity || 20,
+              level: cls.level || "ALL_LEVELS",
+              room: cls.location_room || "סטודיו ראשי",
+              color: cls.color || "indigo",
+              description: cls.description,
+              price_ils: cls.price_ils,
+              categoryName: cls.category?.name,
+              original: cls
             };
           }
           return null;
@@ -50,40 +68,30 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     }
   }, [activeTab]);
 
-  if (loading)
-    return (
-      <div className="flex justify-center p-10">
-        <Loader2 className="animate-spin" />
-      </div>
-    );
+  if (loading) return <LoadingState />;
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-slate-800">הקורסים שלי</h2>
+      <PageHeader title="הקורסים שלי" />
 
       {enrolledCourses.length === 0 ? (
-        <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-100 text-center">
-          <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <BookOpen className="text-indigo-600" size={32} />
-          </div>
-          <h3 className="text-lg font-medium text-slate-900">
-            עדיין לא נרשמת לקורסים
-          </h3>
-          <p className="text-slate-500 mt-2 mb-6">
-            הירשם לקורסים חדשים כדי לראות אותם כאן
-          </p>
-        </div>
+        <EmptyState
+          icon={BookOpen}
+          title="עדיין לא נרשמת לקורסים"
+          description="הירשם לקורסים חדשים כדי לראות אותם כאן"
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {enrolledCourses.map((course) => (
-            <div key={course.id} className="relative">
-              <div className="absolute top-2 left-2 z-10 bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+          {enrolledCourses.map((course: any) => (
+            <div key={course.id} className="relative h-full">
+              <div className="absolute top-2 left-2 z-10 bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 dark:bg-green-900/50 dark:text-green-400">
                 <CheckCircle size={12} /> רשום
               </div>
-              <CourseCard
-                course={course}
-                onRegister={() => {}}
-                hideButton={true}
+              <ClassCard
+                session={course}
+                isStudent={true}
+                isEnrolled={true}
+                hideRegisterButton={true}
               />
             </div>
           ))}

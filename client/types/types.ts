@@ -110,7 +110,7 @@ export interface InstructorStats {
   myCoursesCount: number;
   myStudentsCount: number;
   todayClassesCount: number;
-  nextClass: ClassSession | null;
+  nextClass: (ClassSession & { nextDate: string }) | null;
 }
 
 export interface Studio {

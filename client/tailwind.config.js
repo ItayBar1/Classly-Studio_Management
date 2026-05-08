@@ -6,7 +6,16 @@ export default {
     "./index.tsx",
     "./App.tsx",
     "./components/**/*.{ts,tsx}",
+    "./utils/**/*.{ts,tsx}",
     "./src/**/*.{ts,tsx}",
+  ],
+  safelist: [
+    "bg-blue-50", "dark:bg-blue-900/20", "bg-blue-500",
+    "bg-emerald-50", "dark:bg-emerald-900/20", "bg-emerald-500",
+    "bg-amber-50", "dark:bg-amber-900/20", "bg-amber-500",
+    "bg-fuchsia-50", "dark:bg-fuchsia-900/20", "bg-fuchsia-500",
+    "bg-cyan-50", "dark:bg-cyan-900/20", "bg-cyan-500",
+    "bg-indigo-500", "bg-rose-500", "bg-teal-500"
   ],
   theme: {
     extend: {

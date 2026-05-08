@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Search, Filter, Loader2 } from "lucide-react";
 import { CourseService, EnrollmentService } from "../../services/api";
-import { CourseCard } from "./CourseCard";
+import { ClassCard } from "../common/ClassCard";
 import { RegistrationModal } from "./RegistrationModal";
 import { ClassSession } from "../../types/types";
+import { DAY_MAP, extractTime } from "../../utils/dateUtils";
 
 export const BrowseCourses: React.FC = () => {
   const [courses, setCourses] = useState<ClassSession[]>([]);
@@ -24,7 +25,26 @@ export const BrowseCourses: React.FC = () => {
         EnrollmentService.getMyEnrollments(),
       ]);
 
-      setCourses(coursesData);
+      const mappedCourses = coursesData.map((cls: any) => ({
+        id: cls.id,
+        name: cls.name,
+        dayName: DAY_MAP[cls.day_of_week] || "",
+        instructor: cls.instructor?.full_name || "מדריך לא ידוע",
+        startTime: extractTime(cls.start_time),
+        endTime: extractTime(cls.end_time),
+        duration: cls.duration || 60,
+        students: cls.current_enrollment || 0,
+        capacity: cls.max_capacity || 20,
+        level: cls.level || "ALL_LEVELS",
+        room: cls.location_room || "סטודיו ראשי",
+        color: cls.color || "indigo",
+        description: cls.description,
+        price_ils: cls.price_ils,
+        categoryName: cls.category?.name,
+        original: cls
+      }));
+
+      setCourses(mappedCourses);
 
       // Extract IDs of courses the user is already enrolled in
       const userCourseIds = enrollmentsData
@@ -88,12 +108,14 @@ export const BrowseCourses: React.FC = () => {
       ) : filteredCourses.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCourses.map((course) => (
-            <CourseCard
-              key={course.id}
-              course={course}
-              onRegister={handleRegisterClick}
-              isEnrolled={enrolledCourseIds.includes(course.id)}
-            />
+            <div key={course.id} className="relative h-full">
+              <ClassCard
+                session={course}
+                isStudent={true}
+                onRegister={handleRegisterClick}
+                isEnrolled={enrolledCourseIds.includes(course.id)}
+              />
+            </div>
           ))}
         </div>
       ) : (

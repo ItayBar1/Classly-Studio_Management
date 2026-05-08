@@ -118,8 +118,12 @@ export class CourseService {
     serviceLogger.info({ instructorId }, "Fetching courses by instructor");
 
     const data = await prisma.classes.findMany({
-      where: { instructor_id: instructorId },
+      where: { instructor_id: instructorId, is_active: true },
       orderBy: { day_of_week: "asc" },
+      include: {
+        branch: { select: { name: true } },
+        category: { select: { name: true } }
+      }
     });
 
     return data;

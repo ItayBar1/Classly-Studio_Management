@@ -5,7 +5,6 @@ import {
   DollarSign,
   CalendarCheck,
   TrendingUp,
-  Loader2,
   Building2,
 } from "lucide-react";
 import {
@@ -20,8 +19,10 @@ import {
   Line,
 } from "recharts";
 import { DashboardService } from "../../services/api";
-import { DAY_NAMES_HE } from "../../utils/dateUtils";
 import { API_ERRORS } from "../../constants/errors";
+import { StatCard } from "../common/StatCard";
+import { PageHeader } from "../common/PageHeader";
+import { LoadingState, ErrorState, EmptyState } from "../common/StateDisplay";
 
 interface ChartData {
   name: string;
@@ -29,26 +30,6 @@ interface ChartData {
   attendance: number;
 }
 
-const StatCard = ({ title, value, subtext, icon: Icon, color }: any) => (
-  <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-start justify-between hover:shadow-md transition-shadow dark:bg-slate-900 dark:border-slate-800">
-    <div>
-      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-        {title}
-      </p>
-      <h3 className="text-2xl font-bold text-slate-800 mt-1 dark:text-slate-100">
-        {value}
-      </h3>
-      <p
-        className={`text-xs mt-2 font-medium ${subtext.includes("+") ? "text-green-600 dark:text-green-400" : "text-slate-400 dark:text-slate-500"}`}
-      >
-        {subtext}
-      </p>
-    </div>
-    <div className={`p-3 rounded-lg ${color}`}>
-      <Icon className="text-white" size={24} />
-    </div>
-  </div>
-);
 
 interface DashboardProps {
   onTabChange: (tab: string) => void;
@@ -96,50 +77,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ onTabChange }) => {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64 text-slate-400">
-        <Loader2 className="animate-spin mr-2" /> טוען נתונים...
-      </div>
-    );
+    return <LoadingState />;
   }
 
   if (noStudio) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
-        <div className="p-4 bg-indigo-50 rounded-full dark:bg-indigo-900/30">
-          <Building2 className="text-indigo-500" size={40} />
-        </div>
-        <div>
-          <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1">
-            ברוך הבא ל-Classly!
-          </h3>
-          <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm">
-            הסטודיו שלך עדיין לא הוגדר. כדי להתחיל, עבור למסך הניהול וצור את
-            פרטי הסטודיו.
-          </p>
-        </div>
-        <button
-          onClick={() => onTabChange("administration")}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm px-5 py-2.5 rounded-lg transition-colors"
-        >
-          עבור להגדרת הסטודיו
-        </button>
-      </div>
+      <EmptyState
+        icon={Building2}
+        title="ברוך הבא ל-Classly!"
+        description="הסטודיו שלך עדיין לא הוגדר. כדי להתחיל, עבור למסך הניהול וצור את פרטי הסטודיו."
+        action={{
+          label: "עבור להגדרת הסטודיו",
+          onClick: () => onTabChange("administration"),
+        }}
+      />
     );
   }
 
   if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 text-slate-500">
-        <p className="text-lg font-medium text-red-500 mb-2">⚠️ {error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="text-indigo-600 hover:text-indigo-700 font-medium text-sm"
-        >
-          נסה שוב
-        </button>
-      </div>
-    );
+    return <ErrorState message={error} onRetry={() => window.location.reload()} />;
   }
 
   return (
@@ -147,24 +103,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ onTabChange }) => {
       <Helmet>
         <title>לוח בקרה | Classly</title>
       </Helmet>
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-            מבט על
-          </h2>
-          <p className="text-slate-500 dark:text-slate-400">
-            ברוך שובך, מנהל המערכת.
-          </p>
-        </div>
-        <div className="text-sm text-slate-500 bg-slate-100 px-4 py-2 rounded-full dark:bg-slate-800 dark:text-slate-400">
-          {new Date().toLocaleDateString("he-IL", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
-        </div>
-      </div>
+      <PageHeader
+        title="מבט על"
+        subtitle="ברוך שובך, מנהל המערכת."
+        rightContent={
+          <div className="text-sm text-slate-500 bg-slate-100 px-4 py-2 rounded-full dark:bg-slate-800 dark:text-slate-400">
+            {new Date().toLocaleDateString("he-IL", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard

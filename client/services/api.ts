@@ -325,6 +325,17 @@ export const EnrollmentService = {
       .then((res) => res.data),
 };
 
+export const AttendanceService = {
+  recordAttendance: (data: { classId: string; date: string; records: any[]; sessionStatus: "IN_PROGRESS" | "COMPLETED" }) =>
+    apiClient.post("/attendance", data).then((res) => res.data),
+  getClassAttendance: (classId: string, date?: string) =>
+    apiClient
+      .get(`/attendance/class/${classId}${date ? `?date=${date}` : ""}`)
+      .then((res) => res.data),
+  getSessions: () =>
+    apiClient.get<any[]>("/attendance/sessions").then((res) => res.data),
+};
+
 export const PaymentService = {
   getAll: () =>
     apiClient.get<PaymentRecord[]>("/payments").then((res) => res.data),

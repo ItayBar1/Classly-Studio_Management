@@ -16,7 +16,7 @@ export class AttendanceController {
     );
     try {
       const instructorId = req.user!.id;
-      const { classId, date, records } = req.body;
+      const { classId, date, records, sessionStatus } = req.body;
       // records format: [{ studentId: '...', status: 'PRESENT', notes: '...' }]
 
       if (!classId || !date || !Array.isArray(records)) {
@@ -45,7 +45,8 @@ export class AttendanceController {
         classId,
         date,
         instructorId,
-        records
+        records,
+        sessionStatus
       );
       requestLog.info(
         { count: result.length },
@@ -124,6 +125,25 @@ export class AttendanceController {
         { err: error },
         "Error fetching student attendance history"
       );
+      next(error);
+    }
+  }
+
+  // Get sessions requiring attendance for an instructor
+  static async getInstructorSessions(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    const requestLog = req.logger!;
+    requestLog.info({ userId: req.user!.id }, "Controller entry");
+    try {
+      const instructorId = req.user!.id;
+      const sessions = await AttendanceService.getInstructorSessions(instructorId);
+      requestLog.info({ count: sessions?.length }, "Instructor sessions fetched");
+      res.json(sessions);
+    } catch (error: any) {
+      requestLog.error({ err: error }, "Error fetching instructor sessions");
       next(error);
     }
   }

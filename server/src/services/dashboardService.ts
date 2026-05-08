@@ -189,10 +189,21 @@ export const DashboardService = {
         (course) => course.day_of_week === todayDayOfWeek,
       ).length;
 
+      // Fetch COMPLETED schedule_sessions for these courses from today onwards to skip them
+      const completedSessions = await prisma.schedule_sessions.findMany({
+        where: {
+          class: { instructor_id: instructorId },
+          status: "COMPLETED",
+          session_date: { gte: new Date(new Date().setHours(0,0,0,0)) }
+        },
+        select: { class_id: true, session_date: true }
+      });
+      const completedSet = new Set(completedSessions.map(s => `${s.class_id}_${s.session_date.toISOString().split('T')[0]}`));
+
       // Calculate Next Class
       let nextClass: any = null;
       if (myCourses.length > 0) {
-        const coursesWithNextDate = myCourses.map((course) => ({
+        let coursesWithNextDate = myCourses.map((course) => ({
           ...course,
           // Prisma returns Time as Date object, extract HH:MM string
           nextDate: getNextClassDate(
@@ -201,11 +212,27 @@ export const DashboardService = {
           ),
         }));
 
-        coursesWithNextDate.sort(
-          (a, b) => a.nextDate.getTime() - b.nextDate.getTime(),
-        );
+        let found = false;
+        // Limit iterations to prevent infinite loops in edge cases
+        let iterations = 0;
+        while (!found && coursesWithNextDate.length > 0 && iterations < 50) {
+          iterations++;
+          coursesWithNextDate.sort(
+            (a, b) => a.nextDate.getTime() - b.nextDate.getTime(),
+          );
 
-        nextClass = coursesWithNextDate[0];
+          const candidate = coursesWithNextDate[0];
+          const dateKey = `${candidate.id}_${candidate.nextDate.toISOString().split('T')[0]}`;
+
+          if (completedSet.has(dateKey)) {
+            // This occurrence is already completed, shift it by 7 days and re-sort
+            candidate.nextDate = new Date(candidate.nextDate);
+            candidate.nextDate.setDate(candidate.nextDate.getDate() + 7);
+          } else {
+            nextClass = candidate;
+            found = true;
+          }
+        }
       }
 
       return {

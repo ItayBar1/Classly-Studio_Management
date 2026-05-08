@@ -2,83 +2,74 @@ import React, { useEffect, useState } from 'react';
 import { 
   Users, 
   Calendar, 
-  CheckCircle, 
+  CheckCircle,
   Clock,
-  Loader2
 } from 'lucide-react';
 import { DashboardService } from '../../services/api';
 import { InstructorStats } from '../../types/types';
+import { PageHeader } from '../common/PageHeader';
+import { StatCard } from '../common/StatCard';
+import { LoadingState } from '../common/StateDisplay';
+import { AttendanceModal } from './AttendanceModal';
+import toast from "react-hot-toast";
 
 export const InstructorDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<InstructorStats | null>(null);
-  const [userName, setUserName] = useState('');
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
+
+  const fetchStats = async () => {
+    try {
+      const data = await DashboardService.getInstructorStats();
+      setStats(data);
+    } catch (error) {
+      console.error('Error fetching instructor data:', error);
+      toast.error("שגיאה בטעינת הנתונים");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchInstructorData = async () => {
-      try {
-        const data = await DashboardService.getInstructorStats();
-        setStats(data);
-      } catch (error) {
-        console.error('Error fetching instructor data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInstructorData();
+    fetchStats();
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="animate-spin text-indigo-600" size={32} />
-      </div>
-    );
+    return <LoadingState />;
   }
 
   if (!stats) return null;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">לוח בקרה למדריך</h2>
-          <p className="text-slate-500">סיכום פעילות הקורסים שלך</p>
-        </div>
-      </div>
+      <PageHeader 
+        title="לוח בקרה למדריך"
+        subtitle="סיכום פעילות הקורסים שלך"
+      />
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-slate-500">הקורסים שלי</p>
-            <h3 className="text-2xl font-bold text-slate-800 mt-1">{stats.myCoursesCount}</h3>
-          </div>
-          <div className="p-3 rounded-lg bg-indigo-500 text-white">
-            <Calendar size={24} />
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-slate-500">סה"כ תלמידים</p>
-            <h3 className="text-2xl font-bold text-slate-800 mt-1">{stats.myStudentsCount}</h3>
-          </div>
-          <div className="p-3 rounded-lg bg-blue-500 text-white">
-            <Users size={24} />
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-slate-500">שיעורים היום</p>
-            <h3 className="text-2xl font-bold text-slate-800 mt-1">{stats.todayClassesCount}</h3>
-          </div>
-          <div className="p-3 rounded-lg bg-green-500 text-white">
-            <Clock size={24} />
-          </div>
-        </div>
+        <StatCard
+          title="הקורסים שלי"
+          value={stats.myCoursesCount}
+          subtext="קורסים פעילים"
+          icon={Calendar}
+          color="bg-indigo-500"
+        />
+        <StatCard
+          title="סה״כ תלמידים"
+          value={stats.myStudentsCount}
+          subtext="תלמידים רשומים"
+          icon={Users}
+          color="bg-blue-500"
+        />
+        <StatCard
+          title="שיעורים היום"
+          value={stats.todayClassesCount}
+          subtext="מתוכננים להיום"
+          icon={Clock}
+          color="bg-green-500"
+        />
       </div>
 
       {/* Next Class Section */}
@@ -88,17 +79,23 @@ export const InstructorDashboard: React.FC = () => {
           השיעור הבא במערכת
         </h3>
         {stats.nextClass ? (
-          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+          <div 
+            onClick={() => setIsAttendanceModalOpen(true)}
+            className="bg-slate-50 p-4 rounded-lg border border-slate-200 cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-all group"
+          >
             <div className="flex justify-between items-center">
               <div>
-                <h4 className="font-bold text-lg text-slate-800">{stats.nextClass.name}</h4>
+                <h4 className="font-bold text-lg text-slate-800 group-hover:text-indigo-700 transition-colors">{stats.nextClass.name}</h4>
                 <p className="text-slate-500">
                   {['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][stats.nextClass.day_of_week]} • {stats.nextClass.start_time.slice(0,5)}
                 </p>
               </div>
-              <div className="text-right">
+              <div className="text-right flex flex-col items-end gap-2">
                 <span className="inline-block px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
                   {stats.nextClass.current_enrollment} רשומים
+                </span>
+                <span className="text-xs font-medium text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                  לחץ לדיווח נוכחות
                 </span>
               </div>
             </div>
@@ -107,6 +104,17 @@ export const InstructorDashboard: React.FC = () => {
           <p className="text-slate-500">אין שיעורים קרובים במערכת.</p>
         )}
       </div>
+
+      {isAttendanceModalOpen && stats.nextClass && (
+        <AttendanceModal
+          isOpen={isAttendanceModalOpen}
+          onClose={() => setIsAttendanceModalOpen(false)}
+          classId={stats.nextClass.id}
+          className={stats.nextClass.name}
+          date={new Date(stats.nextClass.nextDate).toISOString().split('T')[0]}
+          onSaved={() => fetchStats()}
+        />
+      )}
     </div>
   );
 };

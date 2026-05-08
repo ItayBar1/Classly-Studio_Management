@@ -14,7 +14,10 @@ import { ClassSession, Branch, Room, Studio } from "../../types/types";
 import { AddClassModal } from "./AddClassModal";
 import { ClassCard } from "../common/ClassCard";
 import { BaseModal } from "../common/BaseModal";
+import { ScheduleGrid } from "../common/ScheduleGrid";
 import { DAY_MAP, DAYS_ARRAY, extractTime } from "../../utils/dateUtils";
+import { ColorMapper } from "../../utils/colorUtils";
+import { Filter } from "lucide-react";
 
 // --- Main Component ---
 
@@ -29,6 +32,11 @@ export const ClassSchedule: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<ClassSession | null>(null);
   const [selectedViewClass, setSelectedViewClass] = useState<ClassSession | null>(null);
+  
+  const [filterTeacher, setFilterTeacher] = useState("all");
+  const [filterLevel, setFilterLevel] = useState("all");
+
+  const colorMapper = React.useMemo(() => new ColorMapper(), []);
 
   const formatClassForDisplay = (cls: any) => {
     const startTimeStr = extractTime(cls.start_time);
@@ -54,8 +62,9 @@ export const ClassSchedule: React.FC = () => {
       capacity: cls.max_capacity,
       level: cls.level,
       room: cls.location_room || "אולם ראשי",
-      category: "כללי",
-      color: "indigo",
+      categoryName: cls.category?.name,
+      bgColor: colorMapper.getBranchColor(cls.branch_id || "default"),
+      sideColor: colorMapper.getRoomColor(cls.location_room || "אולם ראשי"),
       branch_id: cls.branch_id,
       // Raw fields for editing
       original: cls,
@@ -104,34 +113,25 @@ export const ClassSchedule: React.FC = () => {
 
   const filteredClasses = classes
     .filter((cls) => cls.dayOfWeek === selectedDay && (!selectedBranchId || cls.branch_id === selectedBranchId))
+    .filter((cls) => filterTeacher === "all" || cls.instructor === filterTeacher)
+    .filter((cls) => filterLevel === "all" || cls.level === filterLevel)
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+  const uniqueTeachers = Array.from(new Set(classes.map(c => c.instructor))).filter(Boolean);
+  const uniqueLevels = Array.from(new Set(classes.map(c => c.level))).filter(Boolean);
 
   const branchRooms = allRooms.filter(room => room.branch_id === selectedBranchId);
 
   const columns = branchRooms.map(room => ({
     id: room.id,
     name: room.name,
+    icon: <MapPin size={14} className="text-indigo-500" />,
     classes: filteredClasses.filter(cls => cls.room === room.name)
   }));
 
   // Calendar configuration
   const START_HOUR = studio?.schedule_start_hour ?? 7;
   const END_HOUR = studio?.schedule_end_hour ?? 23;
-  const PIXELS_PER_MINUTE = 2; // 120px per hour
-  const HOUR_HEIGHT = 60 * PIXELS_PER_MINUTE;
-
-  const getTopOffset = (startTimeStr: string) => {
-    const [h, m] = startTimeStr.split(':').map(Number);
-    const totalMinutes = h * 60 + m;
-    const startOfDayMinutes = START_HOUR * 60;
-    return (totalMinutes - startOfDayMinutes) * PIXELS_PER_MINUTE;
-  };
-
-  const getHeight = (durationMins: number) => {
-    return durationMins * PIXELS_PER_MINUTE;
-  };
-
-
 
   const handleEdit = (classItem: any) => {
     setSelectedViewClass(null); // Close view modal if open
@@ -220,21 +220,49 @@ export const ClassSchedule: React.FC = () => {
         </div>
       )}
 
-      {/* Day Tabs */}
-      <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-100 flex overflow-x-auto gap-1 scrollbar-hide dark:bg-slate-900 dark:border-slate-800/10">
-        {DAYS_ARRAY.map((day) => (
-          <button
-            key={day}
-            onClick={() => setSelectedDay(day)}
-            className={`flex-shrink-0 md:flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-              selectedDay === day
-                ? "bg-indigo-50 text-indigo-700 shadow-sm dark:bg-indigo-600 dark:text-white"
-                : "text-slate-500 hover:bg-slate-50 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200"
-            }`}
+      {/* Filters & Day Tabs row */}
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+        <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-100 flex overflow-x-auto gap-1 scrollbar-hide dark:bg-slate-900 dark:border-slate-800/10">
+          {DAYS_ARRAY.map((day) => (
+            <button
+              key={day}
+              onClick={() => setSelectedDay(day)}
+              className={`flex-shrink-0 md:flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                selectedDay === day
+                  ? "bg-indigo-50 text-indigo-700 shadow-sm dark:bg-indigo-600 dark:text-white"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200"
+              }`}
+            >
+              {day}
+            </button>
+          ))}
+        </div>
+
+        {/* Filters */}
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center text-slate-500 gap-2 pl-2 border-l border-slate-200 dark:border-slate-700">
+            <Filter size={18} />
+            <span className="font-medium text-sm hidden md:inline">סינון:</span>
+          </div>
+          
+          <select
+            value={filterTeacher}
+            onChange={e => setFilterTeacher(e.target.value)}
+            className="flex-1 md:w-auto text-sm bg-white border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 shadow-sm"
           >
-            {day}
-          </button>
-        ))}
+            <option value="all">כל המדריכים</option>
+            {uniqueTeachers.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+
+          <select
+            value={filterLevel}
+            onChange={e => setFilterLevel(e.target.value)}
+            className="flex-1 md:w-auto text-sm bg-white border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 shadow-sm"
+          >
+            <option value="all">כל הרמות</option>
+            {uniqueLevels.map(l => <option key={l} value={l}>{l === 'BEGINNER' ? 'מתחילים' : l === 'INTERMEDIATE' ? 'בינוניים' : l === 'ADVANCED' ? 'מתקדמים' : l}</option>)}
+          </select>
+        </div>
       </div>
 
       {/* Schedule Grid */}
@@ -244,74 +272,21 @@ export const ClassSchedule: React.FC = () => {
             <Loader2 className="animate-spin mr-2" /> טוען מערכת שעות...
           </div>
         ) : filteredClasses.length > 0 || columns.length > 0 ? (
-          <div className="flex bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden relative shadow-sm h-[800px]">
-            {/* Single scrolling container for both X and Y */}
-            <div className="flex-1 overflow-auto relative scrollbar-hide">
-              <div className="flex min-w-full">
-                
-                {/* Time Axis - Sticky to right */}
-                <div className="w-16 flex-shrink-0 bg-slate-50 dark:bg-slate-800/50 border-l border-slate-200 dark:border-slate-700 sticky right-0 z-40 shadow-[1px_0_5px_rgba(0,0,0,0.05)]">
-                  <div className="h-12 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-slate-50 dark:bg-slate-800/50 z-50"></div>
-                  <div className="relative w-full" style={{ height: (END_HOUR - START_HOUR) * HOUR_HEIGHT }}>
-                    {Array.from({ length: END_HOUR - START_HOUR + 1 }).map((_, i) => (
-                      <div key={i} className="absolute w-full text-center text-xs text-slate-500 font-medium" style={{ top: i * HOUR_HEIGHT - 8 }}>
-                        {String(START_HOUR + i).padStart(2, '0')}:00
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Rooms */}
-                <div className="flex flex-1 min-w-max">
-                  {columns.map(col => (
-                    <div key={col.id} className="flex-1 min-w-[250px] border-l last:border-l-0 border-slate-200 dark:border-slate-800 relative bg-white dark:bg-slate-900">
-                      {/* Room Header - sticky */}
-                      <div className="h-12 sticky top-0 bg-slate-50 dark:bg-slate-800/90 backdrop-blur-sm z-30 border-b border-slate-200 dark:border-slate-700 flex items-center justify-center font-semibold text-sm text-slate-800 dark:text-slate-200 shadow-sm">
-                        <MapPin size={14} className="mr-1 text-indigo-500" /> {col.name}
-                        <span className="text-[10px] bg-white dark:bg-slate-700 px-1.5 py-0.5 rounded-full text-slate-500 shadow-sm mr-2">
-                          {col.classes.length}
-                        </span>
-                      </div>
-
-                      {/* Grid lines & Classes */}
-                      <div className="relative" style={{ height: (END_HOUR - START_HOUR) * HOUR_HEIGHT }}>
-                        {/* Horizontal Grid lines */}
-                        {Array.from({ length: END_HOUR - START_HOUR }).map((_, i) => (
-                          <div key={i} className="absolute w-full border-t border-slate-100 dark:border-slate-800/50" style={{ top: i * HOUR_HEIGHT }}></div>
-                        ))}
-
-                        {/* Half-hour Grid lines (dashed) */}
-                        {Array.from({ length: END_HOUR - START_HOUR }).map((_, i) => (
-                          <div key={`half-${i}`} className="absolute w-full border-t border-dashed border-slate-100 dark:border-slate-800/30" style={{ top: i * HOUR_HEIGHT + (HOUR_HEIGHT / 2) }}></div>
-                        ))}
-
-                        {/* Classes */}
-                        {col.classes.map(cls => (
-                          <div
-                            key={cls.id}
-                            className="absolute left-2 right-2 p-1 group transition-all"
-                            style={{
-                              top: getTopOffset(cls.startTime),
-                              height: getHeight(cls.duration)
-                            }}
-                          >
-                            <ClassCard
-                              session={cls}
-                              isAdmin={true}
-                              isCompact={true}
-                              onEdit={handleEdit}
-                              onDelete={handleDelete}
-                              onClick={() => setSelectedViewClass(cls)}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+          <ScheduleGrid
+            columns={columns}
+            startHour={START_HOUR}
+            endHour={END_HOUR}
+            renderClassCard={(cls) => (
+              <ClassCard
+                session={cls}
+                isAdmin={true}
+                isCompact={true}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onClick={() => setSelectedViewClass(cls)}
+              />
+            )}
+          />
         ) : (
           <div className="text-center py-16 bg-white rounded-xl border border-dashed border-slate-200 dark:bg-slate-900/50 dark:border-slate-700">
             <Calendar className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-600 mb-4" />

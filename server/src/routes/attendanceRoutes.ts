@@ -15,6 +15,13 @@ router.use(authenticateUser);
 router.post('/', requireRole(['INSTRUCTOR']), AttendanceController.recordAttendance);
 
 /**
+ * @route   GET /api/attendance/sessions
+ * @desc    Get recent and today's sessions for the logged-in instructor
+ * @access  Instructor
+ */
+router.get('/sessions', requireRole(['INSTRUCTOR']), AttendanceController.getInstructorSessions);
+
+/**
  * @route   GET /api/attendance/class/:classId
  * @desc    Get attendance history for a specific class
  * @access  Instructor (own class), Admin
