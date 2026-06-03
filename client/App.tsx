@@ -73,6 +73,11 @@ const InstructorStudents = lazy(() =>
     default: module.InstructorStudents,
   }))
 );
+const InstructorAttendanceTab = lazy(() =>
+  import("./components/instructor/InstructorAttendanceTab").then((module) => ({
+    default: module.InstructorAttendanceTab,
+  }))
+);
 const InstructorSchedule = lazy(() =>
   import("./components/instructor/InstructorSchedule").then((module) => ({
     default: module.InstructorSchedule,
@@ -220,6 +225,10 @@ function App() {
       case "schedule":
         if (userRole === "ADMIN") return <ClassSchedule />;
         if (userRole === "INSTRUCTOR") return <InstructorSchedule />;
+        return <div>אין הרשאה</div>;
+
+      case "attendance":
+        if (userRole === "INSTRUCTOR") return <InstructorAttendanceTab />;
         return <div>אין הרשאה</div>;
 
       case "payments":

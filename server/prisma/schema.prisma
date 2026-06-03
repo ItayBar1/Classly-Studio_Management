@@ -58,6 +58,8 @@ model studios {
   bank_code                 String?   @db.VarChar(10)
   cancellation_deadline_hours Int?    @default(24)
   refund_percentage         Decimal?  @default(0) @db.Decimal(5, 2)
+  schedule_start_hour       Int?      @default(7)
+  schedule_end_hour         Int?      @default(23)
   is_active                 Boolean?  @default(true)
   created_at                DateTime? @default(now()) @db.Timestamptz
   updated_at                DateTime? @default(now()) @db.Timestamptz

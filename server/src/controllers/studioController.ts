@@ -42,15 +42,15 @@ export class StudioController {
 
   static async getMyStudio(req: Request, res: Response, next: NextFunction) {
     try {
-      const adminId = req.user?.id;
-      if (!adminId) return res.status(401).json({ error: "Unauthorized" });
+      const studioId = req.user?.studio_id;
+      if (!studioId) return res.status(404).json({ message: "No studio found for this user" });
 
-      const studio = await StudioService.getStudioByAdmin(adminId);
+      const studio = await StudioService.getStudioById(studioId);
 
       if (!studio) {
         return res
           .status(404)
-          .json({ message: "No studio found for this admin" });
+          .json({ message: "No studio found for this user" });
       }
 
       res.status(200).json(studio);
@@ -63,17 +63,13 @@ export class StudioController {
     try {
       const { id } = req.params;
       const updates = req.body;
-      const adminId = req.user?.id;
+      const studioId = req.user?.studio_id;
 
-      // Security check: Ensure the user owns this studio
-      // In a real app we might fetch the studio first or use RLS if we were querying directly.
-      // Here we trust the service/db to enforce or we check it.
-      const currentStudio = await StudioService.getStudioByAdmin(adminId!);
-
-      if (!currentStudio || currentStudio.id !== id) {
+      // Security check: Ensure the user belongs to this studio
+      if (!studioId || studioId !== id) {
         return res
           .status(403)
-          .json({ error: "Forbidden: You do not own this studio" });
+          .json({ error: "Forbidden: You do not have permission to update this studio" });
       }
 
       const updatedStudio = await StudioService.updateStudio(id, updates);

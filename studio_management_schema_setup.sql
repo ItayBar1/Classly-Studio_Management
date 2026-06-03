@@ -56,6 +56,8 @@ CREATE TABLE IF NOT EXISTS public.studios (
   bank_code VARCHAR(10),
   cancellation_deadline_hours INTEGER DEFAULT 24,
   refund_percentage DECIMAL(5, 2) DEFAULT 0,
+  schedule_start_hour INTEGER DEFAULT 7,
+  schedule_end_hour INTEGER DEFAULT 23,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

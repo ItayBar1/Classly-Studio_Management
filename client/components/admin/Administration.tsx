@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserService, InvitationService, StudioService, BranchService, RoomService } from '../../services/api';
-import { Loader2, Copy, Check, Users, UserPlus, Building, Edit, MapPin, Plus, Trash2, Mail, Phone } from 'lucide-react';
+import { Loader2, Copy, Check, Users, UserPlus, Building, Edit, MapPin, Plus, Trash2, Mail, Phone, Clock } from 'lucide-react';
 import { Studio, Branch, User, Room } from '../../types/types';
 
 import { BranchModal } from './BranchModal';
@@ -25,6 +25,7 @@ export const Administration: React.FC = () => {
     // Create Mode (New User)
     const [createForm, setCreateForm] = useState({
         name: '', description: '', contact_email: '', contact_phone: '', website_url: '',
+        schedule_start_hour: 7, schedule_end_hour: 23,
         branchName: 'Main Branch', branchAddress: '', branchCity: '', branchPhone: ''
     });
 
@@ -79,6 +80,8 @@ export const Administration: React.FC = () => {
                 contact_email: createForm.contact_email,
                 contact_phone: createForm.contact_phone,
                 website_url: createForm.website_url,
+                schedule_start_hour: createForm.schedule_start_hour,
+                schedule_end_hour: createForm.schedule_end_hour,
                 branchData: {
                     name: createForm.branchName,
                     address: createForm.branchAddress,
@@ -172,6 +175,18 @@ export const Administration: React.FC = () => {
                                     <input type="email" className="w-full border p-2 rounded" placeholder="אימייל ליצירת קשר ראשי" value={createForm.contact_email} onChange={e => setCreateForm({ ...createForm, contact_email: e.target.value })} />
                                 </div>
                             </div>
+                            
+                            <h3 className="font-semibold text-slate-700 mt-4 mb-3 flex items-center gap-2"><Clock size={18} /> שעות פעילות הסטודיו</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">שעת התחלה</label>
+                                    <input type="number" min="0" max="23" className="w-full border p-2 rounded" value={createForm.schedule_start_hour} onChange={e => setCreateForm({ ...createForm, schedule_start_hour: parseInt(e.target.value) })} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">שעת סיום</label>
+                                    <input type="number" min="0" max="24" className="w-full border p-2 rounded" value={createForm.schedule_end_hour} onChange={e => setCreateForm({ ...createForm, schedule_end_hour: parseInt(e.target.value) })} />
+                                </div>
+                            </div>
                         </div>
 
                         {/* Branch Details */}
@@ -246,12 +261,28 @@ export const Administration: React.FC = () => {
                                 <input className="border p-2 rounded" value={studioForm.website_url} onChange={e => setStudioForm({ ...studioForm, website_url: e.target.value })} placeholder="אתר אינטרנט" />
                             </div>
                             <textarea className="w-full border p-2 rounded" rows={3} value={studioForm.description || ''} onChange={e => setStudioForm({ ...studioForm, description: e.target.value })} placeholder="תיאור" />
-                            <div className="flex gap-2 justify-end">
+                            
+                            <div className="pt-4 border-t border-slate-100">
+                                <h4 className="font-semibold text-slate-700 mb-3 text-sm">הגדרות מערכת שעות</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-medium text-slate-500 mb-1">שעת התחלה (ברירת מחדל: 7)</label>
+                                        <input type="number" min="0" max="23" className="w-full border p-2 rounded" value={studioForm.schedule_start_hour ?? 7} onChange={e => setStudioForm({ ...studioForm, schedule_start_hour: parseInt(e.target.value) })} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-slate-500 mb-1">שעת סיום (ברירת מחדל: 23)</label>
+                                        <input type="number" min="0" max="24" className="w-full border p-2 rounded" value={studioForm.schedule_end_hour ?? 23} onChange={e => setStudioForm({ ...studioForm, schedule_end_hour: parseInt(e.target.value) })} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2 justify-end mt-4">
                                 <button type="button" onClick={() => setIsEditingStudio(false)} className="px-4 py-2 text-slate-500">ביטול</button>
                                 <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">שמור שינויים</button>
                             </div>
                         </form>
                     ) : (
+                        <>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 text-sm">
                             <div><span className="text-slate-500 block">שם</span> <span className="font-medium text-slate-800">{studio.name}</span></div>
                             <div><span className="text-slate-500 block">טלפון</span> <span className="font-medium text-slate-800">{studio.contact_phone || '-'}</span></div>
@@ -259,6 +290,14 @@ export const Administration: React.FC = () => {
                             <div><span className="text-slate-500 block">אתר אינטרנט</span> <span className="font-medium text-slate-800">{studio.website_url || '-'}</span></div>
                             <div className="col-span-2"><span className="text-slate-500 block">תיאור</span> <span className="text-slate-800">{studio.description || '-'}</span></div>
                         </div>
+                        <div className="mt-6 pt-4 border-t border-slate-100">
+                            <h4 className="font-semibold text-slate-800 mb-3">הגדרות סטודיו</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 text-sm">
+                                <div><span className="text-slate-500 block">שעת תחילת יום (מערכת שעות)</span> <span className="font-medium text-slate-800">{studio.schedule_start_hour ?? 7}:00</span></div>
+                                <div><span className="text-slate-500 block">שעת סיום יום (מערכת שעות)</span> <span className="font-medium text-slate-800">{studio.schedule_end_hour ?? 23}:00</span></div>
+                            </div>
+                        </div>
+                    </>
                     )}
                 </div>
             )}

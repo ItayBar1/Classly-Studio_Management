@@ -10,6 +10,8 @@ export interface CreateStudioDTO {
   address?: string;
   city?: string;
   branch_phone?: string;
+  schedule_start_hour?: number;
+  schedule_end_hour?: number;
 }
 
 export class StudioService {
@@ -85,6 +87,15 @@ export class StudioService {
   static async getStudioByAdmin(adminId: string) {
     const data = await prisma.studios.findFirst({
       where: { admin_id: adminId },
+    });
+
+    return data; // Returns null if not found
+  }
+
+  // Get Studio by Studio ID
+  static async getStudioById(studioId: string) {
+    const data = await prisma.studios.findUnique({
+      where: { id: studioId },
     });
 
     return data; // Returns null if not found

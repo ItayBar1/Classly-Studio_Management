@@ -1,6 +1,7 @@
 import { prisma } from "../config/prisma";
 import { logger } from "../logger";
 import { AppError } from "../utils/AppError";
+import { checkScheduleConflict } from "../utils/conflictDetector";
 
 type CourseFilters = {
   category_id?: string | number;
@@ -33,8 +34,8 @@ export class CourseService {
 
     const where: { is_active?: boolean; category_id?: string } = {};
 
-    // If student, only show active courses
-    if (userRole === "STUDENT") {
+    // If student or filter requests active only, show active courses
+    if (userRole === "STUDENT" || filters.status === "active") {
       where.is_active = true;
     }
 
@@ -117,8 +118,12 @@ export class CourseService {
     serviceLogger.info({ instructorId }, "Fetching courses by instructor");
 
     const data = await prisma.classes.findMany({
-      where: { instructor_id: instructorId },
+      where: { instructor_id: instructorId, is_active: true },
       orderBy: { day_of_week: "asc" },
+      include: {
+        branch: { select: { name: true } },
+        category: { select: { name: true } }
+      }
     });
 
     return data;
@@ -131,16 +136,55 @@ export class CourseService {
     });
     serviceLogger.info({ courseData }, "Creating course");
 
+    const studioId = courseData.studio_id as string;
+    const branchId = courseData.branch_id as string;
+
+    // 1. Instructor Conflict Check
+    if (courseData.instructor_id) {
+      const instructorClasses = await prisma.classes.findMany({
+        where: {
+          studio_id: studioId,
+          instructor_id: courseData.instructor_id as string,
+          is_active: true
+        }
+      });
+      const instructorConflict = checkScheduleConflict(courseData as any, instructorClasses);
+      if (instructorConflict.hasConflict) {
+        throw new AppError("המורה כבר מלמד שיעור אחר בשעה זו", 400);
+      }
+      if (instructorConflict.hasWarning && !courseData.ignore_warnings) {
+        throw new AppError(instructorConflict.warnings?.join("\n") || "אזהרה: המדריך משובץ בסניף אחר.", 409);
+      }
+    }
+
+    // 2. Room Conflict Check
+    if (courseData.location_room && branchId) {
+      const roomClasses = await prisma.classes.findMany({
+        where: {
+          studio_id: studioId,
+          branch_id: branchId,
+          location_room: courseData.location_room as string,
+          is_active: true
+        }
+      });
+      const roomConflict = checkScheduleConflict(courseData as any, roomClasses);
+      if (roomConflict.hasConflict) {
+        throw new AppError("החדר כבר תפוס בשעה זו", 400);
+      }
+    }
+
+    const { ignore_warnings, ...validCourseData } = courseData as any;
+
     const dataToSave = {
-      ...courseData,
+      ...validCourseData,
       start_time:
-        typeof courseData.start_time === "string"
-          ? formatTimeForPrisma(courseData.start_time)
-          : courseData.start_time,
+        typeof validCourseData.start_time === "string"
+          ? formatTimeForPrisma(validCourseData.start_time)
+          : validCourseData.start_time,
       end_time:
-        typeof courseData.end_time === "string"
-          ? formatTimeForPrisma(courseData.end_time)
-          : courseData.end_time,
+        typeof validCourseData.end_time === "string"
+          ? formatTimeForPrisma(validCourseData.end_time)
+          : validCourseData.end_time,
     };
 
     const data = await prisma.classes.create({
@@ -157,16 +201,68 @@ export class CourseService {
     });
     serviceLogger.info({ id, updates }, "Updating course");
 
+    const existing = await prisma.classes.findUnique({ where: { id } });
+    if (!existing) {
+      throw new AppError("Course not found", 404);
+    }
+
+    const proposedSession = {
+      id,
+      day_of_week: updates.day_of_week ?? existing.day_of_week,
+      start_time: updates.start_time ?? existing.start_time,
+      end_time: updates.end_time ?? existing.end_time,
+      instructor_id: updates.instructor_id ?? existing.instructor_id,
+      location_room: updates.location_room ?? existing.location_room,
+      branch_id: updates.branch_id ?? existing.branch_id,
+      studio_id: existing.studio_id
+    };
+
+    // 1. Instructor Conflict Check
+    if (proposedSession.instructor_id) {
+      const instructorClasses = await prisma.classes.findMany({
+        where: {
+          studio_id: proposedSession.studio_id,
+          instructor_id: proposedSession.instructor_id as string,
+          is_active: true
+        }
+      });
+      const instructorConflict = checkScheduleConflict(proposedSession as any, instructorClasses);
+      if (instructorConflict.hasConflict) {
+        throw new AppError("המורה כבר מלמד שיעור אחר בשעה זו", 400);
+      }
+      if (instructorConflict.hasWarning && !updates.ignore_warnings) {
+        throw new AppError(instructorConflict.warnings?.join("\n") || "אזהרה: המדריך משובץ בסניף אחר.", 409);
+      }
+    }
+
+    // 2. Room Conflict Check
+    if (proposedSession.location_room && proposedSession.branch_id) {
+      const roomClasses = await prisma.classes.findMany({
+        where: {
+          studio_id: proposedSession.studio_id,
+          branch_id: proposedSession.branch_id as string,
+          location_room: proposedSession.location_room as string,
+          is_active: true
+        }
+      });
+      const roomConflict = checkScheduleConflict(proposedSession as any, roomClasses);
+      if (roomConflict.hasConflict) {
+        throw new AppError("החדר כבר תפוס בשעה זו", 400);
+      }
+    }
+
+    const { ignore_warnings, ...validUpdates } = updates as any;
+
     const dataToUpdate = {
-      ...updates,
+      ...validUpdates,
       start_time:
-        typeof updates.start_time === "string"
-          ? formatTimeForPrisma(updates.start_time)
-          : updates.start_time,
+        typeof validUpdates.start_time === "string"
+          ? formatTimeForPrisma(validUpdates.start_time)
+          : validUpdates.start_time,
       end_time:
-        typeof updates.end_time === "string"
-          ? formatTimeForPrisma(updates.end_time)
-          : updates.end_time,
+        typeof validUpdates.end_time === "string"
+          ? formatTimeForPrisma(validUpdates.end_time)
+          : validUpdates.end_time,
     };
 
     const data = await prisma.classes.update({

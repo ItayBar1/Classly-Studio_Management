@@ -13,6 +13,7 @@ import {
   Search,
   Sun,
   Moon,
+  ClipboardList,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -75,6 +76,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: "תלמידים",
       icon: Users,
       roles: ["ADMIN", "INSTRUCTOR"],
+    },
+    {
+      id: "attendance",
+      label: "נוכחות",
+      icon: ClipboardList,
+      roles: ["INSTRUCTOR"],
     },
     {
       id: "payments",

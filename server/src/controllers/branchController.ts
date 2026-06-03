@@ -7,15 +7,12 @@ export class BranchController {
 
     static async getAll(req: Request, res: Response, next: NextFunction) {
         try {
-            const adminId = req.user?.id;
-            // Get studio for this admin to ensure security
-            const studio = await StudioService.getStudioByAdmin(adminId!);
-
-            if (!studio) {
+            const studioId = req.user?.studio_id;
+            if (!studioId) {
                 return res.status(404).json({ error: 'Studio not found' });
             }
 
-            const branches = await BranchService.getAll(studio.id);
+            const branches = await BranchService.getAll(studioId);
             res.json(branches);
         } catch (error) {
             next(error);
@@ -24,15 +21,14 @@ export class BranchController {
 
     static async create(req: Request, res: Response, next: NextFunction) {
         try {
-            const adminId = req.user?.id;
+            const studioId = req.user?.studio_id;
             const branchData = req.body;
 
-            const studio = await StudioService.getStudioByAdmin(adminId!);
-            if (!studio) {
+            if (!studioId) {
                 return res.status(404).json({ error: 'Studio not found' });
             }
 
-            const branch = await BranchService.create(studio.id, branchData);
+            const branch = await BranchService.create(studioId, branchData);
             res.status(201).json(branch);
         } catch (error) {
             next(error);
@@ -41,17 +37,14 @@ export class BranchController {
 
     static async update(req: Request, res: Response, next: NextFunction) {
         try {
-            const adminId = req.user?.id;
+            const studioId = req.user?.studio_id;
             const { id } = req.params;
             const updates = req.body;
 
             // Security: Verify studio ownership implies branch ownership
-            // We manually check studio first, then pass studio_id to the service layer.
-            // BranchService.update uses a compound where (branch_id + studio_id) for safety.
-            const studio = await StudioService.getStudioByAdmin(adminId!);
-            if (!studio) return res.status(403).json({ error: 'Forbidden' });
+            if (!studioId) return res.status(403).json({ error: 'Forbidden' });
 
-            const branch = await BranchService.update(id, studio.id, updates);
+            const branch = await BranchService.update(id, studioId, updates);
             res.json(branch);
         } catch (error) {
             next(error);
@@ -60,14 +53,11 @@ export class BranchController {
 
     static async delete(req: Request, res: Response, next: NextFunction) {
         try {
-           const adminId = req.user?.id;
-            if (!adminId) return res.status(401).json({ error: "Unauthorized" });
+            const studioId = req.user?.studio_id;
+            if (!studioId) return res.status(401).json({ error: "Unauthorized" });
             const { id } = req.params;
 
-            const studio = await StudioService.getStudioByAdmin(adminId!);
-            if (!studio) return res.status(403).json({ error: 'Forbidden' });
-
-            await BranchService.delete(id, studio.id);
+            await BranchService.delete(id, studioId);
             res.status(204).send();
         } catch (error) {
             next(error);

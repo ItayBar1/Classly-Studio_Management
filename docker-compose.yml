@@ -22,6 +22,8 @@ services:
       - ./docker/loki/loki-config.yaml:/etc/loki/local-config.yaml
       - loki_data:/loki
     command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
     restart: always
     networks:
       - classly_net
