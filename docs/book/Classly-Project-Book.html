@@ -1,0 +1,2896 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ספר פרויקט — Classly | מערכת לניהול סטודיו</title>
+  <link rel="stylesheet" href="assets/hljs-theme.css" />
+  <style>
+    /* ===== Fonts & base ===== */
+    :root {
+      --indigo: #4f46e5;
+      --indigo-dark: #4338ca;
+      --indigo-50: #eef2ff;
+      --indigo-100: #e0e7ff;
+      --ink: #1e293b;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --bg: #eef0f4;
+      --paper: #ffffff;
+      --green: #059669;
+      --amber: #d97706;
+      --red: #dc2626;
+      --code-bg: #282c34;
+      --maxw: 820px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Heebo", "Assistant", "Segoe UI", "Arial Hebrew", "Arial", sans-serif;
+      font-size: 16px;
+      line-height: 1.85;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .book {
+      max-width: var(--maxw);
+      margin: 24px auto;
+      background: var(--paper);
+      box-shadow: 0 10px 40px rgba(15, 23, 42, .12);
+      border-radius: 6px;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .page {
+      padding: 46px 54px;
+    }
+
+    p {
+      margin: 0 0 14px;
+      text-align: justify;
+    }
+
+    a {
+      color: var(--indigo-dark);
+      text-decoration: none;
+    }
+
+    strong {
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    code:not(.hljs) {
+      direction: ltr;
+      unicode-bidi: embed;
+      font-family: "SF Mono", "JetBrains Mono", Consolas, monospace;
+      background: var(--indigo-50);
+      color: var(--indigo-dark);
+      padding: 1px 6px;
+      border-radius: 5px;
+      font-size: .85em;
+      white-space: nowrap;
+    }
+
+    /* ===== Cover ===== */
+    .cover {
+      min-height: 1000px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 60px 54px;
+      background:
+        radial-gradient(900px 380px at 50% -8%, rgba(79, 70, 229, .14), transparent 70%),
+        linear-gradient(180deg, #ffffff 0%, #fbfbff 100%);
+      position: relative;
+    }
+
+    .cover .college {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-top: 8px;
+    }
+
+    .cover .college small {
+      display: block;
+      font-weight: 500;
+      color: var(--muted);
+      font-size: .8rem;
+      margin-top: 3px;
+    }
+
+    .cover .brand {
+      margin: 64px 0 6px;
+      font-size: 5.2rem;
+      font-weight: 800;
+      letter-spacing: -2px;
+      color: var(--indigo);
+      line-height: 1;
+    }
+
+    .cover .brand .gem {
+      color: #312e81;
+    }
+
+    .cover .tagline {
+      font-size: 1.35rem;
+      color: #334155;
+      font-weight: 600;
+      margin: 0 0 6px;
+    }
+
+    .cover .subject {
+      font-size: 1.02rem;
+      color: var(--muted);
+      max-width: 560px;
+      margin: 0 auto 40px;
+    }
+
+    .cover .meta {
+      margin-top: auto;
+      width: 100%;
+      max-width: 560px;
+      border-top: 2px solid var(--indigo-100);
+      padding-top: 26px;
+      text-align: right;
+    }
+
+    .cover .meta .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px dashed var(--line);
+    }
+
+    .cover .meta .row span:first-child {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .cover .meta .row span:last-child {
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .cover .sign {
+      margin-top: 34px;
+      display: flex;
+      justify-content: space-around;
+      width: 100%;
+      color: var(--muted);
+      font-size: .85rem;
+    }
+
+    .cover .sign div {
+      border-top: 1px solid #94a3b8;
+      padding-top: 6px;
+      width: 160px;
+    }
+
+    .editor-note {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      color: #92400e;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: .82rem;
+      margin: 0 auto 0;
+      max-width: 560px;
+      text-align: center;
+    }
+
+    /* ===== Headings ===== */
+    h1.chap {
+      font-size: 2rem;
+      color: var(--indigo-dark);
+      margin: 0 0 8px;
+      padding-bottom: 14px;
+      border-bottom: 3px solid var(--indigo);
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    h1.chap .num {
+      background: var(--indigo);
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: 800;
+      border-radius: 8px;
+      padding: 4px 12px;
+      line-height: 1;
+    }
+
+    .chap-lead {
+      color: var(--muted);
+      font-size: 1.02rem;
+      margin: 0 0 26px;
+    }
+
+    h2.sec {
+      font-size: 1.35rem;
+      color: #312e81;
+      margin: 30px 0 10px;
+      padding-right: 12px;
+      border-right: 5px solid var(--indigo);
+    }
+
+    h3.sub {
+      font-size: 1.08rem;
+      color: #0f172a;
+      margin: 20px 0 8px;
+    }
+
+    h4 {
+      font-size: .98rem;
+      color: var(--indigo-dark);
+      margin: 16px 0 6px;
+    }
+
+    ul,
+    ol {
+      margin: 0 0 16px;
+      padding-right: 24px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    li::marker {
+      color: var(--indigo);
+    }
+
+    /* ===== TOC ===== */
+    .toc h1.chap {
+      border-bottom-color: #cbd5e1;
+    }
+
+    .toc ol {
+      list-style: none;
+      padding: 0;
+      counter-reset: toc;
+    }
+
+    .toc li {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      padding: 9px 0;
+      border-bottom: 1px dotted #cbd5e1;
+    }
+
+    .toc li a {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      width: 100%;
+      color: #1e293b;
+      font-weight: 600;
+    }
+
+    .toc li .tnum {
+      color: var(--indigo);
+      font-weight: 800;
+      min-width: 26px;
+    }
+
+    .toc li .leader {
+      flex: 1;
+      border-bottom: 1px dotted #cbd5e1;
+      transform: translateY(-4px);
+      margin: 0 6px;
+    }
+
+    .toc li .tpage {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .toc li a:hover {
+      color: var(--indigo-dark);
+    }
+
+    /* ===== Code cards ===== */
+    figure.code {
+      margin: 18px 0 22px;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, .16);
+      border: 1px solid #1f2430;
+    }
+
+    figure.code .bar {
+      background: #21252b;
+      color: #cbd5e1;
+      font-family: "SF Mono", Consolas, monospace;
+      font-size: .78rem;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      direction: ltr;
+      border-bottom: 1px solid #11141a;
+    }
+
+    figure.code .bar .dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    figure.code .bar .dots i {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    figure.code .bar .file {
+      margin-inline-start: 8px;
+      color: #9aa4b2;
+    }
+
+    figure.code pre {
+      margin: 0;
+    }
+
+    figure.code pre code.hljs {
+      direction: ltr;
+      text-align: left;
+      unicode-bidi: embed;
+      display: block;
+      font-family: "SF Mono", "JetBrains Mono", Consolas, monospace;
+      font-size: 12.5px;
+      line-height: 1.65;
+      padding: 16px 18px;
+      overflow-x: auto;
+      background: var(--code-bg);
+    }
+
+    figure.code figcaption,
+    figure.diagram figcaption,
+    figure.shot figcaption {
+      text-align: center;
+      color: var(--muted);
+      font-size: .85rem;
+      margin-top: 8px;
+      font-weight: 600;
+    }
+
+    figure.code figcaption {
+      margin-top: 8px;
+    }
+
+    /* ===== Screenshots ===== */
+    figure.shot {
+      margin: 18px 0 24px;
+      text-align: center;
+    }
+
+    figure.shot img {
+      max-width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: 0 6px 22px rgba(15, 23, 42, .14);
+      background: #fff;
+    }
+
+    figure.shot.phone img {
+      max-width: 300px;
+    }
+
+    .shot-pair {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .shot-pair figure.shot {
+      flex: 1;
+      min-width: 240px;
+      margin: 10px 0;
+    }
+
+    /* ===== Diagrams ===== */
+    figure.diagram {
+      margin: 20px 0 24px;
+      text-align: center;
+    }
+
+    figure.diagram svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* SVG coordinates were authored in an LTR mental model; force LTR text anchoring
+     so start/end/middle behave as designed (Hebrew glyphs still shape correctly). */
+    figure.diagram svg text {
+      direction: ltr;
+    }
+
+    .diagram-wrap {
+      background: #fbfcff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px;
+    }
+
+    /* ===== Tables ===== */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 22px;
+      font-size: .92rem;
+    }
+
+    th,
+    td {
+      border: 1px solid var(--line);
+      padding: 9px 12px;
+      text-align: right;
+      vertical-align: top;
+    }
+
+    thead th {
+      background: var(--indigo-50);
+      color: var(--indigo-dark);
+      font-weight: 700;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #f8fafc;
+    }
+
+    td code:not(.hljs) {
+      white-space: normal;
+    }
+
+    /* ===== Callouts ===== */
+    .note,
+    .principle,
+    .warn {
+      border-radius: 10px;
+      padding: 14px 18px 14px 16px;
+      margin: 16px 0;
+      border-right: 5px solid;
+    }
+
+    .note {
+      background: #eff6ff;
+      border-color: #3b82f6;
+    }
+
+    .principle {
+      background: #f5f3ff;
+      border-color: var(--indigo);
+    }
+
+    .warn {
+      background: #fff7ed;
+      border-color: #f97316;
+    }
+
+    .note .t,
+    .principle .t,
+    .warn .t {
+      font-weight: 800;
+      display: block;
+      margin-bottom: 4px;
+      color: #0f172a;
+    }
+
+    /* ===== Tech badges ===== */
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 14px 0 20px;
+    }
+
+    .badge {
+      background: #fff;
+      border: 1px solid var(--indigo-100);
+      color: var(--indigo-dark);
+      border-radius: 999px;
+      padding: 5px 14px;
+      font-size: .84rem;
+      font-weight: 700;
+      box-shadow: 0 1px 3px rgba(79, 70, 229, .08);
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .card {
+      background: #fbfcff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px 18px;
+    }
+
+    .card h4 {
+      margin-top: 0;
+    }
+
+    hr.soft {
+      border: 0;
+      border-top: 1px solid var(--line);
+      margin: 28px 0;
+    }
+
+    /* ===== SVG helpers ===== */
+    .svg-box {
+      fill: #fff;
+      stroke: #c7d2fe;
+      stroke-width: 1.5;
+    }
+
+    .svg-box-h {
+      fill: var(--indigo);
+    }
+
+    .svg-t {
+      font-family: "Heebo", "Arial", sans-serif;
+      fill: #1e293b;
+    }
+
+    .svg-th {
+      font-family: "Heebo", "Arial", sans-serif;
+      fill: #fff;
+      font-weight: 700;
+    }
+
+    .svg-mut {
+      fill: #64748b;
+    }
+
+    .svg-line {
+      stroke: #818cf8;
+      stroke-width: 1.6;
+      fill: none;
+    }
+
+    .svg-lbl {
+      font-family: "Heebo", "Arial", sans-serif;
+      fill: #475569;
+      font-size: 11px;
+    }
+
+    /* ===== Print ===== */
+    @page {
+      size: A4;
+      margin: 16mm 14mm;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        font-size: 11.5pt;
+      }
+
+      .book {
+        max-width: none;
+        margin: 0;
+        box-shadow: none;
+        border-radius: 0;
+      }
+
+      .page {
+        padding: 0;
+      }
+
+      .editor-note,
+      .no-print {
+        display: none !important;
+      }
+
+      .chapter {
+        break-before: page;
+      }
+
+      .cover {
+        min-height: auto;
+        break-after: page;
+        padding-top: 30mm;
+      }
+
+      h1.chap,
+      h2.sec,
+      h3.sub {
+        break-after: avoid;
+      }
+
+      figure,
+      table,
+      .note,
+      .principle,
+      .warn,
+      .diagram-wrap {
+        break-inside: avoid;
+      }
+
+      figure.code pre code.hljs {
+        font-size: 9pt;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      a {
+        color: #1e293b;
+      }
+    }
+
+    @media (max-width:840px) {
+      .page {
+        padding: 24px 18px;
+      }
+
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+
+      .cover .brand {
+        font-size: 3.4rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="book">
+
+    <!-- ============ COVER ============ -->
+    <section class="cover">
+      <div class="college">מכללת בסמ״ח
+        <small>סמל מכללה: 71605 · המכון הממשלתי להכשרה טכנולוגית — מה"ט</small>
+      </div>
+
+      <div class="brand">Classly <span class="gem">❖</span></div>
+      <div class="tagline">מערכת לניהול סטודיו כושר ובריאות</div>
+      <div class="subject">פלטפורמת SaaS רב-דיירית (multi-tenant) לניהול סטודיואים — תלמידים, חוגים, מערכת שעות, נוכחות,
+        עמלות ותשלומים מקוונים</div>
+
+      <div class="meta">
+        <div class="row"><span>מסלול הכשרה</span><span>טכנאים מוסמכים</span></div>
+        <div class="row"><span>מגמת לימוד</span><span>הנדסת תוכנה</span></div>
+        <div class="row"><span>נושא פרויקט הגמר</span><span>Classly — מערכת לניהול סטודיו</span></div>
+        <div class="row"><span>שם המגישים</span><span>אופיר גואטה · איתי בר</span></div>
+        <div class="row"><span>שם המנחה האישי</span><span>מר עיליי גילת</span></div>
+        <div class="row"><span>תאריך הגשת ספר הפרויקט</span><span>יוני 2026</span></div>
+      </div>
+
+      <div class="sign">
+        <div>חתימת הסטודנט</div>
+        <div>חתימת המנחה האישי</div>
+        <div>חתימת הגורם המקצועי</div>
+      </div>
+    </section>
+
+    <!-- ============ TOC ============ -->
+    <section class="page toc">
+      <p class="editor-note no-print">⚠️ הפרטים בשער (שמות, ת״ז, שם המכללה, מנחה, תאריך) הם <strong>ערכי דמה</strong> —
+        יש להחליפם לפני ההגשה.</p>
+      <h1 class="chap">תוכן עניינים</h1>
+      <ol>
+        <li><a href="#proposal"><span class="tnum">1</span> הצעת פרויקט<span class="leader"></span><span
+              class="tpage">3</span></a></li>
+        <li><a href="#declaration"><span class="tnum">2</span> הצהרת הסטודנטים<span class="leader"></span><span
+              class="tpage">12</span></a></li>
+        <li><a href="#thanks"><span class="tnum">3</span> הוקרות<span class="leader"></span><span
+              class="tpage">13</span></a></li>
+        <li><a href="#abstract"><span class="tnum">4</span> תקציר<span class="leader"></span><span
+              class="tpage">14</span></a></li>
+        <li><a href="#principles"><span class="tnum">5</span> עקרונות בסיסיים בפרויקט<span class="leader"></span><span
+              class="tpage">15</span></a></li>
+        <li><a href="#erd"><span class="tnum">6</span> תרשים ERD<span class="leader"></span><span
+              class="tpage">17</span></a></li>
+        <li><a href="#server"><span class="tnum">7</span> צד שרת<span class="leader"></span><span
+              class="tpage">19</span></a></li>
+        <li><a href="#client"><span class="tnum">8</span> צד לקוח<span class="leader"></span><span
+              class="tpage">30</span></a></li>
+        <li><a href="#processes"><span class="tnum">9</span> תהליכים מרכזיים במערכת<span class="leader"></span><span
+              class="tpage">42</span></a></li>
+        <li><a href="#summary"><span class="tnum">10</span> סיכום ומסקנות<span class="leader"></span><span
+              class="tpage">47</span></a></li>
+        <li><a href="#biblio"><span class="tnum">11</span> ביבליוגרפיה<span class="leader"></span><span
+              class="tpage">48</span></a></li>
+      </ol>
+    </section>
+
+    <!-- ============ 1. PROPOSAL ============ -->
+    <section class="page chapter" id="proposal">
+      <h1 class="chap"><span class="num">1</span> הצעת פרויקט</h1>
+      <p class="chap-lead">חוזר מנהל מה"ט 51‑4‑11 — נספח מס' 1: הצעה לפרויקט גמר</p>
+
+      <p style="text-align:left;direction:ltr;color:var(--muted)">תאריך: יוני 2026</p>
+      <p><strong>לכבוד:</strong> יחידת הפרויקטים, המכון הממשלתי להכשרה בטכנולוגיה ובמדע (מה"ט).</p>
+
+      <h2 class="sec">1. פרטי הסטודנטים</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>שם הסטודנט</th>
+            <th>תעודת זהות (9 ספרות)</th>
+            <th>כתובת</th>
+            <th>טלפון נייד</th>
+            <th>תאריך סיום לימודים</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>אופיר גואטה</td>
+            <td>326091337</td>
+            <td>דוד רזנק 7, נתניה</td>
+            <td>058-6262800</td>
+            <td>2026</td>
+          </tr>
+          <tr>
+            <td>איתי בר</td>
+            <td>208731323</td>
+            <td>ביאליק 10, בית שמש</td>
+            <td>051-2087313</td>
+            <td>2026</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 class="sec">2. פרטי המנחה והמכללה</h2>
+      <table>
+        <tbody>
+          <tr>
+            <th>שם המנחה האישי</th>
+            <td>מר עיליי גילת</td>
+            <th>תפקיד</th>
+            <td>מהנדס תוכנה פונקציונלי</td>
+          </tr>
+          <tr>
+            <th>שם המכללה</th>
+            <td>מכללת לדוגמה להנדסאים</td>
+            <th>סמל מכללה</th>
+            <td>71605</td>
+          </tr>
+          <tr>
+            <th>מסלול הכשרה</th>
+            <td>טכנאים מוסמכים</td>
+            <th>מגמת לימוד</th>
+            <td>הנדסת תוכנה</td>
+          </tr>
+          <tr>
+            <th>מקום ביצוע הפרויקט</th>
+            <td colspan="3">פיתוח משותף דרך git, והקמת שרת לינוקס על גבי הרשת הביתית</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="cover sign" style="min-height:auto;padding:6px 0 20px;background:none;">
+        <div>חתימת הסטודנט</div>
+        <div>חתימת המנחה האישי</div>
+        <div>חתימת הגורם המקצועי</div>
+      </div>
+
+      <h2 class="sec">2.1 תיאור ורקע כללי</h2>
+      <p><strong>Classly</strong> היא פלטפורמת SaaS (Software as a Service) לניהול סטודיואים בתחום הכושר והבריאות —
+        יוגה, פילאטיס, מחול, אומנויות לחימה ועוד. המערכת היא <strong>רב‑דיירית (multi‑tenant)</strong>: כל סטודיו הוא
+        "דייר" מבודד עם הנתונים שלו בלבד — סניפים, חדרים, חוגים, תלמידים, הרשמות ותשלומים — כך שעסקים רבים חולקים את
+        אותה תשתית מבלי לראות זה את נתוניו של זה.</p>
+      <p>כיום, סטודיואים רבים מנהלים את הפעילות בכלים מפוזרים: גיליונות אקסל למערכת השעות, אפליקציות הודעות לתיאום מול
+        תלמידים, פנקסי נייר לנוכחות, והעברות בנקאיות ידניות לתשלומים. ניהול זה גוזל זמן רב, רווי טעויות, ואינו מספק
+        שקיפות — לא למנהל הסטודיו, לא למדריך ולא לתלמיד. Classly מאחדת את כל אלו לכדי מערכת אחת, מבוססת‑דפדפן, בעברית
+        ובכיווניות מימין‑לשמאל (RTL), הנגישה גם ממחשב וגם ממכשיר נייד.</p>
+
+      <h2 class="sec">2.2 מטרות המערכת</h2>
+      <ul>
+        <li><strong>מערכת ניהול אחת</strong> לכל פעילות הסטודיו — סניפים, חדרים, חוגים, תלמידים, נוכחות, עמלות מדריכים
+          ותשלומים.</li>
+        <li><strong>הרשאות לפי תפקיד</strong> — מנהל‑על (SUPER_ADMIN), מנהל סטודיו (ADMIN), מדריך (INSTRUCTOR) ותלמיד
+          (STUDENT) — כך שכל משתמש רואה ופועל רק במה שמורשה לו.</li>
+        <li><strong>תשלומים מקוונים מאובטחים</strong> דרך Stripe, עם אישור אוטומטי של הרשמה לחוג בעקבות תשלום מוצלח.
+        </li>
+        <li><strong>בידוד נתונים מלא בין סטודיואים</strong> — כל שאילתה מסוננת לפי מזהה הסטודיו
+          (<code>studio_id</code>).</li>
+        <li><strong>חוויית משתמש פשוטה ונגישה</strong> בעברית, מותאמת למובייל, לכלל סוגי המשתמשים.</li>
+      </ul>
+
+      <h2 class="sec">3. הבעיות שהמערכת פותרת</h2>
+      <h3 class="sub">3.1 ניהול ידני גוזל זמן</h3>
+      <p>מנהלי סטודיו משקיעים שעות רבות בתיאום מערכת שעות, רישום תלמידים ומעקב ידני — זמן שיכול היה להיות מושקע בפעילות
+        עצמה. Classly מרכזת את כל אלו בממשק אחד.</p>
+      <h3 class="sub">3.2 מעקב תשלומים מפוצל</h3>
+      <p>תשלומים המתנהלים בערוצים שונים (מזומן, העברה, אפליקציות) מקשים על מעקב, גבייה והפקת חשבוניות. המערכת מנהלת את
+        מחזור החיים המלא של תשלום — מיצירת כוונת תשלום ועד אישורו דרך Webhook.</p>
+      <h3 class="sub">3.3 היעדר שקיפות בנוכחות ובעמלות</h3>
+      <p>ללא תיעוד מסודר של נוכחות קשה לחשב עמלות מדריכים בצורה הוגנת ולנהל את הקשר עם התלמיד. המערכת מתעדת נוכחות לכל
+        מפגש ומקשרת אותה לחישוב עמלות.</p>
+      <h3 class="sub">3.4 קושי בניהול רב‑סניפי</h3>
+      <p>סטודיו עם כמה סניפים וחדרים זקוק להפרדה ברורה של משאבים. המבנה ההיררכי
+        <code>studio → branch → room → class</code> מאפשר זאת באופן טבעי.</p>
+
+      <h2 class="sec">4. ייעול תהליכים</h2>
+      <ul>
+        <li><strong>חיסכון בעבודה אדמיניסטרטיבית</strong> — אוטומציה של רישום, תשלום ואישור הרשמה.</li>
+        <li><strong>שקיפות פיננסית</strong> — לוח בקרה עם הכנסות, תשלומים ומגמות בזמן אמת.</li>
+        <li><strong>חוויית הרשמה עצמית לתלמיד</strong> — עיון בחוגים, הרשמה ותשלום ללא תיווך ידני.</li>
+      </ul>
+
+      <h2 class="sec">4.1 דרישות מערכת (לא‑פונקציונליות)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>דרישה</th>
+            <th>פירוט</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>רב‑דיירות ובידוד</td>
+            <td>הפרדה מלאה בין נתוני סטודיואים לפי <code>studio_id</code> בכל שאילתה.</td>
+          </tr>
+          <tr>
+            <td>אבטחה</td>
+            <td>JWT בעוגיית HttpOnly, הצפנת סיסמאות (bcrypt), Helmet/CSP, ניקוי קלט, הגבלת קצב.</td>
+          </tr>
+          <tr>
+            <td>ביצועים וזמינות</td>
+            <td>שרת stateless הניתן להרצה במספר עותקים; טרנזקציות לשמירת עקביות הנתונים.</td>
+          </tr>
+          <tr>
+            <td>נגישות ושפה</td>
+            <td>ממשק עברי בכיווניות RTL, מותאם מסכים (mobile‑first).</td>
+          </tr>
+          <tr>
+            <td>תשתית אחידה</td>
+            <td>הרצה מלאה תחת Docker Compose — DB, שרת, צד לקוח ולוגים.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 class="sec">4.2 דרישות פונקציונליות לפי תפקיד</h2>
+      <div class="two-col">
+        <div class="card">
+          <h4>מנהל‑על (SUPER_ADMIN)</h4>
+          <ul>
+            <li>ניהול חוצה‑סטודיואים והגדרות פלטפורמה</li>
+            <li>מדדים ובקרה ברמת המערכת כולה</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>מנהל סטודיו (ADMIN)</h4>
+          <ul>
+            <li>ניהול סניפים, חדרים, קטגוריות וחוגים</li>
+            <li>ניהול תלמידים, מערכת שעות ותשלומים</li>
+            <li>הזמנת מדריכים ותלמידים, הגדרות סטודיו</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>מדריך (INSTRUCTOR)</h4>
+          <ul>
+            <li>צפייה בלוח השיעורים שלו</li>
+            <li>רשימת התלמידים בחוגיו</li>
+            <li>סימון נוכחות לכל מפגש</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>תלמיד (STUDENT)</h4>
+          <ul>
+            <li>עיון בחוגים הזמינים</li>
+            <li>הרשמה לחוג ותשלום מקוון</li>
+            <li>צפייה בהרשמות שלו בלוח האישי</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3 class="sub">מסכי המערכת המרכזיים</h3>
+      <ul>
+        <li><strong>מסך התחברות/הרשמה</strong> — כניסה למערכת, הרשמה והזמנות.</li>
+        <li><strong>לוח בקרה</strong> — מותאם לכל תפקיד (מדדים, גרפים, פעולות מהירות).</li>
+        <li><strong>מערכת שעות</strong> — תצוגת לוח שבועי וניהול חוגים.</li>
+        <li><strong>ניהול תלמידים</strong> — רשימת תלמידים, רישום לחוגים.</li>
+        <li><strong>תשלומים</strong> — היסטוריית תשלומים, חשבוניות ותשלום חדש.</li>
+        <li><strong>ניהול</strong> — פרטי סטודיו, סניפים וצוות.</li>
+        <li><strong>נוכחות</strong> — סימון נוכחות תלמידים (למדריך).</li>
+        <li><strong>עיון בחוגים</strong> — קטלוג חוגים והרשמה (לתלמיד).</li>
+      </ul>
+    </section>
+
+    <!-- ============ 1. PROPOSAL — part 2 (architecture) ============ -->
+    <section class="page">
+      <h2 class="sec">5. ארכיטקטורה</h2>
+      <p>המערכת בנויה בארכיטקטורת <strong>שלוש שכבות</strong> מופרדות — <strong>צד לקוח</strong> (React), <strong>צד
+          שרת</strong> (Express) ו<strong>בסיס נתונים</strong> (PostgreSQL) — כשכולן רצות כשירותי Docker נפרדים תחת
+        Docker Compose. צד הלקוח מוגש על‑ידי Nginx, אשר גם משמש כ‑reverse‑proxy ומעביר בקשות <code>/api</code> אל השרת.
+        השרת חסר מצב (stateless) ומתקשר עם בסיס הנתונים דרך Prisma ORM.</p>
+
+      <figure class="diagram">
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 760 470" role="img" aria-label="דיאגרמת ארכיטקטורה">
+            <defs>
+              <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+                <path d="M0,0 L7,3 L0,6 Z" fill="#6366f1" />
+              </marker>
+            </defs>
+            <!-- user -->
+            <rect class="svg-box" x="300" y="14" width="160" height="46" rx="10" />
+            <text class="svg-t" x="380" y="34" text-anchor="middle" font-size="14" font-weight="700">דפדפן המשתמש</text>
+            <text class="svg-mut" x="380" y="50" text-anchor="middle" font-size="11">מחשב / מובייל</text>
+            <!-- cloudflare -->
+            <rect class="svg-box" x="300" y="84" width="160" height="34" rx="8" style="fill:#fff7ed;stroke:#fdba74" />
+            <text class="svg-t" x="380" y="106" text-anchor="middle" font-size="12" font-weight="700">Cloudflare
+              Tunnel</text>
+            <line class="svg-line" x1="380" y1="60" x2="380" y2="84" marker-end="url(#arr)" />
+
+            <!-- docker box -->
+            <rect x="24" y="140" width="712" height="250" rx="14" fill="#f8faff" stroke="#94a3b8"
+              stroke-dasharray="6 5" />
+            <text class="svg-mut" x="40" y="160" font-size="12" font-weight="700">Docker Compose</text>
+
+            <!-- frontend -->
+            <rect class="svg-box" x="300" y="150" width="160" height="56" rx="10" style="stroke:#6366f1" />
+            <text class="svg-th" x="380" y="172" text-anchor="middle" font-size="13"
+              style="fill:#4f46e5">Frontend</text>
+            <text class="svg-mut" x="380" y="190" text-anchor="middle" font-size="11">React + Vite · Nginx :80</text>
+            <line class="svg-line" x1="380" y1="118" x2="380" y2="150" marker-end="url(#arr)" />
+
+            <!-- backend -->
+            <rect class="svg-box" x="300" y="234" width="160" height="56" rx="10" style="stroke:#6366f1" />
+            <text class="svg-th" x="380" y="256" text-anchor="middle" font-size="13" style="fill:#4f46e5">Backend</text>
+            <text class="svg-mut" x="380" y="274" text-anchor="middle" font-size="11">Express API :5000</text>
+            <line class="svg-line" x1="380" y1="206" x2="380" y2="234" marker-end="url(#arr)" />
+            <text class="svg-lbl" x="392" y="224">proxy /api</text>
+
+            <!-- db -->
+            <rect class="svg-box" x="300" y="318" width="160" height="50" rx="10" style="fill:#ecfdf5;stroke:#34d399" />
+            <text class="svg-t" x="380" y="338" text-anchor="middle" font-size="13" font-weight="700">PostgreSQL
+              :5432</text>
+            <text class="svg-mut" x="380" y="354" text-anchor="middle" font-size="11">Prisma ORM</text>
+            <line class="svg-line" x1="380" y1="290" x2="380" y2="318" marker-end="url(#arr)" />
+
+            <!-- logs cluster -->
+            <rect class="svg-box" x="60" y="234" width="150" height="56" rx="10" style="fill:#fef2f2;stroke:#fca5a5" />
+            <text class="svg-t" x="135" y="256" text-anchor="middle" font-size="12" font-weight="700">Loki +
+              Grafana</text>
+            <text class="svg-mut" x="135" y="274" text-anchor="middle" font-size="11">לוגים ובקרה</text>
+            <line class="svg-line" x1="300" y1="262" x2="210" y2="262" marker-end="url(#arr)" />
+
+            <!-- external services -->
+            <rect class="svg-box" x="552" y="226" width="156" height="34" rx="8" style="fill:#eef2ff;stroke:#a5b4fc" />
+            <text class="svg-t" x="630" y="248" text-anchor="middle" font-size="12" font-weight="700">Stripe
+              (תשלומים)</text>
+            <line class="svg-line" x1="460" y1="250" x2="552" y2="248" marker-end="url(#arr)" />
+            <rect class="svg-box" x="552" y="266" width="156" height="34" rx="8" style="fill:#eef2ff;stroke:#a5b4fc" />
+            <text class="svg-t" x="630" y="288" text-anchor="middle" font-size="12" font-weight="700">Resend
+              (דוא"ל)</text>
+            <line class="svg-line" x1="460" y1="276" x2="552" y2="284" marker-end="url(#arr)" />
+
+            <text class="svg-lbl" x="380" y="412" text-anchor="middle" font-size="12">כל השירותים רצים ברשת Docker
+              פנימית; נתונים נשמרים ב‑volumes</text>
+          </svg>
+        </div>
+        <figcaption>תרשים 1.1 — ארכיטקטורת המערכת הכללית</figcaption>
+      </figure>
+
+      <h2 class="sec">5.1—5.2 הכלים המרכזיים</h2>
+      <div class="badges">
+        <span class="badge">React 19</span><span class="badge">Vite</span><span class="badge">TypeScript</span>
+        <span class="badge">Express</span><span class="badge">Prisma</span><span class="badge">PostgreSQL 18</span>
+        <span class="badge">Stripe</span><span class="badge">TailwindCSS</span><span class="badge">Zod</span>
+        <span class="badge">JWT</span><span class="badge">Pino</span><span class="badge">Docker</span><span
+          class="badge">Nginx</span>
+      </div>
+      <ul>
+        <li><strong>Express</strong> — מסגרת שרת מינימלית ופופולרית ל‑Node.js, גמישה לבניית REST API.</li>
+        <li><strong>Prisma</strong> — ORM type‑safe ל‑TypeScript: שאילתות בטוחות‑טיפוסים מול PostgreSQL, ללא כתיבת SQL
+          ידני.</li>
+        <li><strong>React + Vite</strong> — ספריית UI מבוססת קומפוננטות עם כלי build מהיר.</li>
+        <li><strong>TailwindCSS</strong> — ספריית עיצוב utility‑first התומכת בכיווניות RTL.</li>
+        <li><strong>Stripe</strong> — תשתית תשלומים: יצירת כוונת תשלום בשרת ואיסוף כרטיס מאובטח בצד לקוח.</li>
+        <li><strong>Zod</strong> — ולידציה של קלט בזמן ריצה לפי סכמות.</li>
+      </ul>
+
+      <h2 class="sec">5.3 שפות הפיתוח</h2>
+      <ul>
+        <li><strong>TypeScript</strong> — שפת הפיתוח הראשית בשני הצדדים (<code>strict: true</code>). מוסיפה טיפוסים
+          סטטיים מעל JavaScript ומעלה את בטיחות הקוד.</li>
+        <li><strong>JavaScript</strong> — בסיס הריצה בדפדפן וב‑Node.js.</li>
+        <li><strong>SQL</strong> — שפת בסיס הנתונים היחסי (PostgreSQL); נגזרת אוטומטית על‑ידי Prisma.</li>
+      </ul>
+
+      <h2 class="sec">5.4 תיאור הארכיטקטורה הנבחרת</h2>
+      <p>בחרנו בהפרדה ל‑<strong>צד לקוח</strong>, <strong>צד שרת</strong> ו<strong>בסיס נתונים</strong> כדי שכל צד יעמוד
+        בפני עצמו: שינוי (refactor) בצד אחד אינו משפיע על האחר. צד הלקוח מציג את המידע ומאפשר אינטראקציה; צד השרת מנגיש
+        ומעבד את המידע ואוכף הרשאות וכללים עסקיים; בסיס הנתונים שומר את כל המידע באופן עקבי. צד השרת עצמו בנוי
+        <strong>בשכבות</strong> (Routes → Controllers → Services → Prisma), כפי שיפורט בפרק "צד שרת".</p>
+
+      <h2 class="sec">5.5 חלוקה לתכניות ומודולים</h2>
+      <h3 class="sub">5.5.1 צד שרת</h3>
+      <p>השרת מאורגן לפי תפקיד: <code>routes/</code> (הגדרת מסלולי ה‑API), <code>controllers/</code> (התאמת בקשה/תשובה),
+        <code>services/</code> (לוגיקה עסקית ושאילתות Prisma), <code>middleware/</code> (אימות, ולידציה, טיפול בשגיאות),
+        <code>schemas/</code> (סכמות Zod) ו‑<code>utils/</code>. הישויות המרכזיות:
+        <code>users, studios, branches, studio_rooms, categories, classes, enrollments, attendance, payments, instructor_commissions</code>.
+      </p>
+      <h3 class="sub">5.5.2 צד לקוח</h3>
+      <p>צד הלקוח מאורגן בקומפוננטות <strong>לפי תפקיד</strong> (<code>components/admin/</code>,
+        <code>instructor/</code>, <code>student/</code>, <code>super-admin/</code>), קומפוננטות מוצגות משותפות
+        ב‑<code>components/common/</code>, ושכבת שירותים אחת (<code>services/api.ts</code>) שדרכה עוברות כל קריאות
+        ה‑HTTP.</p>
+
+      <h2 class="sec">6.1 מבני הנתונים</h2>
+      <p>המודל היחסי בנוי סביב היררכיית הבעלות
+        <code>studios → branches → studio_rooms → classes → enrollments → attendance</code>, עם <code>users</code> (בעלי
+        תפקיד), <code>payments</code> (תשלומים), <code>instructor_commissions</code> (עמלות) וטבלאות עזר. כל המפתחות
+        הראשיים הם UUID, חותמות הזמן הן <code>timestamptz</code>, וכל טבלה תחומה בשדה <code>studio_id</code>. המבנה המלא
+        מוצג בפרק "תרשים ERD".</p>
+
+      <h2 class="sec">5.6 סביבת השרת</h2>
+      <p>השרת רץ בקונטיינר <code>node:20-alpine</code>; בסיס הנתונים בקונטיינר <code>postgres:18</code>; צד הלקוח נבנה
+        ומוגש דרך Nginx. כל השירותים מתואמים ע"י Docker Compose, וניתנים להרצה מקומית בפקודה אחת
+        (<code>docker compose up -d --build</code>).</p>
+
+      <h2 class="sec">5.7 ממשק המשתמש (GUI)</h2>
+      <p>המשתמש ניגש למערכת דרך דפדפן (Chrome/Edge/Safari) כאפליקציית עמוד יחיד (SPA). הממשק עברי, RTL, ומותאם למסכי
+        מחשב ולמובייל (סרגל צד במחשב, ניווט תחתון במובייל).</p>
+
+      <h2 class="sec">5.8 ממשקים למערכות חיצוניות / API</h2>
+      <ul>
+        <li><strong>Stripe</strong> — יצירת כוונות תשלום ואימות Webhook (<code>/api/webhooks/stripe</code>).</li>
+        <li><strong>Resend / Nodemailer</strong> — שליחת מיילים (הזמנות, איפוס סיסמה).</li>
+        <li><strong>Loki + Grafana</strong> — איסוף לוגים מובְנים והצגתם.</li>
+        <li><strong>Supabase</strong> — מאותחל בצד לקוח, שמור לאחסון קבצים עתידי.</li>
+      </ul>
+
+      <h2 class="sec">5.9 שימוש בחבילות תוכנה (npm)</h2>
+      <h4>7.9.1 צד שרת</h4>
+      <p><code>express</code>, <code>@prisma/client</code>, <code>jsonwebtoken</code>, <code>bcryptjs</code>,
+        <code>stripe</code>, <code>nodemailer</code>, <code>pino</code> / <code>pino-loki</code>, <code>zod</code>,
+        <code>helmet</code>, <code>cors</code>, <code>express-rate-limit</code>, <code>cookie-parser</code>,
+        <code>sanitize-html</code>.</p>
+      <h4>7.9.2 צד לקוח</h4>
+      <p><code>react</code> / <code>react-dom</code>, <code>axios</code>, <code>@stripe/react-stripe-js</code> /
+        <code>@stripe/stripe-js</code>, <code>recharts</code>, <code>date-fns</code>, <code>tailwindcss</code>,
+        <code>lucide-react</code>, <code>vitest</code>.</p>
+    </section>
+
+    <!-- ============ 1. PROPOSAL — part 3 ============ -->
+    <section class="page">
+      <h2 class="sec">7.1 תרחישי שימוש (Use Cases)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>תפקיד</th>
+            <th>תרחיש</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>UC‑1</td>
+            <td>מנהל סטודיו</td>
+            <td>יוצר סניף, חדר וקטגוריה לסטודיו שלו.</td>
+          </tr>
+          <tr>
+            <td>UC‑2</td>
+            <td>מנהל סטודיו</td>
+            <td>יוצר חוג חדש ומשייך לו מדריך, חדר, יום ושעה.</td>
+          </tr>
+          <tr>
+            <td>UC‑3</td>
+            <td>מנהל סטודיו</td>
+            <td>מזמין מדריך/תלמיד באמצעות קישור הזמנה (JWT).</td>
+          </tr>
+          <tr>
+            <td>UC‑4</td>
+            <td>מנהל סטודיו</td>
+            <td>רושם תלמיד לחוג ומנהל תשלומים.</td>
+          </tr>
+          <tr>
+            <td>UC‑5</td>
+            <td>מדריך</td>
+            <td>צופה בלוח השיעורים שלו ומסמן נוכחות תלמידים.</td>
+          </tr>
+          <tr>
+            <td>UC‑6</td>
+            <td>תלמיד</td>
+            <td>מעיין בחוגים, נרשם ומשלם תשלום מקוון.</td>
+          </tr>
+          <tr>
+            <td>UC‑7</td>
+            <td>משתמש</td>
+            <td>מתחבר/מתנתק; מאפס סיסמה דרך קישור במייל.</td>
+          </tr>
+          <tr>
+            <td>UC‑8</td>
+            <td>מנהל‑על</td>
+            <td>צופה ומנהל את הפלטפורמה חוצה‑הסטודיואים.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 class="sec">6.2 שיטת האחסון</h2>
+      <p>הנתונים נשמרים ב‑<strong>PostgreSQL</strong> — בסיס נתונים יחסי — ונשלפים בצד השרת באמצעות <strong>Prisma
+          ORM</strong>. השימוש ב‑ORM מספק שאילתות בטוחות‑טיפוסים ומונע SQL Injection (פרמטריזציה אוטומטית).</p>
+
+      <h2 class="sec">6.3 מנגנוני התאוששות וטרנזקציות</h2>
+      <ul>
+        <li><strong>טרנזקציות</strong> — כל פעולה שנוגעת ביותר מטבלה אחת (למשל עדכון תשלום + הפעלת הרשמה) רצה בתוך
+          <code>prisma.$transaction</code>, כך שהיא מתבצעת במלואה או נכשלת במלואה.</li>
+        <li><strong>אידמפוטנטיות ב‑Webhook</strong> — עדכון מותנה (<code>updateMany … where status = 'PENDING'</code>)
+          מבטיח ששליחה חוזרת של אותו אירוע מ‑Stripe לא תעבד את התשלום פעמיים.</li>
+        <li><strong>מדיניות הפעלה מחדש</strong> — Docker מגדיר <code>restart: always</code> לכל שירות, כך שקריסה גוררת
+          הפעלה מחדש אוטומטית.</li>
+      </ul>
+
+      <h2 class="sec">7.2—7.3 תרשימי רצף וזרימת מידע</h2>
+      <p>תהליכי הליבה — התחברות, הרשמה לחוג ותשלום, הזמנה, נוכחות ואיפוס סיסמה — מתוארים בתרשימי רצף (Sequence) בפרק <a
+          href="#processes">"תהליכים מרכזיים במערכת"</a>. זרימת המידע הכללית: <em>לקוח → שרת (אימות → הרשאה → ולידציה →
+          controller → service) → Prisma → בסיס נתונים</em>, וחזרה.</p>
+
+      <h2 class="sec">8. תרומת המערכת</h2>
+      <p>Classly מפחיתה עומס אדמיניסטרטיבי, משפרת שקיפות פיננסית ותפעולית, ומשדרגת את חוויית התלמיד והמדריך — תוך שמירה
+        על בידוד נתונים מלא בין סטודיואים ועל אבטחת מידע.</p>
+
+      <h2 class="sec">12.1 שעות עבודה וחלוקת עבודה</h2>
+      <p>הפרויקט מתומחר בכ‑<strong>350 שעות עבודה</strong>. חלוקת עבודה (ערכי דמה):</p>
+      <table>
+        <thead>
+          <tr>
+            <th>תחום</th>
+            <th>אחראי</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>תכנון מסד נתונים וארכיטקטורה</td>
+            <td>שני חברי הצוות</td>
+          </tr>
+          <tr>
+            <td>צד שרת (API, אימות, תשלומים)</td>
+            <td>ישראל ישראלי</td>
+          </tr>
+          <tr>
+            <td>צד לקוח (React, מסכים, עיצוב)</td>
+            <td>ישראלה כהן</td>
+          </tr>
+          <tr>
+            <td>אינטגרציית Stripe ו‑Webhooks</td>
+            <td>ישראל ישראלי</td>
+          </tr>
+          <tr>
+            <td>בדיקות, תיעוד ו‑UX</td>
+            <td>שני חברי הצוות</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 class="sec">12.2—12.3 ציוד ותוכנות נדרשות</h2>
+      <p><strong>ציוד:</strong> תחנת מחשב עם מערכת הפעלה Windows / macOS / Linux. <strong>תוכנות:</strong> Docker
+        Desktop, Visual Studio Code, Node.js 20, Git, PostgreSQL (בקונטיינר), Stripe CLI, דפדפן Chrome.</p>
+
+      <h2 class="sec">12.4 ידע חדש שנדרש ללמוד</h2>
+      <ul>
+        <li>Prisma ORM ומידול נתונים יחסי בטוח‑טיפוסים.</li>
+        <li>אינטגרציית תשלומים עם Stripe (Payment Intents, Elements, Webhooks).</li>
+        <li>קונטיינריזציה ותזמור באמצעות Docker Compose.</li>
+        <li>לוגים מובְנים ובקרה עם Pino, Loki ו‑Grafana.</li>
+        <li>תכנון רב‑דיירות (multi‑tenancy) ובידוד נתונים.</li>
+      </ul>
+
+      <h2 class="sec">12.5 ספרות ומקורות מידע</h2>
+      <p>תיעוד רשמי של React, Vite, Express, Prisma, PostgreSQL, Stripe, Docker, TailwindCSS, JWT ו‑Zod — ראו פרק <a
+          href="#biblio">ביבליוגרפיה</a>.</p>
+
+      <h2 class="sec">14.1 בדיקות תהליכיות (Full‑flow)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>התהליך הנבדק</th>
+            <th>פירוט</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>התחברות וניתוב לפי תפקיד</td>
+            <td>משתמש מתחבר ומופנה למסך המתאים לתפקידו; טוקן לא תקין מנתב למסך התחברות.</td>
+          </tr>
+          <tr>
+            <td>הרשמה לחוג ותשלום</td>
+            <td>תלמיד נרשם לחוג, משלם דרך Stripe, וההרשמה מאושרת בעקבות Webhook.</td>
+          </tr>
+          <tr>
+            <td>סימון נוכחות</td>
+            <td>מדריך מסמן נוכחות למפגש; הנתונים נשמרים ומוצגים.</td>
+          </tr>
+          <tr>
+            <td>הזמנת משתמש</td>
+            <td>מנהל מזמין מדריך/תלמיד; הקישור מקצה תפקיד ו‑studio נכונים.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 class="sec">14.2 בדיקות יחידה (Unit)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>מודול</th>
+            <th>בדיקה (מייצג)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>paymentService</code></td>
+            <td>יצירת כוונת תשלום, עיבוד תשלום מוצלח ואידמפוטנטיות.</td>
+          </tr>
+          <tr>
+            <td><code>enrollmentService</code></td>
+            <td>ולידציית קיבולת, מניעת הרשמה כפולה, חוג חינם.</td>
+          </tr>
+          <tr>
+            <td><code>authController</code></td>
+            <td>התחברות תקינה/שגויה, איפוס סיסמה.</td>
+          </tr>
+          <tr>
+            <td>צד לקוח</td>
+            <td>קומפוננטת איפוס סיסמה (Vitest + Testing Library).</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="chap-lead">בדיקות צד שרת רצות תחת Jest + Supertest; בדיקות צד לקוח תחת Vitest + React Testing Library.
+      </p>
+
+      <h2 class="sec">תהליך מפורט — הרשמה לחוג ותשלום</h2>
+      <ol>
+        <li>התלמיד בוחר חוג ומבצע הרשמה — נבדקות קיבולת והרשמה כפולה.</li>
+        <li>נוצרת כוונת תשלום (PaymentIntent) בצד השרת ונרשמת שורת תשלום בסטטוס <code>PENDING</code>.</li>
+        <li>התלמיד מזין פרטי כרטיס דרך Stripe Elements (הכרטיס אינו נוגע בשרת שלנו).</li>
+        <li>בעת תשלום מוצלח, Stripe שולח Webhook; השרת מאמת חתימה ומעדכן בתוך טרנזקציה את התשלום
+          ל‑<code>SUCCEEDED</code> ואת ההרשמה ל‑<code>ACTIVE / PAID</code>.</li>
+      </ol>
+
+      <h2 class="sec">שימוש ב‑Git</h2>
+      <p>הקוד מנוהל ב‑Git כדי למנוע אובדן גרסאות, להקל על עבודת הצוות ולמנוע התנגשויות. נעשה שימוש ב‑<em>Conventional
+          Commits</em> (<code>feat:</code>, <code>fix:</code>, <code>refactor:</code> ...) ובבדיקות אוטומטיות
+        ב‑pre‑commit (Husky).</p>
+
+      <div class="cover sign" style="min-height:auto;padding:14px 0 6px;background:none;">
+        <div>חתימת הסטודנט</div>
+        <div>חתימת המנחה האישי</div>
+      </div>
+    </section>
+
+    <!-- ============ 2. DECLARATION ============ -->
+    <section class="page chapter" id="declaration">
+      <h1 class="chap"><span class="num">2</span> הצהרת הסטודנטים</h1>
+      <p>אנו, החתומים מטה, מצהירים בזאת כי פרויקט הגמר <strong>"Classly — מערכת לניהול סטודיו"</strong> נעשה על‑ידינו
+        באופן עצמאי, וכי כל המקורות והכלים שבהם נעזרנו מצוינים במפורש בגוף העבודה ובביבליוגרפיה.</p>
+      <p>אנו מצהירים כי הקוד נכתב על‑ידינו, וכי במקומות בהם נעזרנו בספריות צד‑שלישי (כמפורט בפרק חבילות התוכנה) — הדבר
+        נעשה בהתאם לרישיונות השימוש שלהן. כל שימוש בקוד או ברעיון של אחר צוין כנדרש.</p>
+      <p>הבנו את חשיבות היושרה האקדמית, ואנו אחראים לתוכן העבודה במלואה.</p>
+      <div class="cover sign" style="min-height:auto;padding:40px 0 6px;background:none;">
+        <div>חתימת הסטודנט א'</div>
+        <div>חתימת הסטודנט ב'</div>
+        <div>חתימת המנחה האישי</div>
+      </div>
+    </section>
+
+    <!-- ============ 3. THANKS ============ -->
+    <section class="page chapter" id="thanks">
+      <h1 class="chap"><span class="num">3</span> הוקרות</h1>
+      <p>אנו רוצים להוקיר תודה <strong>למנחה המקצועי שלנו</strong>, שליווה אותנו לאורך כל הדרך ועזר לנו עם כל שאלה
+        מקצועית, ארכיטקטונית ואלגוריתמית, ונענה לכל בקשה באדיבות ובמסירות.</p>
+      <p>כמו כן, נרצה להודות <strong>למכללה</strong> על הסביבה הלימודית, על החומרים וההדרכה שסיפקה לנו, ועל המשוב לאורך
+        הפרויקט שעזר לנו להגיע לתוצר הסופי.</p>
+      <p>תודה מיוחדת לכל מי שתרם ממזמנו ומניסיונו, ולמשפחותינו על התמיכה לכל אורך הפיתוח.</p>
+    </section>
+
+    <!-- ============ 4. ABSTRACT ============ -->
+    <section class="page chapter" id="abstract">
+      <h1 class="chap"><span class="num">4</span> תקציר</h1>
+      <p><strong>Classly</strong> היא מערכת ווב מקצה‑לקצה (full‑stack) לניהול סטודיו כושר ובריאות, הבנויה כפלטפורמת
+        <strong>SaaS רב‑דיירית</strong>: כל סטודיו הוא דייר מבודד עם הסניפים, החדרים, החוגים, התלמידים והתשלומים שלו.
+      </p>
+      <p>המערכת תומכת בארבעה תפקידים — <strong>מנהל‑על, מנהל סטודיו, מדריך ותלמיד</strong> — וכל תפקיד רואה ממשק מותאם.
+        מנהל הסטודיו מנהל סניפים, חדרים, חוגים, מערכת שעות, תלמידים ותשלומים; המדריך צופה בלוח שלו ומסמן נוכחות; התלמיד
+        מעיין בחוגים, נרשם ומשלם תשלום מקוון מאובטח דרך Stripe.</p>
+      <p>צד השרת נכתב ב‑<strong>Express</strong> בארכיטקטורת שכבות (Routes → Controllers → Services → Prisma), עם אימות
+        מבוסס <strong>JWT בעוגיית HttpOnly</strong> ואכיפת הרשאות לפי תפקיד. צד הלקוח נכתב ב‑<strong>React</strong>,
+        בעברית RTL ומותאם למובייל. כל המערכת רצה תחת <strong>Docker Compose</strong>, עם בסיס נתונים
+        <strong>PostgreSQL</strong> וניהול גישה דרך Prisma ORM. לוגים מובְנים נאספים ב‑Loki ומוצגים ב‑Grafana.</p>
+      <p>ערכי הליבה של המערכת: <strong>בידוד נתונים מלא</strong> בין סטודיואים, <strong>אבטחה כברירת מחדל</strong>,
+        <strong>קוד מודולרי וגמיש</strong>, ו<strong>חוויית משתמש פשוטה ונגישה</strong>.</p>
+    </section>
+
+    <!-- ============ 5. PRINCIPLES ============ -->
+    <section class="page chapter" id="principles">
+      <h1 class="chap"><span class="num">5</span> עקרונות בסיסיים בפרויקט</h1>
+      <p class="chap-lead">העקרונות שהנחו אותנו בכתיבת הקוד ובמימוש המערכת</p>
+
+      <div class="principle"><span class="t">קוד נקי, מסודר וקריא + Code Review</span>
+        הקפדנו על כתיבת קוד קריא ועקבי. בכל פעם שאחד מאיתנו סיים משימה, השני עבר על הקוד ובחן אותו (code review) על מנת
+        לשמור על איכות ועל קריאות.</div>
+
+      <div class="principle"><span class="t">ארכיטקטורת שכבות והפרדת אחריות</span>
+        צד השרת בנוי בשכבות עם תפקיד ברור לכל אחת (Routes / Controllers / Services / Prisma). הפרדה זו מפשטת את הפיתוח,
+        מקלה על איתור באגים, והופכת את המערכת לגמישה יותר לשינויים.</div>
+
+      <div class="principle"><span class="t">הפרדת צד לקוח וצד שרת + TypeScript Strict</span>
+        הפרדנו את הצדדים כך שכל אחד עומד בפני עצמו. בשני הצדדים נעשה שימוש ב‑TypeScript במצב <code>strict</code>, המעלה
+        את בטיחות הקוד ומפחית שגיאות זמן‑ריצה.</div>
+
+      <div class="principle"><span class="t">רב‑דיירות ובידוד נתונים</span>
+        כל שאילתה תחומה לפי <code>studio_id</code>, כך שאף משתמש אינו יכול לגשת לנתונים של סטודיו אחר. זהו עיקרון מנחה
+        בכל שכבת השירותים.</div>
+
+      <div class="principle"><span class="t">מניעת חזרה על קוד — קומפוננטות גנריות</span>
+        בנינו קומפוננטות מוצגות גנריות ומשותפות (תיקיית <code>components/common/</code>: <code>BaseModal</code>,
+        <code>StatCard</code>, <code>ClassCard</code>, <code>FormFields</code>, <code>ScheduleGrid</code>) המשמשות שוב
+        ושוב — כך נמנעת חזרה על קוד והמערכת קלה להרחבה.</div>
+
+      <div class="principle"><span class="t">שכבת שירותים אחת בצד לקוח</span>
+        כל קריאות ה‑HTTP עוברות דרך <code>services/api.ts</code> (מופע axios יחיד). אף קומפוננטה אינה קוראת ל‑axios
+        ישירות — מה שמרכז את הטיפול בעוגיות, בשגיאות וב‑interceptors.</div>
+
+      <div class="principle"><span class="t">אבטחה כברירת מחדל</span>
+        JWT בעוגיית HttpOnly, הצפנת סיסמאות עם bcrypt, כותרות אבטחה עם Helmet/CSP, ניקוי קלט (sanitize‑html) וולידציה עם
+        Zod, והגבלת קצב בקשות.</div>
+
+      <div class="principle"><span class="t">לוגים מובְנים ובקרה</span>
+        כל בקשה מקבלת מזהה (<code>requestId</code>) ולוגר ייעודי (Pino). הלוגים נשלחים ל‑Loki ומוצגים ב‑Grafana, כך
+        שניתן לעקוב אחר תקלות ולנתח ביצועים.</div>
+
+      <div class="principle"><span class="t">Containerization + Conventional Commits</span>
+        כל המערכת רצה תחת Docker Compose לסביבה אחידה וניתנת לשחזור. ניהול הקוד ב‑Git עם Conventional Commits ובדיקות
+        אוטומטיות ב‑pre‑commit (Husky: Prettier + typecheck + בדיקות).</div>
+    </section>
+
+    <!-- ============ 6. ERD ============ -->
+    <section class="page chapter" id="erd">
+      <h1 class="chap"><span class="num">6</span> תרשים ERD</h1>
+      <p class="chap-lead">מודל הנתונים היחסי (Entity–Relationship Diagram)</p>
+      <p>המודל בנוי סביב היררכיית הבעלות
+        <code>studios → branches → studio_rooms → classes → enrollments → attendance</code>. ישות <code>studios</code>
+        היא הדייר (tenant), וכל שאר הטבלאות התפעוליות נושאות שדה <code>studio_id</code> לבידוד. מחיקת סטודיו מפילה
+        בשרשור (cascade) את כל נתוניו. כל המפתחות הראשיים הם UUID.</p>
+
+      <figure class="diagram">
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 920 730" role="img" aria-label="תרשים ERD">
+            <defs>
+              <marker id="many" markerWidth="12" markerHeight="12" refX="2" refY="6" orient="auto">
+                <path d="M10,1 L2,6 L10,11" fill="none" stroke="#6366f1" stroke-width="1.4" />
+              </marker>
+              <marker id="one" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+                <path d="M6,2 L6,10" stroke="#6366f1" stroke-width="1.6" />
+              </marker>
+            </defs>
+            <style>
+              .et {
+                font-family: "SF Mono", Consolas, monospace;
+                font-size: 11px;
+                fill: #334155
+              }
+
+              .eh {
+                font-family: "Heebo", "Arial", sans-serif;
+                font-size: 13px;
+                fill: #fff;
+                font-weight: 700
+              }
+
+              .efk {
+                fill: #7c3aed
+              }
+
+              .epk {
+                fill: #0f766e;
+                font-weight: 700
+              }
+
+              .rel {
+                stroke: #6366f1;
+                stroke-width: 1.5;
+                fill: none
+              }
+
+              .crd {
+                font-family: Arial;
+                font-size: 11px;
+                fill: #6366f1;
+                font-weight: 700
+              }
+
+              .ebox {
+                fill: #fff;
+                stroke: #c7d2fe;
+                stroke-width: 1.5
+              }
+
+              .ehdr {
+                fill: #4f46e5
+              }
+            </style>
+
+            <!-- relationship lines (drawn first, under boxes) -->
+            <path class="rel" d="M246,70 H356" marker-start="url(#one)" marker-end="url(#one)" />
+            <text class="crd" x="300" y="62" text-anchor="middle">admin 1—1</text>
+            <path class="rel" d="M461,118 V168" marker-start="url(#one)" marker-end="url(#many)" />
+            <text class="crd" x="472" y="146">1—∞</text>
+            <path class="rel" d="M461,247 V292" marker-start="url(#one)" marker-end="url(#many)" />
+            <text class="crd" x="472" y="274">1—∞</text>
+            <path class="rel" d="M461,386 V430" marker-start="url(#one)" marker-end="url(#many)" />
+            <text class="crd" x="472" y="412">1—∞</text>
+            <path class="rel" d="M690,86 C600,150 600,420 566,470" marker-start="url(#one)" marker-end="url(#many)" />
+            <text class="crd" x="630" y="300">קטגוריה 1—∞</text>
+            <path class="rel" d="M461,554 V600" marker-start="url(#one)" marker-end="url(#many)" />
+            <text class="crd" x="472" y="582">1—∞</text>
+            <path class="rel" d="M356,650 H280" marker-start="url(#many)" marker-end="url(#one)" />
+            <text class="crd" x="318" y="642" text-anchor="middle">∞—1</text>
+            <path class="rel" d="M566,650 H646" marker-start="url(#one)" marker-end="url(#many)" />
+            <text class="crd" x="606" y="642" text-anchor="middle">1—∞</text>
+            <path class="rel" d="M120,133 C120,360 200,430 356,470" marker-start="url(#one)" marker-end="url(#many)" />
+            <text class="crd" x="150" y="350">מדריך 1—∞</text>
+            <path class="rel" d="M150,133 C150,560 240,600 356,628" marker-start="url(#one)" marker-end="url(#many)" />
+            <text class="crd" x="250" y="560">תלמיד 1—∞</text>
+
+            <!-- users -->
+            <g>
+              <rect class="ebox" x="36" y="24" width="210" height="109" rx="8" />
+              <rect class="ehdr" x="36" y="24" width="210" height="24" rx="8" />
+              <rect class="ehdr" x="36" y="38" width="210" height="10" />
+              <text class="eh" x="141" y="41" text-anchor="middle">users</text>
+              <text class="et epk" x="48" y="66">id (PK)</text><text class="et" x="48" y="81">email · role</text><text
+                class="et efk" x="48" y="96">studio_id (FK)</text><text class="et" x="48" y="111">status</text><text
+                class="et" x="48" y="126">password_hash</text>
+            </g>
+            <!-- studios -->
+            <g>
+              <rect class="ebox" x="356" y="24" width="210" height="94" rx="8" />
+              <rect class="ehdr" x="356" y="24" width="210" height="24" rx="8" />
+              <rect class="ehdr" x="356" y="38" width="210" height="10" />
+              <text class="eh" x="461" y="41" text-anchor="middle">studios</text>
+              <text class="et epk" x="368" y="66">id (PK)</text><text class="et" x="368" y="81">name ·
+                serial_number</text><text class="et efk" x="368" y="96">admin_id (FK)</text><text class="et" x="368"
+                y="111">is_active</text>
+            </g>
+            <!-- categories -->
+            <g>
+              <rect class="ebox" x="690" y="24" width="190" height="94" rx="8" />
+              <rect class="ehdr" x="690" y="24" width="190" height="24" rx="8" />
+              <rect class="ehdr" x="690" y="38" width="190" height="10" />
+              <text class="eh" x="785" y="41" text-anchor="middle">categories</text>
+              <text class="et epk" x="702" y="66">id (PK)</text><text class="et efk" x="702" y="81">studio_id
+                (FK)</text><text class="et" x="702" y="96">name</text><text class="et" x="702" y="111">type</text>
+            </g>
+            <!-- branches -->
+            <g>
+              <rect class="ebox" x="356" y="168" width="210" height="79" rx="8" />
+              <rect class="ehdr" x="356" y="168" width="210" height="24" rx="8" />
+              <rect class="ehdr" x="356" y="182" width="210" height="10" />
+              <text class="eh" x="461" y="185" text-anchor="middle">branches</text>
+              <text class="et epk" x="368" y="210">id (PK)</text><text class="et efk" x="368" y="225">studio_id
+                (FK)</text><text class="et" x="368" y="240">name · city</text>
+            </g>
+            <!-- studio_rooms -->
+            <g>
+              <rect class="ebox" x="356" y="292" width="210" height="94" rx="8" />
+              <rect class="ehdr" x="356" y="292" width="210" height="24" rx="8" />
+              <rect class="ehdr" x="356" y="306" width="210" height="10" />
+              <text class="eh" x="461" y="309" text-anchor="middle">studio_rooms</text>
+              <text class="et epk" x="368" y="334">id (PK)</text><text class="et efk" x="368" y="349">studio_id
+                (FK)</text><text class="et efk" x="368" y="364">branch_id (FK)</text><text class="et" x="368"
+                y="379">capacity</text>
+            </g>
+            <!-- classes -->
+            <g>
+              <rect class="ebox" x="356" y="430" width="210" height="124" rx="8" />
+              <rect class="ehdr" x="356" y="430" width="210" height="24" rx="8" />
+              <rect class="ehdr" x="356" y="444" width="210" height="10" />
+              <text class="eh" x="461" y="447" text-anchor="middle">classes</text>
+              <text class="et epk" x="368" y="472">id (PK)</text><text class="et efk" x="368" y="487">studio_id
+                (FK)</text><text class="et efk" x="368" y="502">instructor_id (FK)</text><text class="et efk" x="368"
+                y="517">room_id (FK)</text><text class="et" x="368" y="532">price_ils</text><text class="et" x="368"
+                y="547">max_capacity</text>
+            </g>
+            <!-- enrollments -->
+            <g>
+              <rect class="ebox" x="356" y="600" width="210" height="109" rx="8" />
+              <rect class="ehdr" x="356" y="600" width="210" height="24" rx="8" />
+              <rect class="ehdr" x="356" y="614" width="210" height="10" />
+              <text class="eh" x="461" y="617" text-anchor="middle">enrollments</text>
+              <text class="et epk" x="368" y="642">id (PK)</text><text class="et efk" x="368" y="657">studio_id
+                (FK)</text><text class="et efk" x="368" y="672">student_id (FK)</text><text class="et efk" x="368"
+                y="687">class_id (FK)</text><text class="et" x="368" y="702">status · payment_status</text>
+            </g>
+            <!-- attendance -->
+            <g>
+              <rect class="ebox" x="60" y="600" width="220" height="109" rx="8" />
+              <rect class="ehdr" x="60" y="600" width="220" height="24" rx="8" />
+              <rect class="ehdr" x="60" y="614" width="220" height="10" />
+              <text class="eh" x="170" y="617" text-anchor="middle">attendance</text>
+              <text class="et epk" x="72" y="642">id (PK)</text><text class="et efk" x="72" y="657">enrollment_id
+                (FK)</text><text class="et efk" x="72" y="672">student_id (FK)</text><text class="et" x="72"
+                y="687">session_date</text><text class="et" x="72" y="702">status</text>
+            </g>
+            <!-- payments -->
+            <g>
+              <rect class="ebox" x="646" y="600" width="234" height="109" rx="8" />
+              <rect class="ehdr" x="646" y="600" width="234" height="24" rx="8" />
+              <rect class="ehdr" x="646" y="614" width="234" height="10" />
+              <text class="eh" x="763" y="617" text-anchor="middle">payments</text>
+              <text class="et epk" x="658" y="642">id (PK)</text><text class="et efk" x="658" y="657">enrollment_id
+                (FK)</text><text class="et" x="658" y="672">amount_ils</text><text class="et" x="658"
+                y="687">stripe_payment_intent_id</text><text class="et" x="658" y="702">status</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption>תרשים 6.1 — מודל הנתונים (ישויות מרכזיות, מפתחות וקשרים). <span style="color:#0f766e">PK</span> =
+          מפתח ראשי · <span style="color:#7c3aed">FK</span> = מפתח זר · ∞ = רבים</figcaption>
+      </figure>
+
+      <h2 class="sec">ישויות עזר נוספות</h2>
+      <p>בנוסף לישויות המרכזיות שבתרשים, הסכמה כוללת טבלאות תומכות (כולן תחומות ב‑<code>studio_id</code> או מקושרות
+        ל‑<code>users</code>):</p>
+      <table>
+        <thead>
+          <tr>
+            <th>טבלה</th>
+            <th>תפקיד</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>instructor_commissions</code></td>
+            <td>עמלות מדריך לפי חוג (אחוז/קבוע, סטטוס תשלום).</td>
+          </tr>
+          <tr>
+            <td><code>schedule_sessions</code></td>
+            <td>מופעי מפגש קונקרטיים של חוג בתאריך נתון.</td>
+          </tr>
+          <tr>
+            <td><code>notifications</code></td>
+            <td>התראות למשתמש (נקרא/לא נקרא).</td>
+          </tr>
+          <tr>
+            <td><code>audit_logs</code></td>
+            <td>תיעוד פעולות (actor, action, changes JSONB).</td>
+          </tr>
+          <tr>
+            <td><code>pending_registrations</code></td>
+            <td>הרשמות ממתינות + טוקן הזמנה, פגות תוקף.</td>
+          </tr>
+          <tr>
+            <td><code>password_reset_tokens</code></td>
+            <td>טוקני איפוס סיסמה (hash, פג‑תוקף, used).</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="note"><span class="t">הערה — אינדקסים</span> קיימים אינדקסים ייחודיים על <code>users.email</code>,
+        <code>studios.serial_number</code>, <code>payments.stripe_payment_intent_id</code> ועל הצמד
+        <code>(enrollment_id, session_date)</code> ב‑attendance (מניעת כפילות סימון נוכחות לאותו מפגש).</div>
+    </section>
+
+    <!-- ============ 7. SERVER ============ -->
+    <section class="page chapter" id="server">
+      <h1 class="chap"><span class="num">7</span> צד שרת</h1>
+      <p class="chap-lead">Express + TypeScript בארכיטקטורת שכבות, מול PostgreSQL דרך Prisma</p>
+      <p>צד השרת נכתב ב‑<strong>Express</strong> וחושף REST API תחת הקידומת <code>/api</code>. הוא בנוי בשכבות, כאשר כל
+        בקשה עוברת מסלול קבוע: שרשרת middleware (לוגים, אבטחה, אימות, הרשאה, ולידציה) ואז <em>Controller → Service →
+          Prisma → בסיס הנתונים</em>.</p>
+
+      <h2 class="sec">7.1 ארכיטקטורת השכבות וזרימת הבקשה</h2>
+      <figure class="diagram">
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 540 720" role="img" aria-label="זרימת בקשה בשרת">
+            <defs>
+              <marker id="fa" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+                <path d="M0,0 L7,3 L0,6 Z" fill="#6366f1" />
+              </marker>
+            </defs>
+            <style>
+              .fl {
+                font-family: "Heebo", "Arial";
+                font-size: 13px;
+                fill: #1e293b;
+                font-weight: 600
+              }
+
+              .fm {
+                font-family: "SF Mono", monospace;
+                font-size: 11px;
+                fill: #64748b
+              }
+
+              .fb {
+                fill: #fff;
+                stroke: #c7d2fe;
+                stroke-width: 1.5
+              }
+
+              .fa {
+                stroke: #6366f1;
+                stroke-width: 1.6;
+                fill: none
+              }
+            </style>
+            <!-- nodes -->
+            <rect class="fb" x="150" y="14" width="240" height="44" rx="10" style="fill:#eef2ff;stroke:#6366f1" /><text
+              class="fl" x="270" y="33" text-anchor="middle">בקשת HTTP מהדפדפן</text><text class="fm" x="270" y="50"
+              text-anchor="middle">Nginx → /api proxy</text>
+            <line class="fa" x1="270" y1="58" x2="270" y2="78" marker-end="url(#fa)" />
+            <rect class="fb" x="120" y="80" width="300" height="86" rx="10" /><text class="fl" x="270" y="100"
+              text-anchor="middle">שרשרת Middleware</text>
+            <text class="fm" x="270" y="118" text-anchor="middle">requestLogger → helmet → rateLimit</text>
+            <text class="fm" x="270" y="133" text-anchor="middle">→ cookieParser → cors</text>
+            <text class="fm" x="270" y="151" text-anchor="middle">express.raw (/webhooks) | express.json</text>
+            <line class="fa" x1="270" y1="166" x2="270" y2="186" marker-end="url(#fa)" />
+            <rect class="fb" x="160" y="188" width="220" height="40" rx="10" /><text class="fl" x="270" y="213"
+              text-anchor="middle">Router (routes/*.ts)</text>
+            <line class="fa" x1="270" y1="228" x2="270" y2="248" marker-end="url(#fa)" />
+            <rect class="fb" x="140" y="250" width="260" height="40" rx="10" style="fill:#fff7ed;stroke:#fb923c" /><text
+              class="fl" x="270" y="275" text-anchor="middle">authenticateUser — אימות JWT</text>
+            <line class="fa" x1="270" y1="290" x2="270" y2="310" marker-end="url(#fa)" />
+            <rect class="fb" x="140" y="312" width="260" height="40" rx="10" style="fill:#fff7ed;stroke:#fb923c" /><text
+              class="fl" x="270" y="337" text-anchor="middle">requireRole — הרשאה (RBAC)</text>
+            <line class="fa" x1="270" y1="352" x2="270" y2="372" marker-end="url(#fa)" />
+            <rect class="fb" x="140" y="374" width="260" height="40" rx="10" style="fill:#fff7ed;stroke:#fb923c" /><text
+              class="fl" x="270" y="399" text-anchor="middle">validate(Zod) — ניקוי + ולידציה</text>
+            <line class="fa" x1="270" y1="414" x2="270" y2="434" marker-end="url(#fa)" />
+            <rect class="fb" x="160" y="436" width="220" height="40" rx="10" /><text class="fl" x="270" y="461"
+              text-anchor="middle">Controller</text>
+            <line class="fa" x1="270" y1="476" x2="270" y2="496" marker-end="url(#fa)" />
+            <rect class="fb" x="160" y="498" width="220" height="44" rx="10" /><text class="fl" x="270" y="518"
+              text-anchor="middle">Service</text><text class="fm" x="270" y="534" text-anchor="middle">לוגיקה עסקית +
+              שאילתות</text>
+            <line class="fa" x1="270" y1="542" x2="270" y2="562" marker-end="url(#fa)" />
+            <rect class="fb" x="160" y="564" width="220" height="40" rx="10" /><text class="fl" x="270" y="589"
+              text-anchor="middle">Prisma Client</text>
+            <line class="fa" x1="270" y1="604" x2="270" y2="624" marker-end="url(#fa)" />
+            <rect class="fb" x="160" y="626" width="220" height="44" rx="10" style="fill:#ecfdf5;stroke:#34d399" /><text
+              class="fl" x="270" y="646" text-anchor="middle">PostgreSQL</text><text class="fm" x="270" y="662"
+              text-anchor="middle">שאילתה תחומה ב‑studio_id</text>
+            <!-- error side -->
+            <rect class="fb" x="416" y="436" width="110" height="120" rx="10" style="fill:#fef2f2;stroke:#fca5a5" />
+            <text class="fm" x="471" y="476" text-anchor="middle"
+              style="font-size:12px;fill:#b91c1c;font-weight:700">throw</text><text class="fm" x="471" y="494"
+              text-anchor="middle" style="fill:#b91c1c">AppError</text><text class="fm" x="471" y="520"
+              text-anchor="middle">→ error</text><text class="fm" x="471" y="536" text-anchor="middle">Middleware</text>
+            <line class="fa" x1="416" y1="496" x2="380" y2="496" style="stroke:#ef4444" marker-end="url(#fa)" />
+          </svg>
+        </div>
+        <figcaption>תרשים 7.1 — מסלול הבקשה דרך שכבות השרת</figcaption>
+      </figure>
+
+      <p>השכבות ותפקידיהן:</p>
+      <ul>
+        <li><strong>Routes</strong> — מגדירות אילו מסלולי API קיימים ואילו middleware רצים על כל אחד.</li>
+        <li><strong>Middleware</strong> — אחראי על נושאים רוחביים: לוגים, אבטחה, אימות זהות, הרשאה וולידציה.</li>
+        <li><strong>Controller</strong> — קורא את הבקשה (<code>req.body</code>, <code>req.params</code>,
+          <code>req.studioId</code>), קורא לשירות, ומעצב את התשובה.</li>
+        <li><strong>Service</strong> — מכיל את הלוגיקה העסקית (קיבולת, תמחור, מעברי סטטוס) ואת שאילתות Prisma.</li>
+        <li><strong>Prisma</strong> — שכבת הגישה לבסיס הנתונים, ממירה קריאות type‑safe ל‑SQL.</li>
+      </ul>
+
+      <h2 class="sec">7.2 יתרונות ארכיטקטורת השכבות</h2>
+      <div class="two-col">
+        <div class="card">
+          <h4>1. הפרדת אחריות</h4>כל שכבה אחראית על תחום אחד בלבד, מה שמפחית תלות ומאפשר לכל שכבה להתמקד בתפקידה.
+        </div>
+        <div class="card">
+          <h4>2. תחזוקה קלה</h4>קל לתקן באגים — כל נושא מטופל בשכבה אחת, ולכן קל לבודד את מקור התקלה.
+        </div>
+        <div class="card">
+          <h4>3. גמישות להרחבה</h4>הוספת פיצ'ר או ישות חדשה אינה דורשת שינוי בשכבות אחרות; המערכת גמישה לשינויים.
+        </div>
+        <div class="card">
+          <h4>4. בדיקוּת</h4>ניתן לבדוק כל שכבה בנפרד (למשל בדיקת שירות מול Prisma מדומה).
+        </div>
+      </div>
+
+      <h3 class="sub">קובץ ה‑middleware המרכזי (app.ts)</h3>
+      <p>סדר ה‑middleware קריטי: <code>express.raw</code> עבור <code>/api/webhooks</code> חייב לרוץ
+        <strong>לפני</strong> <code>express.json</code>, כדי ש‑Stripe יוכל לאמת את חתימת הגוף הגולמי.</p>
+      <figure class="code">
+        <div class="bar"><span class="dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+              style="background:#27c93f"></i></span><span class="file">server/src/app.ts</span></div>
+        <pre><code class="language-typescript">export const app = express();
+app.set("trust proxy", 1);
+
+app.use(requestLogger);                  // מצרף req.logger + req.requestId
+app.use(helmet({ contentSecurityPolicy: { /* CSP directives */ } }));
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 5000 }));
+app.use(cookieParser());                 // קריאת עוגיית classly_token
+app.use(cors({ origin: /* whitelist */ allowedOrigins, credentials: true }));
+
+// ⚠️ raw body ל‑Webhooks — חייב לפני express.json
+app.use("/api/webhooks", express.raw({ type: "application/json" }), webhookRoutes);
+app.use(express.json());                 // כל שאר המסלולים — JSON רגיל
+
+app.use("/api/auth", authRoutes);
+app.use("/api/courses", courseRoutes);
+app.use("/api/enrollments", enrollmentRoutes);
+app.use("/api/payments", paymentRoutes);
+// ... students, instructors, attendance, dashboard, studios, branches, rooms
+
+app.get("/api/health", (req, res) =&gt; res.json({ status: "OK" }));
+app.use(errorHandler);                   // טיפול שגיאות מרוכז</code></pre>
+        <figcaption>תמונה 7.1 — מחסנית ה‑middleware ורישום המסלולים (app.ts)</figcaption>
+      </figure>
+    </section>
+
+    <!-- ============ 7. SERVER — part B ============ -->
+    <section class="page">
+      <h2 class="sec">7.3 ה‑API המרכזיים</h2>
+      <p>כל המסלולים תחת <code>/api</code>. מסלולים ציבוריים: <code>/api/health</code>, <code>/api/auth/*</code>,
+        <code>/api/webhooks/stripe</code>. כל השאר דורשים אימות, ורובם גם הרשאת תפקיד.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>קבוצת מסלולים</th>
+            <th>תפקיד</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>/api/auth/*</code></td>
+            <td>התחברות, הרשמה, me, התנתקות, שכחתי/איפוס סיסמה.</td>
+          </tr>
+          <tr>
+            <td><code>/api/courses/*</code></td>
+            <td>ניהול חוגים (יצירה, עדכון, רשימה, חוגי מדריך/זמינים).</td>
+          </tr>
+          <tr>
+            <td><code>/api/enrollments/*</code></td>
+            <td>הרשמה לחוג, הרשמות שלי, רשימת נרשמים, ביטול.</td>
+          </tr>
+          <tr>
+            <td><code>/api/payments/*</code></td>
+            <td>היסטוריית תשלומים, יצירת כוונת תשלום.</td>
+          </tr>
+          <tr>
+            <td><code>/api/students, /api/instructors</code></td>
+            <td>ניהול תלמידים ומדריכים.</td>
+          </tr>
+          <tr>
+            <td><code>/api/attendance/*</code></td>
+            <td>סימון וצפייה בנוכחות.</td>
+          </tr>
+          <tr>
+            <td><code>/api/dashboard/*</code></td>
+            <td>מדדים ללוח הבקרה (מנהל/מדריך).</td>
+          </tr>
+          <tr>
+            <td><code>/api/studios, /api/branches, /api/rooms</code></td>
+            <td>ניהול סטודיו, סניפים וחדרים.</td>
+          </tr>
+          <tr>
+            <td><code>/api/webhooks/stripe</code></td>
+            <td>קליטת אירועי Stripe (אימות חתימה, גוף גולמי).</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 class="sec">7.4 הזדהות והרשאות</h2>
+      <p>האימות מבוסס <strong>JWT בעוגיית HttpOnly</strong> בשם <code>classly_token</code> (JavaScript אינו יכול לקרוא
+        אותה — הגנה מפני גניבת טוקן ב‑XSS). ה‑middleware <code>authenticateUser</code> מאמת את הטוקן, שולף את המשתמש
+        מה‑DB, דוחה משתמש מושעה, ומצרף <code>req.user</code> ו‑<code>req.studioId</code> לבקשה. <code>requireRole</code>
+        אוכף הרשאות לפי תפקיד.</p>
+      <figure class="code">
+        <div class="bar"><span class="dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+              style="background:#27c93f"></i></span><span class="file">server/src/middleware/authMiddleware.ts</span>
+        </div>
+        <pre><code class="language-typescript">export const authenticateUser = async (req, res, next) =&gt; {
+  const token = req.cookies?.classly_token;
+  if (!token) return res.status(401).json({ error: "Not authenticated" });
+
+  try {
+    // 1. אימות חתימת ה‑JWT מקומית
+    const decoded = jwt.verify(token, environment.jwtSecret) as JwtPayload;
+
+    // 2. שליפת פרופיל המשתמש מבסיס הנתונים
+    const userData = await prisma.users.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, role: true, studio_id: true, status: true },
+    });
+    if (!userData) return res.status(403).json({ error: "User not found" });
+    if (userData.status === "SUSPENDED")
+      return res.status(403).json({ error: "Account is suspended" });
+
+    // 3. צירוף המשתמש לבקשה עבור השכבות הבאות
+    req.user = userData;
+    req.studioId = userData.studio_id || undefined;
+    next();
+  } catch (err) {
+    if (err.name === "TokenExpiredError")
+      return res.status(401).json({ error: "Token expired" });
+    return res.status(401).json({ error: "Invalid token" });
+  }
+};
+
+// אכיפת תפקידים נדרשים על מסלול
+export const requireRole = (allowedRoles: string[]) =&gt; (req, res, next) =&gt; {
+  if (!req.user?.role || !allowedRoles.includes(req.user.role))
+    return res.status(403).json({ error: "Insufficient permissions" });
+  next();
+};</code></pre>
+        <figcaption>תמונה 7.2 — אימות זהות ואכיפת הרשאות (authMiddleware.ts)</figcaption>
+      </figure>
+
+      <p>בעת התחברות מוצלחת נחתם הטוקן ונשמר בעוגייה עם ההגדרות הבאות (תוקף 7 ימים; <code>secure</code> מופעל רק
+        בייצור):</p>
+      <figure class="code">
+        <div class="bar"><span class="dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+              style="background:#27c93f"></i></span><span class="file">server/src/controllers/authController.ts</span>
+        </div>
+        <pre><code class="language-typescript">const AUTH_COOKIE_OPTIONS = {
+  httpOnly: true,                                  // JS לא יכול לקרוא
+  secure: process.env.NODE_ENV === "production",   // HTTPS בלבד בייצור
+  sameSite: "lax",                                 // הגנת CSRF חלקית
+  maxAge: 7 * 24 * 60 * 60 * 1000,                 // 7 ימים
+  path: "/",
+};
+// בעת login: bcrypt.compare → jwt.sign({ userId, email, role }) → res.cookie(...)
+res.cookie("classly_token", token, AUTH_COOKIE_OPTIONS);</code></pre>
+        <figcaption>תמונה 7.3 — הגדרת עוגיית האימות (authController.ts)</figcaption>
+      </figure>
+
+      <h2 class="sec">7.5 תפקידים (Roles)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>תפקיד</th>
+            <th>הרשאות</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>SUPER_ADMIN</code></td>
+            <td>ניהול הפלטפורמה חוצה‑הסטודיואים והגדרות מערכת.</td>
+          </tr>
+          <tr>
+            <td><code>ADMIN</code></td>
+            <td>ניהול מלא של הסטודיו שלו — סניפים, חדרים, חוגים, תלמידים, תשלומים, צוות והגדרות.</td>
+          </tr>
+          <tr>
+            <td><code>INSTRUCTOR</code></td>
+            <td>לוח שיעורים, רשימת תלמידים בחוגיו, סימון נוכחות.</td>
+          </tr>
+          <tr>
+            <td><code>STUDENT</code></td>
+            <td>עיון בחוגים, הרשמה ותשלום, צפייה בהרשמות שלו.</td>
+          </tr>
+          <tr>
+            <td><code>PARENT</code></td>
+            <td>קיים בסכמה (רשומות ילדים) — שמור לשימוש עתידי.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 class="sec">7.6 טיפול בשגיאות מרוכז</h2>
+      <p>בקרים ושירותים לעולם אינם כותבים <code>res.status(500)...</code> ישירות, אלא <strong>זורקים</strong>
+        <code>AppError</code> שמטופל ב‑middleware מרכזי. כך התשובה ללקוח אחידה, והשגיאה נרשמת ללוג.</p>
+      <figure class="code">
+        <div class="bar"><span class="dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+              style="background:#27c93f"></i></span><span class="file">server/src/utils/AppError.ts ·
+            middleware/errorMiddleware.ts</span></div>
+        <pre><code class="language-typescript">export class AppError extends Error {
+  constructor(public message: string, public statusCode: number) {
+    super(message);
+    this.isOperational = true;
+  }
+}
+
+// errorMiddleware — handler מרכזי
+const errorHandler = (err, req, res, next) =&gt; {
+  const statusCode = err.statusCode || 500;
+  req.logger.error({ message: err.message, statusCode, path: req.path });
+
+  // שגיאות מתוכננות (AppError) נחשפות ללקוח; שגיאות תכנות — הודעה גנרית
+  const message = err.isOperational ? err.message : "Something went wrong.";
+  res.status(statusCode).json({ status: "error", message });
+};</code></pre>
+        <figcaption>תמונה 7.4 — מחלקת AppError ו‑handler השגיאות המרכזי</figcaption>
+      </figure>
+
+      <h2 class="sec">7.7 ולידציה וניקוי קלט</h2>
+      <p>ה‑middleware <code>validate(schema)</code> מבצע שני שלבים לפני שהבקשה מגיעה ל‑Controller: (1) ניקוי תגיות HTML
+        מכל שדה מחרוזת (למעט שדות רגישים כמו סיסמאות וטוקנים), ו‑(2) ולידציה מול סכמת <strong>Zod</strong>. הניקוי נמצא
+        במקום אחד — כך שאף מסלול לא יכול "לשכוח" אותו.</p>
+      <figure class="code">
+        <div class="bar"><span class="dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+              style="background:#27c93f"></i></span><span class="file">server/src/middleware/validate.ts</span></div>
+        <pre><code class="language-typescript">const SENSITIVE_FIELDS = new Set(["password", "token", "invitationToken", "newPassword"]);
+
+export function validate(schema: ZodSchema) {
+  return (req, _res, next) =&gt; {
+    req.body = sanitizeBody(req.body);          // 1. הסרת תגיות HTML
+    const result = schema.safeParse(req.body);  // 2. ולידציית Zod
+    if (!result.success) {
+      const first = result.error.errors[0];
+      return next(new ValidationError(first.message, first.path.join(".")));
+    }
+    req.body = result.data;
+    next();
+  };
+}</code></pre>
+        <figcaption>תמונה 7.5 — middleware של ניקוי קלט וולידציית Zod</figcaption>
+      </figure>
+    </section>
+
+    <!-- ============ 7. SERVER — part C ============ -->
+    <section class="page">
+      <h2 class="sec">7.8 התממשקות מול בסיס הנתונים (Prisma)</h2>
+      <p>הגישה לבסיס הנתונים נעשית דרך <strong>Prisma</strong>. כל ישות מוגדרת כ‑model בסכמה, וממנה נגזרים גם הטיפוסים
+        וגם ה‑SQL. דוגמה למודל ההרשמות, עם המפתחות הזרים והקשרים:</p>
+      <figure class="code">
+        <div class="bar"><span class="dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+              style="background:#27c93f"></i></span><span class="file">server/prisma/schema.prisma</span></div>
+        <pre><code class="language-typescript">model enrollments {
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studio_id       String  @db.Uuid
+  student_id      String  @db.Uuid
+  class_id        String  @db.Uuid
+  status          String? @default("ACTIVE")    // ACTIVE | PENDING | CANCELLED
+  payment_status  String? @default("PENDING")   // PENDING | PAID | OVERDUE
+
+  studio   studios  @relation(fields: [studio_id], references: [id], onDelete: Cascade)
+  student  users    @relation("EnrollmentStudent", fields: [student_id], references: [id])
+  class    classes  @relation(fields: [class_id], references: [id], onDelete: Cascade)
+  payments    payments[]
+  attendance  attendance[]
+}</code></pre>
+        <figcaption>תמונה 7.6 — מודל Prisma של ישות ההרשמות (schema.prisma)</figcaption>
+      </figure>
+
+      <h3 class="sub">בידוד רב‑דיירי — studio_id בכל שאילתה</h3>
+      <p>עיקרון מנחה: כל שאילתה תחומה ב‑<code>studio_id</code>. במקום <code>findUnique({ where: { id } })</code> משתמשים
+        ב‑<code>findFirst({ where: { id, studio_id } })</code>, ומתייחסים לכישלון כ‑404 — כך משתמש מסטודיו אחד לא יכול
+        לגשת לנתוני סטודיו אחר גם אם ניחש מזהה.</p>
+      <figure class="code">
+        <div class="bar"><span class="dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+              style="background:#27c93f"></i></span><span class="file">server/src/services/*Service.ts</span></div>
+        <pre><code class="language-typescript">// שאילתה תחומה לדייר — מונעת דליפת נתונים בין סטודיואים
+const record = await prisma.payments.findFirst({
+  where: { id, studio_id: studioId },   // תמיד מסננים לפי הדייר
+});
+if (!record) throw new AppError("Not found", 404);</code></pre>
+        <figcaption>תמונה 7.7 — תבנית שאילתה תחומת‑דייר</figcaption>
+      </figure>
+
+      <h3 class="sub">טרנזקציות — הרשמה + תשלום יחד</h3>
+      <p>פעולה הנוגעת בכמה טבלאות עוטפת אותן ב‑<code>prisma.$transaction</code>, כך שהן מתבצעות יחד (atomic). למשל,
+        יצירת הרשמה ורישום שורת תשלום מתבצעים כיחידה אחת:</p>
+      <figure class="code">
+        <div class="bar"><span class="dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+              style="background:#27c93f"></i></span><span class="file">server/src/services/enrollmentService.ts</span>
+        </div>
+        <pre><code class="language-typescript">await prisma.$transaction(async (tx) =&gt; {
+  // 1. ולידציית קיבולת + מניעת הרשמה כפולה, ואז יצירת ההרשמה
+  const { enrollment } = await EnrollmentService.enrollStudent(
+    studioId, studentId, classId, "PENDING", "PENDING", undefined, tx,
+  );
+  // 2. רישום שורת תשלום ראשונית במצב PENDING — באותה טרנזקציה
+  await PaymentService.createPaymentRecord(
+    { studioId, studentId, enrollmentId: enrollment.id, amount, stripePaymentIntentId }, tx,
+  );
+});</code></pre>
+        <figcaption>תמונה 7.8 — טרנזקציה אטומית של הרשמה + תשלום</figcaption>
+      </figure>
+
+      <h2 class="sec">7.9 אינטגרציית Stripe ו‑Webhooks</h2>
+      <p>תהליך התשלום: השרת יוצר <strong>PaymentIntent</strong> ומחזיר ללקוח <code>clientSecret</code>; הלקוח מאשר את
+        התשלום מול Stripe; ולבסוף Stripe שולח <strong>Webhook</strong> מאומת‑חתימה לשרת, אשר מעדכן את התשלום וההרשמה
+        בתוך טרנזקציה.</p>
+      <figure class="code">
+        <div class="bar"><span class="dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+              style="background:#27c93f"></i></span><span class="file">server/src/services/paymentService.ts</span>
+        </div>
+        <pre><code class="language-typescript">// יצירת כוונת תשלום (הסכום באגורות)
+static async createIntent(amount, currency = "ils", description?) {
+  if (!amount || amount &lt;= 0) throw new AppError("Invalid amount", 400);
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: Math.round(amount * 100),
+    currency,
+    automatic_payment_methods: { enabled: true },
+  });
+  return { clientSecret: paymentIntent.client_secret, id: paymentIntent.id };
+}
+
+// אימות חתימת ה‑Webhook על הגוף הגולמי
+static constructEvent(payload: Buffer, signature: string) {
+  return stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+}
+
+// עדכון מותנה (status = PENDING) → אידמפוטנטיות מפני שליחה חוזרת
+const result = await prisma.$transaction(async (tx) =&gt; {
+  await tx.payments.updateMany({
+    where: { stripe_payment_intent_id: paymentIntentId, status: "PENDING" },
+    data:  { status: "SUCCEEDED", paid_date: new Date() },
+  });
+  // הפעלת ההרשמה בעקבות התשלום
+  await tx.enrollments.updateMany({
+    where: { id: enrollmentId, payment_status: { not: "PAID" } },
+    data:  { payment_status: "PAID", status: "ACTIVE" },
+  });
+});</code></pre>
+        <figcaption>תמונה 7.9 — יצירת כוונת תשלום, אימות Webhook ועדכון אידמפוטנטי (paymentService.ts)</figcaption>
+      </figure>
+      <div class="note"><span class="t">למה גוף גולמי?</span> אימות חתימת ה‑Webhook של Stripe מתבצע על ה‑bytes המקוריים.
+        לכן <code>express.raw</code> חייב לרוץ לפני <code>express.json</code> עבור <code>/api/webhooks</code> — אחרת
+        החתימה לא תתאמת.</div>
+
+      <h2 class="sec">7.10 לוגים ובקרה (Pino + Loki)</h2>
+      <p>כל בקשה מקבלת <code>requestId</code> ולוגר‑ילד ייעודי (<code>req.logger</code>) המצרף הקשר (כמו
+        <code>studioId</code>, <code>enrollmentId</code>). הלוגים מובְנים כ‑JSON, נשלחים ב‑transport של
+        <code>pino-loki</code> אל Loki, ומוצגים ב‑Grafana. לעולם אין רושמים סיסמאות, טוקנים או גוף בקשה מלא.</p>
+      <figure class="code">
+        <div class="bar"><span class="dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+              style="background:#27c93f"></i></span><span class="file">server/src/services/paymentService.ts</span>
+        </div>
+        <pre><code class="language-typescript">const serviceLogger = logger.child({ service: "PaymentService", method: "createIntent" });
+serviceLogger.info({ amount, currency }, "Starting createIntent");
+// ... בתוך handler: req.logger.info({ studioId, enrollmentId }, "Enrollment created");</code></pre>
+        <figcaption>תמונה 7.10 — לוגר מובְנה עם הקשר (Pino child logger)</figcaption>
+      </figure>
+    </section>
+
+    <!-- ============ 8. CLIENT ============ -->
+    <section class="page chapter" id="client">
+      <h1 class="chap"><span class="num">8</span> צד לקוח</h1>
+      <p class="chap-lead">React 19 + Vite + TypeScript · עברית RTL · מותאם למובייל</p>
+      <p>צד הלקוח הוא אפליקציית עמוד יחיד (SPA) ב‑React. הקומפוננטות מאורגנות לפי תפקיד, כל קריאות ה‑HTTP עוברות דרך
+        שכבת שירותים אחת (<code>api.ts</code>), ומצב ההזדהות מנוהל ב‑<code>App.tsx</code>. כל הצילומים שלהלן נלקחו
+        מהמערכת החיה.</p>
+
+      <h2 class="sec">8.1 מסכים מרכזיים במערכת</h2>
+
+      <h3 class="sub">מסך התחברות והרשמה</h3>
+      <p>נקודת הכניסה למערכת. ניתן לעבור בין "התחברות" ל"הרשמה", לאפס סיסמה, ולהירשם דרך קישור הזמנה. הטוקן נשמר בעוגיית
+        HttpOnly, והמשתמש מנותב למסך המתאים לתפקידו.</p>
+      <figure class="shot"><img src="assets/auth-login.png" alt="מסך התחברות" />
+        <figcaption>תמונה 8.1 — מסך ההתחברות</figcaption>
+      </figure>
+
+      <h3 class="sub">לוח בקרה — מנהל סטודיו</h3>
+      <p>לוח הבקרה של המנהל מציג מדדים מרכזיים (ממוצע נוכחות, שיעורים פעילים, הכנסות החודש, סך תלמידים) וגרפים (נוכחות
+        שבועית ומגמת הכנסות) באמצעות ספריית <code>recharts</code>.</p>
+      <figure class="shot"><img src="assets/admin-dashboard.png" alt="לוח בקרה מנהל" />
+        <figcaption>תמונה 8.2 — לוח הבקרה של מנהל הסטודיו</figcaption>
+      </figure>
+
+      <h3 class="sub">מערכת שעות</h3>
+      <p>תצוגת לוח השיעורים השבועי וניהול חוגים. לחיצה על "שיבוץ שיעור חדש" פותחת מודל ליצירת חוג (ראו תמונה 8.13).</p>
+      <figure class="shot"><img src="assets/admin-schedule.png" alt="מערכת שעות" />
+        <figcaption>תמונה 8.3 — מערכת השעות (תצוגת מנהל)</figcaption>
+      </figure>
+
+      <h3 class="sub">ניהול תלמידים</h3>
+      <p>רשימת התלמידים של הסטודיו, עם חיפוש, רישום לחוגים וניהול. הנתונים מסוננים אוטומטית לפי הסטודיו של המנהל.</p>
+      <figure class="shot"><img src="assets/admin-students.png" alt="ניהול תלמידים" />
+        <figcaption>תמונה 8.4 — מסך ניהול התלמידים</figcaption>
+      </figure>
+
+      <h3 class="sub">תשלומים וחשבוניות</h3>
+      <p>ניהול התשלומים והצגת היסטוריית חיובים — סכום, שיטת תשלום, סטטוס והורדת חשבונית PDF. כפתור "תשלום חדש" פותח טופס
+        תשלום מבוסס Stripe Elements.</p>
+      <figure class="shot"><img src="assets/admin-payments.png" alt="תשלומים" />
+        <figcaption>תמונה 8.5 — מסך התשלומים והחשבוניות</figcaption>
+      </figure>
+
+      <h3 class="sub">ניהול הסטודיו</h3>
+      <p>מסך הניהול מרכז את פרטי הסטודיו, הסניפים והצוות (מדריכים), כולל הזמנת אנשי צוות חדשים.</p>
+      <figure class="shot"><img src="assets/admin-administration.png" alt="ניהול סטודיו" />
+        <figcaption>תמונה 8.6 — מסך ניהול הסטודיו</figcaption>
+      </figure>
+    </section>
+
+    <!-- ============ 8. CLIENT — part B (screens) ============ -->
+    <section class="page">
+      <h3 class="sub">מסכי המדריך</h3>
+      <p>המדריך רואה ממשק ממוקד: לוח בקרה אישי, לוח השיעורים שלו, רשימת התלמידים בחוגיו, ומסך נוכחות. כל מסך מציג רק את
+        הנתונים הרלוונטיים למדריך המחובר.</p>
+      <div class="shot-pair">
+        <figure class="shot"><img src="assets/instructor-dashboard.png" alt="לוח מדריך" />
+          <figcaption>תמונה 8.7 — לוח הבקרה של המדריך</figcaption>
+        </figure>
+        <figure class="shot"><img src="assets/instructor-schedule.png" alt="לוז מדריך" />
+          <figcaption>תמונה 8.8 — לוח השיעורים של המדריך</figcaption>
+        </figure>
+      </div>
+      <div class="shot-pair">
+        <figure class="shot"><img src="assets/instructor-students.png" alt="תלמידי מדריך" />
+          <figcaption>תמונה 8.9 — תלמידי המדריך</figcaption>
+        </figure>
+        <figure class="shot"><img src="assets/instructor-attendance.png" alt="נוכחות" />
+          <figcaption>תמונה 8.10 — מסך הנוכחות</figcaption>
+        </figure>
+      </div>
+
+      <h3 class="sub">מסכי התלמיד</h3>
+      <p>התלמיד מקבל לוח אישי ומסך עיון בחוגים. בקטלוג מוצגים כל החוגים הזמינים — שם, מחיר, מועד, מדריך, חדר וקיבולת —
+        והתלמיד יכול להירשם ולשלם. חוגים שהתלמיד כבר רשום אליהם מסומנים.</p>
+      <div class="shot-pair">
+        <figure class="shot"><img src="assets/student-dashboard.png" alt="לוח תלמיד" />
+          <figcaption>תמונה 8.11 — לוח הבקרה של התלמיד</figcaption>
+        </figure>
+        <figure class="shot"><img src="assets/student-browse.png" alt="עיון בחוגים" />
+          <figcaption>תמונה 8.12 — קטלוג החוגים (הרשמה)</figcaption>
+        </figure>
+      </div>
+
+      <h3 class="sub">מנהל‑על (פלטפורמה)</h3>
+      <p>מנהל‑העל מקבל תצוגת ניהול חוצה‑סטודיואים: ניהול סטודיואים, משתמשים פעילים והגדרות מערכת.</p>
+      <figure class="shot"><img src="assets/superadmin-dashboard.png" alt="לוח מנהל-על" />
+        <figcaption>תמונה 8.13 — לוח הבקרה של מנהל‑העל</figcaption>
+      </figure>
+
+      <h3 class="sub">דף הנחיתה</h3>
+      <p>דף השיווק הציבורי של המוצר — Hero, מחירים, מדריכים, גלריה ושאלות נפוצות — עם קריאה להתחברות/הרשמה.</p>
+      <figure class="shot"><img src="assets/landing-hero.png" alt="דף נחיתה" />
+        <figcaption>תמונה 8.14 — דף הנחיתה (Hero)</figcaption>
+      </figure>
+
+      <h3 class="sub">תצוגת מובייל (Mobile‑first)</h3>
+      <p>הממשק מותאם למסכים קטנים: במובייל סרגל הצד מתחלף בניווט תחתון (<code>BottomNav</code>), והתוכן מסתדר בעמודה
+        אחת.</p>
+      <div class="shot-pair">
+        <figure class="shot phone"><img src="assets/mobile-admin-dashboard.png" alt="מובייל מנהל" />
+          <figcaption>תמונה 8.15 — לוח מנהל במובייל</figcaption>
+        </figure>
+        <figure class="shot phone"><img src="assets/mobile-student-dashboard.png" alt="מובייל תלמיד" />
+          <figcaption>תמונה 8.16 — לוח תלמיד במובייל</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ 8. CLIENT — part C1 (state/services/routing) ============ -->
+    <section class="page">
+      <h2 class="sec">8.2 ניהול מצב (State)</h2>
+      <p>אין store גלובלי. מצב ההזדהות חי ב‑<code>App.tsx</code> כ‑state מקומי, ומועבר בהורשה (props) לקומפוננטות. עותק
+        מסונן של המשתמש נשמר ב‑<code>localStorage</code> (<code>classly_user</code>) לאתחול מהיר של ה‑UI, אך מקור האמת
+        הוא השרת — בעת טעינה נקראת <code>GET /api/auth/me</code> דרך העוגייה.</p>
+      <figure class="code">
+        <div class="bar"><span class="dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+              style="background:#27c93f"></i></span><span class="file">client/App.tsx</span></div>
+        <pre><code class="language-typescript">const [isAuthenticated, setIsAuthenticated] = useState(false);
+const [currentUser, setCurrentUser]   = useState&lt;User | null&gt;(null);
+const [userRole, setUserRole]         = useState&lt;string&gt;("STUDENT");
+const [activeTab, setActiveTab]       = useState("dashboard");
+
+// בדיקת הזדהות ראשונית — קוראת את עוגיית ה‑HttpOnly דרך /api/auth/me
+useEffect(() =&gt; {
+  const initialize = async () =&gt; {
+    try {
+      await AuthService.me();        // זורק 401 אם אין סשן תקף
+      setIsAuthenticated(true);
+      const cached = getStoredUser();
+      if (cached) { setCurrentUser(cached); setUserRole(cached.role); }
+      fetchUserRole();               // רענון פרופיל מהשרת ברקע
+    } catch { /* 401 — מציגים דף נחיתה */ }
+    finally { setLoading(false); }
+  };
+  initialize();
+}, []);</code></pre>
+        <figcaption>תמונה 8.17 — אתחול מצב ההזדהות (App.tsx)</figcaption>
+      </figure>
+
+      <h2 class="sec">8.3 שכבת השירותים (api.ts)</h2>
+      <p>מופע <code>axios</code> יחיד עם <code>withCredentials: true</code> (שולח את העוגייה בכל בקשה).
+        <em>Interceptor</em> של בקשות רושם לוג, ו‑interceptor של תשובות מטפל בשגיאת 401: אם פג תוקף הסשן, המשתמש מנותק
+        והדף נטען מחדש. כל אובייקטי השירות (AuthService, CourseService, ...) הם עטיפות דקות מעליו.</p>
+      <figure class="code">
+        <div class="bar"><span class="dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+              style="background:#27c93f"></i></span><span class="file">client/services/api.ts</span></div>
+        <pre><code class="language-typescript">export const apiClient = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  withCredentials: true,             // שולח/מקבל את עוגיית ה‑HttpOnly
+});
+
+// טיפול גלובלי ב‑401 — סשן שפג תוקפו
+apiClient.interceptors.response.use(
+  (res) =&gt; res,
+  (error) =&gt; {
+    const isAuthRequest = AUTH_PATHS.some((p) =&gt; error.config?.url?.includes(p));
+    if (error.response?.status === 401 &amp;&amp; !isAuthRequest) {
+      if (getStoredUser()) { removeStoredUser(); window.location.reload(); }
+    }
+    return Promise.reject(error);
+  }
+);
+
+export const AuthService = {
+  login: async (email, password) =&gt; {
+    const res = await apiClient.post("/auth/login", { email, password });
+    setStoredUser(res.data.user);
+    return res.data;
+  },
+  me: () =&gt; apiClient.get("/auth/me").then((r) =&gt; r.data),
+  logout: () =&gt; apiClient.post("/auth/logout").finally(removeStoredUser),
+};</code></pre>
+        <figcaption>תמונה 8.18 — מופע axios יחיד עם interceptors ואובייקטי שירות (api.ts)</figcaption>
+      </figure>
+
+      <h2 class="sec">8.4 ניתוב והרשאות בצד הלקוח</h2>
+      <p>במצב מחובר, התוכן נקבע לפי <code>activeTab</code>. הפונקציה <code>getComponentForTab</code> מחזירה קומפוננטה
+        שונה לכל שילוב של טאב ותפקיד — וכך אותו "טאב" מציג מסך מותאם לכל סוג משתמש. <strong>הסתרת טאבים היא קוסמטית
+          בלבד</strong>; האכיפה האמיתית היא בשרת.</p>
+      <figure class="code">
+        <div class="bar"><span class="dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+              style="background:#27c93f"></i></span><span class="file">client/App.tsx</span></div>
+        <pre><code class="language-typescript">const getComponentForTab = (tab: string) =&gt; {
+  switch (tab) {
+    case "dashboard":
+      if (userRole === "SUPER_ADMIN") return &lt;SuperAdminDashboard /&gt;;
+      if (userRole === "ADMIN")       return &lt;Dashboard onTabChange={setActiveTab} /&gt;;
+      if (userRole === "INSTRUCTOR")  return &lt;InstructorDashboard /&gt;;
+      return &lt;StudentDashboard /&gt;;
+    case "schedule":
+      return userRole === "ADMIN" ? &lt;ClassSchedule /&gt; : &lt;InstructorSchedule /&gt;;
+    case "payments":
+      if (userRole === "ADMIN") return &lt;Payments /&gt;;
+      return &lt;div&gt;אין הרשאה&lt;/div&gt;;
+    case "browse":  return &lt;BrowseCourses /&gt;;   // STUDENT
+    // ... students, attendance, administration
+  }
+};</code></pre>
+        <figcaption>תמונה 8.19 — בחירת קומפוננטה לפי טאב ותפקיד (App.tsx)</figcaption>
+      </figure>
+      <p>פריטי הסרגל עצמם מסוננים לפי תפקיד — כל פריט מגדיר אילו תפקידים רשאים לראותו:</p>
+      <figure class="code">
+        <div class="bar"><span class="dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+              style="background:#27c93f"></i></span><span class="file">client/components/Sidebar.tsx</span></div>
+        <pre><code class="language-typescript">const allMenuItems = [
+  { id: "dashboard", label: "לוח בקרה",       roles: ["ADMIN","INSTRUCTOR","STUDENT","SUPER_ADMIN"] },
+  { id: "browse",    label: "הרשמה לקורסים",  roles: ["STUDENT"] },
+  { id: "schedule",  label: "מערכת שעות",      roles: ["ADMIN","INSTRUCTOR"] },
+  { id: "students",  label: "תלמידים",         roles: ["ADMIN","INSTRUCTOR"] },
+  { id: "attendance",label: "נוכחות",          roles: ["INSTRUCTOR"] },
+  { id: "payments",  label: "תשלומים",         roles: ["ADMIN"] },
+  { id: "administration", label: "ניהול",      roles: ["ADMIN","SUPER_ADMIN"] },
+];
+const menuItems = allMenuItems.filter((item) =&gt; item.roles.includes(userRole));</code></pre>
+        <figcaption>תמונה 8.20 — סינון פריטי הניווט לפי תפקיד (Sidebar.tsx)</figcaption>
+      </figure>
+    </section>
+
+    <!-- ============ 8. CLIENT — part C2 (components/stripe/rtl) ============ -->
+    <section class="page">
+      <h2 class="sec">8.5 ארגון קומפוננטות — "חכמה" מול "טיפשה"</h2>
+      <p>הקומפוננטות מאורגנות לפי תפקיד (<code>admin/</code>, <code>instructor/</code>, <code>student/</code>,
+        <code>super-admin/</code>), ומשתמשות בהפרדה בין קומפוננטה <strong>"חכמה"</strong> (מנהלת מצב ושולפת נתונים —
+        למשל <code>StudentManagement</code>) לבין קומפוננטה <strong>"טיפשה"/מוצגת</strong> (מקבלת נתונים ב‑props ומציגה
+        בלבד — למשל <code>StatCard</code>, <code>ClassCard</code>). כך נמנעת חזרה על קוד ונשמרת גמישות.</p>
+      <figure class="code">
+        <div class="bar"><span class="dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+              style="background:#27c93f"></i></span><span class="file">client/components/common/StatCard.tsx</span>
+        </div>
+        <pre><code class="language-typescript">// קומפוננטה מוצגת ("טיפשה") — מקבלת נתונים ב‑props ומציגה בלבד
+export const StatCard: React.FC&lt;StatCardProps&gt; = ({ title, value, subtext, icon: Icon, color }) =&gt; (
+  &lt;div className="bg-white p-6 rounded-xl shadow-sm border dark:bg-slate-900"&gt;
+    &lt;div&gt;
+      &lt;p className="text-sm text-slate-500"&gt;{title}&lt;/p&gt;
+      &lt;h3 className="text-2xl font-bold"&gt;{value}&lt;/h3&gt;
+      &lt;p className="text-xs mt-2"&gt;{subtext}&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;div className={`p-3 rounded-lg ${color}`}&gt;&lt;Icon className="text-white" size={24} /&gt;&lt;/div&gt;
+  &lt;/div&gt;
+);</code></pre>
+        <figcaption>תמונה 8.21 — קומפוננטה מוצגת גנרית (StatCard.tsx)</figcaption>
+      </figure>
+
+      <h2 class="sec">8.6 קומפוננטות גנריות משותפות ומודלים</h2>
+      <p>בתיקיית <code>components/common/</code> מרוכזות קומפוננטות לשימוש חוזר. <code>BaseModal</code> היא תשתית אחידה
+        לכל החלונות הקופצים במערכת — היא נועלת גלילה, מציגה כותרת אחידה, ומקבלת תוכן וכפתורי תחתית.</p>
+      <figure class="code">
+        <div class="bar"><span class="dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+              style="background:#27c93f"></i></span><span class="file">client/components/common/BaseModal.tsx</span>
+        </div>
+        <pre><code class="language-typescript">export const BaseModal: React.FC&lt;BaseModalProps&gt; = ({ isOpen, onClose, title, children, footer }) =&gt; {
+  useEffect(() =&gt; {                      // נעילת גלילת הרקע כשהמודל פתוח
+    document.body.style.overflow = isOpen ? "hidden" : "auto";
+  }, [isOpen]);
+  if (!isOpen) return null;
+  return (
+    &lt;div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"&gt;
+      &lt;div className="bg-white rounded-2xl shadow-xl max-w-2xl dark:bg-slate-900"&gt;
+        &lt;div className="bg-indigo-600 p-6 text-white"&gt;{title}&lt;/div&gt;
+        &lt;div className="p-6 overflow-y-auto"&gt;{children}&lt;/div&gt;
+        {footer &amp;&amp; &lt;div className="p-6 border-t"&gt;{footer}&lt;/div&gt;}
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+};</code></pre>
+        <figcaption>תמונה 8.22 — תשתית מודל אחידה (BaseModal.tsx)</figcaption>
+      </figure>
+      <div class="shot-pair">
+        <figure class="shot"><img src="assets/modal-add-class.png" alt="מודל הוספת שיעור" />
+          <figcaption>תמונה 8.23 — מודל "שיבוץ שיעור חדש"</figcaption>
+        </figure>
+        <figure class="shot"><img src="assets/modal-attendance.png" alt="מודל נוכחות" />
+          <figcaption>תמונה 8.24 — מודל סימון נוכחות</figcaption>
+        </figure>
+      </div>
+
+      <h2 class="sec">8.7 אינטגרציית Stripe Elements (צד לקוח)</h2>
+      <p>בצד הלקוח נטענת ספריית Stripe, וטופס התשלום מוצג באמצעות <code>&lt;PaymentElement /&gt;</code> בתוך
+        <code>&lt;Elements&gt;</code>. פרטי הכרטיס נאספים ומאומתים מול Stripe ישירות — הם <strong>אינם נוגעים בשרת
+          שלנו</strong>. אישור התשלום נעשה עם <code>clientSecret</code> שהתקבל מהשרת.</p>
+      <figure class="code">
+        <div class="bar"><span class="dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i
+              style="background:#27c93f"></i></span><span class="file">client/components/admin/Payments.tsx</span></div>
+        <pre><code class="language-typescript">const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
+
+const handleSubmit = async (e) =&gt; {
+  e.preventDefault();
+  const { error, paymentIntent } = await stripe.confirmPayment({
+    elements,
+    confirmParams: { return_url: window.location.origin + "/payment/success" },
+    redirect: "if_required",
+  });
+  if (paymentIntent?.status === "succeeded") onSuccess();
+};
+
+// JSX: טופס התשלום
+&lt;Elements stripe={stripePromise} options={{ clientSecret }}&gt;
+  &lt;PaymentElement /&gt;
+  &lt;button&gt;בצע תשלום מאובטח&lt;/button&gt;
+&lt;/Elements&gt;</code></pre>
+        <figcaption>תמונה 8.25 — איסוף תשלום מאובטח עם Stripe Elements (Payments.tsx)</figcaption>
+      </figure>
+
+      <h2 class="sec">8.8 עיצוב RTL, Tailwind ומצב כהה</h2>
+      <p>כל הממשק מוגדר <code>dir="rtl"</code> בשורש האפליקציה, והעיצוב נעשה עם <strong>TailwindCSS</strong> תוך העדפת
+        utilities לוגיים (<code>ms-*</code>, <code>me-*</code>) על פני כיווניים. המערכת תומכת ב<strong>מצב כהה</strong>
+        (Dark Mode) הניתן להחלפה מהסרגל, באמצעות מחלקות <code>dark:</code> של Tailwind (כפי שניתן לראות בקטעי הקוד
+        שלעיל).</p>
+      <div class="note"><span class="t">אבטחה בצד לקוח</span> הסתרת טאבים וכפתורים לפי תפקיד היא לנוחות התצוגה בלבד. כל
+        פעולה רגישה נאכפת מחדש בשרת — לעולם אין להסתמך על מצב הלקוח לצורכי אבטחה.</div>
+    </section>
+
+    <!-- ============ 9. PROCESSES ============ -->
+    <section class="page chapter" id="processes">
+      <h1 class="chap"><span class="num">9</span> תהליכים מרכזיים במערכת</h1>
+      <p class="chap-lead">תרשימי רצף (Sequence) של התהליכים העיקריים</p>
+
+      <h2 class="sec">9.1 תהליך התחברות</h2>
+      <p>המשתמש מזין פרטים; השרת מאמת מול ה‑DB, חותם JWT ושומר אותו בעוגיית HttpOnly; לאחר מכן הלקוח קורא
+        ל‑<code>/api/auth/me</code> ומנתב לפי התפקיד.</p>
+      <figure class="diagram">
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 700 420" role="img" aria-label="תרשים רצף התחברות">
+            <defs>
+              <marker id="sa1" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+                <path d="M0,0 L7,3 L0,6 Z" fill="#6366f1" />
+              </marker>
+            </defs>
+            <style>
+              .aL {
+                font-family: "Heebo", "Arial";
+                font-size: 12px;
+                fill: #475569
+              }
+
+              .ah {
+                font-family: "Heebo", "Arial";
+                font-size: 13px;
+                fill: #fff;
+                font-weight: 700
+              }
+
+              .actor {
+                fill: #4f46e5
+              }
+
+              .life {
+                stroke: #cbd5e1;
+                stroke-width: 1.4;
+                stroke-dasharray: 4 4
+              }
+
+              .msg {
+                stroke: #6366f1;
+                stroke-width: 1.5
+              }
+
+              .msgr {
+                stroke: #94a3b8;
+                stroke-width: 1.4;
+                stroke-dasharray: 5 4
+              }
+
+              .note {
+                fill: #eef2ff;
+                stroke: #a5b4fc
+              }
+            </style>
+            <!-- actors -->
+            <rect class="actor" x="45" y="14" width="150" height="38" rx="8" /><text class="ah" x="120" y="38"
+              text-anchor="middle">דפדפן (לקוח)</text>
+            <rect class="actor" x="295" y="14" width="150" height="38" rx="8" /><text class="ah" x="370" y="38"
+              text-anchor="middle">שרת (Express)</text>
+            <rect class="actor" x="545" y="14" width="120" height="38" rx="8" /><text class="ah" x="605" y="38"
+              text-anchor="middle">PostgreSQL</text>
+            <line class="life" x1="120" y1="52" x2="120" y2="408" />
+            <line class="life" x1="370" y1="52" x2="370" y2="408" />
+            <line class="life" x1="605" y1="52" x2="605" y2="408" />
+            <!-- messages -->
+            <line class="msg" x1="120" y1="92" x2="370" y2="92" marker-end="url(#sa1)" /><text class="aL" x="245" y="86"
+              text-anchor="middle">POST /api/auth/login</text>
+            <line class="msg" x1="370" y1="128" x2="605" y2="128" marker-end="url(#sa1)" /><text class="aL" x="487"
+              y="122" text-anchor="middle">findUnique(email)</text>
+            <line class="msgr" x1="605" y1="160" x2="370" y2="160" marker-end="url(#sa1)" /><text class="aL" x="487"
+              y="154" text-anchor="middle">user + password_hash</text>
+            <rect class="note" x="300" y="178" width="140" height="30" rx="6" /><text class="aL" x="370" y="198"
+              text-anchor="middle">bcrypt.compare · jwt.sign</text>
+            <line class="msgr" x1="370" y1="238" x2="120" y2="238" marker-end="url(#sa1)" /><text class="aL" x="245"
+              y="232" text-anchor="middle">Set‑Cookie: classly_token</text>
+            <line class="msg" x1="120" y1="278" x2="370" y2="278" marker-end="url(#sa1)" /><text class="aL" x="245"
+              y="272" text-anchor="middle">GET /api/auth/me</text>
+            <line class="msgr" x1="370" y1="314" x2="120" y2="314" marker-end="url(#sa1)" /><text class="aL" x="245"
+              y="308" text-anchor="middle">{ id, role, studio_id }</text>
+            <rect class="note" x="55" y="338" width="130" height="30" rx="6" /><text class="aL" x="120" y="358"
+              text-anchor="middle">ניתוב לפי תפקיד</text>
+          </svg>
+        </div>
+        <figcaption>תרשים 9.1 — תהליך התחברות וניתוב לפי תפקיד</figcaption>
+      </figure>
+
+      <h2 class="sec">9.2 תהליך הרשמה לחוג ותשלום</h2>
+      <p>התהליך המרכזי של המערכת: התלמיד נרשם, נוצרת כוונת תשלום, הוא משלם דרך Stripe, ולבסוף Webhook מאמת‑חתימה מפעיל
+        את ההרשמה בתוך טרנזקציה — כך שגם אם הדפדפן נסגר, ההרשמה תאושר.</p>
+      <figure class="diagram">
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 760 500" role="img" aria-label="תרשים רצף הרשמה ותשלום">
+            <defs>
+              <marker id="sa2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+                <path d="M0,0 L7,3 L0,6 Z" fill="#6366f1" />
+              </marker>
+            </defs>
+            <style>
+              .aL {
+                font-family: "Heebo", "Arial";
+                font-size: 11.5px;
+                fill: #475569
+              }
+
+              .ah {
+                font-family: "Heebo", "Arial";
+                font-size: 12px;
+                fill: #fff;
+                font-weight: 700
+              }
+
+              .actor {
+                fill: #4f46e5
+              }
+
+              .life {
+                stroke: #cbd5e1;
+                stroke-width: 1.4;
+                stroke-dasharray: 4 4
+              }
+
+              .msg {
+                stroke: #6366f1;
+                stroke-width: 1.5
+              }
+
+              .msgr {
+                stroke: #94a3b8;
+                stroke-width: 1.4;
+                stroke-dasharray: 5 4
+              }
+
+              .note {
+                fill: #ecfdf5;
+                stroke: #34d399
+              }
+            </style>
+            <rect class="actor" x="20" y="14" width="140" height="38" rx="8" /><text class="ah" x="90" y="38"
+              text-anchor="middle">תלמיד (לקוח)</text>
+            <rect class="actor" x="230" y="14" width="140" height="38" rx="8" /><text class="ah" x="300" y="38"
+              text-anchor="middle">שרת</text>
+            <rect class="actor" x="440" y="14" width="140" height="38" rx="8" /><text class="ah" x="510" y="38"
+              text-anchor="middle">Stripe</text>
+            <rect class="actor" x="630" y="14" width="110" height="38" rx="8" /><text class="ah" x="685" y="38"
+              text-anchor="middle">DB</text>
+            <line class="life" x1="90" y1="52" x2="90" y2="488" />
+            <line class="life" x1="300" y1="52" x2="300" y2="488" />
+            <line class="life" x1="510" y1="52" x2="510" y2="488" />
+            <line class="life" x1="685" y1="52" x2="685" y2="488" />
+            <line class="msg" x1="90" y1="86" x2="300" y2="86" marker-end="url(#sa2)" /><text class="aL" x="195" y="80"
+              text-anchor="middle">POST /enrollments/register</text>
+            <rect class="note" x="225" y="100" width="150" height="28" rx="6" style="fill:#eef2ff;stroke:#a5b4fc" />
+            <text class="aL" x="300" y="118" text-anchor="middle">בדיקת קיבולת + כפילות</text>
+            <line class="msg" x1="300" y1="150" x2="510" y2="150" marker-end="url(#sa2)" /><text class="aL" x="405"
+              y="144" text-anchor="middle">create PaymentIntent</text>
+            <line class="msgr" x1="510" y1="180" x2="300" y2="180" marker-end="url(#sa2)" /><text class="aL" x="405"
+              y="174" text-anchor="middle">clientSecret</text>
+            <line class="msg" x1="300" y1="210" x2="685" y2="210" marker-end="url(#sa2)" /><text class="aL" x="492"
+              y="204" text-anchor="middle">payment PENDING + enrollment</text>
+            <line class="msgr" x1="300" y1="240" x2="90" y2="240" marker-end="url(#sa2)" /><text class="aL" x="195"
+              y="234" text-anchor="middle">clientSecret</text>
+            <line class="msg" x1="90" y1="272" x2="510" y2="272" marker-end="url(#sa2)" /><text class="aL" x="300"
+              y="266" text-anchor="middle">confirmPayment (Stripe Elements)</text>
+            <line class="msg" x1="510" y1="312" x2="300" y2="312" marker-end="url(#sa2)" /><text class="aL" x="405"
+              y="306" text-anchor="middle">Webhook: payment_intent.succeeded</text>
+            <rect class="note" x="225" y="326" width="150" height="28" rx="6" style="fill:#eef2ff;stroke:#a5b4fc" />
+            <text class="aL" x="300" y="344" text-anchor="middle">constructEvent (אימות חתימה)</text>
+            <line class="msg" x1="300" y1="376" x2="685" y2="376" marker-end="url(#sa2)" /><text class="aL" x="492"
+              y="370" text-anchor="middle">$transaction</text>
+            <rect class="note" x="600" y="392" width="150" height="44" rx="6" /><text class="aL" x="675" y="410"
+              text-anchor="middle">payment → SUCCEEDED</text><text class="aL" x="675" y="426"
+              text-anchor="middle">enrollment → ACTIVE/PAID</text>
+            <line class="msgr" x1="300" y1="462" x2="90" y2="462" marker-end="url(#sa2)" /><text class="aL" x="195"
+              y="456" text-anchor="middle">אישור הרשמה</text>
+          </svg>
+        </div>
+        <figcaption>תרשים 9.2 — תהליך הרשמה לחוג ותשלום (כולל Webhook אידמפוטנטי)</figcaption>
+      </figure>
+    </section>
+
+    <!-- ============ 9. PROCESSES — part B ============ -->
+    <section class="page">
+      <h2 class="sec">9.3 תהליך הזמנת משתמש</h2>
+      <p>מנהל מזמין מדריך/תלמיד; ההזמנה היא JWT הנושא <code>role</code> ו‑<code>studio_id</code>. בעת הרשמה עם הטוקן,
+        התפקיד והסטודיו מוקצים אוטומטית.</p>
+      <figure class="diagram">
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 470 452" role="img" aria-label="תרשים תהליך הזמנה">
+            <defs>
+              <marker id="fl1" markerWidth="9" markerHeight="9" refX="4" refY="7" orient="auto">
+                <path d="M0,0 L8,0 L4,7 Z" fill="#6366f1" />
+              </marker>
+            </defs>
+            <style>
+              .fb {
+                fill: #fff;
+                stroke: #c7d2fe;
+                stroke-width: 1.5
+              }
+
+              .fn {
+                fill: #4f46e5
+              }
+
+              .ft {
+                font-family: "Heebo", "Arial";
+                font-size: 12.5px;
+                fill: #1e293b
+              }
+
+              .fnn {
+                font-family: Arial;
+                font-size: 13px;
+                fill: #fff;
+                font-weight: 700
+              }
+
+              .fdn {
+                stroke: #818cf8;
+                stroke-width: 1.6;
+                fill: none
+              }
+            </style>
+            <g>
+              <rect class="fb" x="30" y="10" width="410" height="46" rx="10" />
+              <circle class="fn" cx="60" cy="33" r="14" /><text class="fnn" x="60" y="38"
+                text-anchor="middle">1</text><text class="ft" x="410" y="38" text-anchor="end">מנהל לוחץ "הזמן" ובוחר
+                תפקיד</text>
+            </g>
+            <line class="fdn" x1="235" y1="56" x2="235" y2="72" marker-end="url(#fl1)" />
+            <g>
+              <rect class="fb" x="30" y="74" width="410" height="46" rx="10" />
+              <circle class="fn" cx="60" cy="97" r="14" /><text class="fnn" x="60" y="102"
+                text-anchor="middle">2</text><text class="ft" x="410" y="102" text-anchor="end">השרת חותם JWT עם { role,
+                studio_id }</text>
+            </g>
+            <line class="fdn" x1="235" y1="120" x2="235" y2="136" marker-end="url(#fl1)" />
+            <g>
+              <rect class="fb" x="30" y="138" width="410" height="46" rx="10" />
+              <circle class="fn" cx="60" cy="161" r="14" /><text class="fnn" x="60" y="166"
+                text-anchor="middle">3</text><text class="ft" x="410" y="166" text-anchor="end">הקישור נשלח במייל /
+                מועתק ללוח</text>
+            </g>
+            <line class="fdn" x1="235" y1="184" x2="235" y2="200" marker-end="url(#fl1)" />
+            <g>
+              <rect class="fb" x="30" y="202" width="410" height="46" rx="10" />
+              <circle class="fn" cx="60" cy="225" r="14" /><text class="fnn" x="60" y="230"
+                text-anchor="middle">4</text><text class="ft" x="410" y="230" text-anchor="end">המוזמן נרשם עם
+                invitationToken</text>
+            </g>
+            <line class="fdn" x1="235" y1="248" x2="235" y2="264" marker-end="url(#fl1)" />
+            <g>
+              <rect class="fb" x="30" y="266" width="410" height="46" rx="10" />
+              <circle class="fn" cx="60" cy="289" r="14" /><text class="fnn" x="60" y="294"
+                text-anchor="middle">5</text><text class="ft" x="410" y="294" text-anchor="end">השרת מאמת את הטוקן ומקצה
+                role + studio</text>
+            </g>
+            <line class="fdn" x1="235" y1="312" x2="235" y2="328" marker-end="url(#fl1)" />
+            <g>
+              <rect class="fb" x="30" y="330" width="410" height="46" rx="10" style="fill:#ecfdf5;stroke:#34d399" />
+              <circle class="fn" cx="60" cy="353" r="14" style="fill:#059669" /><text class="fnn" x="60" y="358"
+                text-anchor="middle">6</text><text class="ft" x="410" y="358" text-anchor="end">נוצר משתמש חדש ומחובר
+                למערכת</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption>תרשים 9.3 — תהליך הזמנת משתמש</figcaption>
+      </figure>
+
+      <h2 class="sec">9.4 תהליך סימון נוכחות</h2>
+      <p>המדריך מסמן נוכחות למפגש; אילוץ ייחודיות על <code>(enrollment_id, session_date)</code> מונע סימון כפול לאותו
+        מפגש, והנתונים משמשים בהמשך לחישוב עמלות.</p>
+      <figure class="diagram">
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 470 388" role="img" aria-label="תרשים תהליך נוכחות">
+            <defs>
+              <marker id="fl2" markerWidth="9" markerHeight="9" refX="4" refY="7" orient="auto">
+                <path d="M0,0 L8,0 L4,7 Z" fill="#6366f1" />
+              </marker>
+            </defs>
+            <style>
+              .fb2 {
+                fill: #fff;
+                stroke: #c7d2fe;
+                stroke-width: 1.5
+              }
+
+              .fn2 {
+                fill: #4f46e5
+              }
+
+              .ft2 {
+                font-family: "Heebo", "Arial";
+                font-size: 12.5px;
+                fill: #1e293b
+              }
+
+              .fnn2 {
+                font-family: Arial;
+                font-size: 13px;
+                fill: #fff;
+                font-weight: 700
+              }
+
+              .fdn2 {
+                stroke: #818cf8;
+                stroke-width: 1.6;
+                fill: none
+              }
+            </style>
+            <g>
+              <rect class="fb2" x="30" y="10" width="410" height="46" rx="10" />
+              <circle class="fn2" cx="60" cy="33" r="14" /><text class="fnn2" x="60" y="38"
+                text-anchor="middle">1</text><text class="ft2" x="410" y="38" text-anchor="end">המדריך פותח מפגש מתוך
+                "שיעורים אחרונים"</text>
+            </g>
+            <line class="fdn2" x1="235" y1="56" x2="235" y2="72" marker-end="url(#fl2)" />
+            <g>
+              <rect class="fb2" x="30" y="74" width="410" height="46" rx="10" />
+              <circle class="fn2" cx="60" cy="97" r="14" /><text class="fnn2" x="60" y="102"
+                text-anchor="middle">2</text><text class="ft2" x="410" y="102" text-anchor="end">מסמן לכל תלמיד: נוכח /
+                חיסרון / איחור</text>
+            </g>
+            <line class="fdn2" x1="235" y1="120" x2="235" y2="136" marker-end="url(#fl2)" />
+            <g>
+              <rect class="fb2" x="30" y="138" width="410" height="46" rx="10" />
+              <circle class="fn2" cx="60" cy="161" r="14" /><text class="fnn2" x="60" y="166"
+                text-anchor="middle">3</text><text class="ft2" x="410" y="166" text-anchor="end">POST /api/attendance
+                (classId, date, records)</text>
+            </g>
+            <line class="fdn2" x1="235" y1="184" x2="235" y2="200" marker-end="url(#fl2)" />
+            <g>
+              <rect class="fb2" x="30" y="202" width="410" height="46" rx="10" />
+              <circle class="fn2" cx="60" cy="225" r="14" /><text class="fnn2" x="60" y="230"
+                text-anchor="middle">4</text><text class="ft2" x="410" y="230" text-anchor="end">שמירה ב‑DB — אילוץ
+                ייחודיות מונע כפילות</text>
+            </g>
+            <line class="fdn2" x1="235" y1="248" x2="235" y2="264" marker-end="url(#fl2)" />
+            <g>
+              <rect class="fb2" x="30" y="266" width="410" height="46" rx="10" style="fill:#ecfdf5;stroke:#34d399" />
+              <circle class="fn2" cx="60" cy="289" r="14" style="fill:#059669" /><text class="fnn2" x="60" y="294"
+                text-anchor="middle">5</text><text class="ft2" x="410" y="294" text-anchor="end">הנתונים זמינים לחישוב
+                עמלות המדריך</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption>תרשים 9.4 — תהליך סימון נוכחות</figcaption>
+      </figure>
+
+      <h2 class="sec">9.5 תהליך איפוס סיסמה</h2>
+      <p>נשמר רק <em>hash</em> של הטוקן (לעולם לא הטוקן הגולמי), עם תוקף שעה. האיפוס עצמו והסימון "נוצל" מתבצעים בתוך
+        טרנזקציה, ולאחריו המשתמש מחובר אוטומטית.</p>
+      <figure class="diagram">
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 700 430" role="img" aria-label="תרשים רצף איפוס סיסמה">
+            <defs>
+              <marker id="sa3" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+                <path d="M0,0 L7,3 L0,6 Z" fill="#6366f1" />
+              </marker>
+            </defs>
+            <style>
+              .aL3 {
+                font-family: "Heebo", "Arial";
+                font-size: 11.5px;
+                fill: #475569
+              }
+
+              .ah3 {
+                font-family: "Heebo", "Arial";
+                font-size: 12px;
+                fill: #fff;
+                font-weight: 700
+              }
+
+              .act3 {
+                fill: #4f46e5
+              }
+
+              .lf3 {
+                stroke: #cbd5e1;
+                stroke-width: 1.4;
+                stroke-dasharray: 4 4
+              }
+
+              .m3 {
+                stroke: #6366f1;
+                stroke-width: 1.5
+              }
+
+              .mr3 {
+                stroke: #94a3b8;
+                stroke-width: 1.4;
+                stroke-dasharray: 5 4
+              }
+
+              .nt3 {
+                fill: #eef2ff;
+                stroke: #a5b4fc
+              }
+            </style>
+            <rect class="act3" x="45" y="14" width="150" height="38" rx="8" /><text class="ah3" x="120" y="38"
+              text-anchor="middle">משתמש</text>
+            <rect class="act3" x="295" y="14" width="150" height="38" rx="8" /><text class="ah3" x="370" y="38"
+              text-anchor="middle">שרת</text>
+            <rect class="act3" x="545" y="14" width="120" height="38" rx="8" /><text class="ah3" x="605" y="38"
+              text-anchor="middle">DB</text>
+            <line class="lf3" x1="120" y1="52" x2="120" y2="418" />
+            <line class="lf3" x1="370" y1="52" x2="370" y2="418" />
+            <line class="lf3" x1="605" y1="52" x2="605" y2="418" />
+            <line class="m3" x1="120" y1="86" x2="370" y2="86" marker-end="url(#sa3)" /><text class="aL3" x="245" y="80"
+              text-anchor="middle">POST /forgot-password { email }</text>
+            <line class="m3" x1="370" y1="120" x2="605" y2="120" marker-end="url(#sa3)" /><text class="aL3" x="487"
+              y="114" text-anchor="middle">שמירת token_hash (תוקף שעה)</text>
+            <line class="mr3" x1="370" y1="154" x2="120" y2="154" marker-end="url(#sa3)" /><text class="aL3" x="245"
+              y="148" text-anchor="middle">מייל עם קישור איפוס</text>
+            <line class="m3" x1="120" y1="200" x2="370" y2="200" marker-end="url(#sa3)" /><text class="aL3" x="245"
+              y="194" text-anchor="middle">POST /reset-password { token, newPassword }</text>
+            <line class="m3" x1="370" y1="234" x2="605" y2="234" marker-end="url(#sa3)" /><text class="aL3" x="487"
+              y="228" text-anchor="middle">findFirst(token_hash, !used, !expired)</text>
+            <rect class="nt3" x="290" y="252" width="160" height="44" rx="6" /><text class="aL3" x="370" y="270"
+              text-anchor="middle">$transaction:</text><text class="aL3" x="370" y="286" text-anchor="middle">עדכון
+              סיסמה + used=true</text>
+            <line class="mr3" x1="370" y1="326" x2="120" y2="326" marker-end="url(#sa3)" /><text class="aL3" x="245"
+              y="320" text-anchor="middle">Set‑Cookie (התחברות אוטומטית)</text>
+            <rect class="nt3" x="55" y="350" width="130" height="30" rx="6" style="fill:#ecfdf5;stroke:#34d399" /><text
+              class="aL3" x="120" y="370" text-anchor="middle">מחובר למערכת</text>
+          </svg>
+        </div>
+        <figcaption>תרשים 9.5 — תהליך איפוס סיסמה</figcaption>
+      </figure>
+    </section>
+
+    <!-- ============ 10. SUMMARY ============ -->
+    <section class="page chapter" id="summary">
+      <h1 class="chap"><span class="num">10</span> סיכום ומסקנות</h1>
+      <p>פרויקט <strong>Classly</strong> פיתח את יכולתנו לתכנן ולממש מערכת ווב מלאה (full‑stack) מהאפס — מהקמת בסיס
+        נתונים ותכנון ברמת ארכיטקטורה, דרך פיתוח צד שרת וצד לקוח והחיבור ביניהם, ועד הרצת המערכת כולה בסביבת קונטיינרים
+        אחת.</p>
+      <p>במהלך הפרויקט התמודדנו עם מספר אתגרים מרכזיים:</p>
+      <ul>
+        <li><strong>בידוד רב‑דיירי</strong> — הבטחה שכל סטודיו רואה אך ורק את נתוניו, באמצעות סינון עקבי לפי
+          <code>studio_id</code> בכל שאילתה.</li>
+        <li><strong>תשלומים מקוונים</strong> — אינטגרציה עם Stripe, כולל אימות חתימת Webhook על גוף גולמי ושמירה על
+          אידמפוטנטיות מול שליחות חוזרות.</li>
+        <li><strong>עקביות נתונים</strong> — שימוש בטרנזקציות כדי שפעולות מרובות‑טבלאות (הרשמה + תשלום) יתבצעו כיחידה
+          אטומית.</li>
+        <li><strong>ממשק עברי RTL</strong> ומותאם מובייל, עם תמיכה במצב כהה.</li>
+        <li><strong>תזמור Docker</strong> — הרצת כל השירותים (DB, שרת, לקוח, לוגים) בפקודה אחת, בסביבה זהה לפיתוח
+          ולייצור.</li>
+      </ul>
+      <p>למדנו לעומק טכנולוגיות מודרניות — TypeScript, Prisma, React, Stripe, Docker ו‑Loki/Grafana — וכן עקרונות הנדסת
+        תוכנה כמו ארכיטקטורת שכבות, הפרדת אחריות, קומפוננטות גנריות ואבטחה כברירת מחדל.</p>
+
+      <h2 class="sec">שיפורים עתידיים</h2>
+      <p>כחלק מהסתכלות קדימה, זיהינו מספר כיווני שיפור שיחזקו את המערכת:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>שיפור</th>
+            <th>תועלת</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>שער בדיקות ב‑CI</td>
+            <td>הרצת typecheck ובדיקות אוטומטית בכל PR לפני מיזוג ל‑main.</td>
+          </tr>
+          <tr>
+            <td>מודול <em>TenantScope</em></td>
+            <td>ריכוז סינון ה‑<code>studio_id</code> במקום אחד — כך אי‑אפשר "לשכוח" אותו בשאילתה.</td>
+          </tr>
+          <tr>
+            <td>טבלת <code>webhook_events</code></td>
+            <td>מניעת עיבוד כפול של אירועי Stripe ברמת מזהה האירוע (dedup מלא).</td>
+          </tr>
+          <tr>
+            <td>Refresh Tokens</td>
+            <td>חידוש סשן שקוף ללא טעינה מחדש של הדף לאחר פקיעת הטוקן.</td>
+          </tr>
+          <tr>
+            <td>אינדקסים ב‑DB</td>
+            <td>אינדקסים על <code>studio_id</code>, <code>status</code> ועמודות זמן — לשיפור ביצועים בנפח גדול.</td>
+          </tr>
+          <tr>
+            <td>i18n</td>
+            <td>חילוץ מחרוזות עברית והוספת אנגלית להרחבת קהל היעד.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>לסיכום, Classly מדגימה כיצד ניתן לבנות פלטפורמת SaaS רב‑דיירית, מאובטחת ונוחה לשימוש, תוך שימוש בכלים מודרניים
+        ובעקרונות הנדסיים מבוססים — תוצר שאנו גאים בו ושממנו למדנו רבות.</p>
+    </section>
+
+    <!-- ============ 11. BIBLIOGRAPHY ============ -->
+    <section class="page chapter" id="biblio">
+      <h1 class="chap"><span class="num">11</span> ביבליוגרפיה</h1>
+      <p class="chap-lead">תיעוד רשמי ומקורות מידע</p>
+      <ul>
+        <li>React — <a href="https://react.dev/">https://react.dev/</a></li>
+        <li>Vite — <a href="https://vitejs.dev/">https://vitejs.dev/</a></li>
+        <li>TypeScript — <a href="https://www.typescriptlang.org/docs/">https://www.typescriptlang.org/docs/</a></li>
+        <li>Express — <a href="https://expressjs.com/">https://expressjs.com/</a></li>
+        <li>Prisma — <a href="https://www.prisma.io/docs">https://www.prisma.io/docs</a></li>
+        <li>PostgreSQL — <a href="https://www.postgresql.org/docs/">https://www.postgresql.org/docs/</a></li>
+        <li>Stripe — <a href="https://stripe.com/docs">https://stripe.com/docs</a></li>
+        <li>Stripe Elements (React) — <a
+            href="https://stripe.com/docs/stripe-js/react">https://stripe.com/docs/stripe-js/react</a></li>
+        <li>Docker — <a href="https://docs.docker.com/">https://docs.docker.com/</a></li>
+        <li>TailwindCSS — <a href="https://tailwindcss.com/docs">https://tailwindcss.com/docs</a></li>
+        <li>JSON Web Tokens — <a href="https://jwt.io/">https://jwt.io/</a></li>
+        <li>Zod — <a href="https://zod.dev/">https://zod.dev/</a></li>
+        <li>Pino (Logging) — <a href="https://getpino.io/">https://getpino.io/</a></li>
+        <li>Grafana Loki — <a href="https://grafana.com/oss/loki/">https://grafana.com/oss/loki/</a></li>
+        <li>Nodemailer — <a href="https://nodemailer.com/">https://nodemailer.com/</a></li>
+        <li>bcrypt — <a href="https://www.npmjs.com/package/bcryptjs">https://www.npmjs.com/package/bcryptjs</a></li>
+        <li>Helmet — <a href="https://helmetjs.github.io/">https://helmetjs.github.io/</a></li>
+        <li>Axios — <a href="https://axios-http.com/">https://axios-http.com/</a></li>
+        <li>Recharts — <a href="https://recharts.org/">https://recharts.org/</a></li>
+      </ul>
+    </section>
+
+
+  </div>
+  <script src="assets/hljs.min.js"></script>
+  <script>try { hljs.highlightAll(); } catch (e) { }</script>
+</body>
+
+</html>
