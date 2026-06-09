@@ -81,7 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: "attendance",
       label: "נוכחות",
       icon: ClipboardList,
-      roles: ["INSTRUCTOR"],
+      roles: ["ADMIN", "INSTRUCTOR"],
     },
     {
       id: "payments",

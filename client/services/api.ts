@@ -332,8 +332,27 @@ export const AttendanceService = {
     apiClient
       .get(`/attendance/class/${classId}${date ? `?date=${date}` : ""}`)
       .then((res) => res.data),
-  getSessions: () =>
-    apiClient.get<any[]>("/attendance/sessions").then((res) => res.data),
+  getSessions: (range?: { from?: string; to?: string }) =>
+    apiClient
+      .get<any[]>("/attendance/sessions", { params: range })
+      .then((res) => res.data),
+  // Manager studio-wide overview. Returns { mode, items }; passing studentId
+  // switches the response to a student-centric list.
+  getStudioOverview: (filters?: {
+    instructorId?: string;
+    branchId?: string;
+    classId?: string;
+    roomId?: string;
+    studentId?: string;
+    from?: string;
+    to?: string;
+  }) =>
+    apiClient
+      .get<{ mode: "session" | "student"; items: any[] }>(
+        "/attendance/overview",
+        { params: filters }
+      )
+      .then((res) => res.data),
 };
 
 export const PaymentService = {
