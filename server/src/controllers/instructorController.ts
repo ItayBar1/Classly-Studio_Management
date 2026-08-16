@@ -38,7 +38,10 @@ export class InstructorController {
           .json({ error: "Unauthorized access to instructor profile" });
       }
 
-      const instructor = await InstructorService.getInstructorById(id);
+      const instructor = await InstructorService.getInstructorById(
+        id,
+        req.studioId
+      );
       if (!instructor) {
         return res.status(404).json({ error: "Instructor not found" });
       }

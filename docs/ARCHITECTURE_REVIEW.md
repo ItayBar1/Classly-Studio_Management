@@ -36,7 +36,7 @@ This doc is organized in three parts:
 - `DB_PASSWORD=SERVICEphonenumber4441355705`
 - `JWT_SECRET=<full 256-char key>`
 - `STRIPE_SECRET_KEY=sk_test_51SeyMs...`
-- `SMTP_PASS=re_3U6TZLJs_8K6XyXBiDc2Siv1HYsrKq4w8` (Resend)
+- `SMTP_PASS=<YOUR_RESEND_API_KEY>` (Resend)
 - `CF_TUNNEL_TOKEN=eyJhIjoi...` (Cloudflare)
 - `SUPERADMIN_EMAIL=superadmin@superadmin.com` + plaintext password
 
@@ -51,9 +51,16 @@ This doc is organized in three parts:
 
 ---
 
-### A1.2 Multi-tenant data leak in `CourseService`
+### A1.2 Multi-tenant data leak in `CourseService` — RESOLVED 2026-08-16
 
-**Evidence:**
+> **Status: fixed.** Every method below now takes a `studioId` and resolves through
+> `findFirst({ where: { id, studio_id } })`, treating a miss as 404; list reads
+> return `[]` when there is no studio context. Regression coverage lives in
+> `tests/unit/enrollmentService.test.ts` and `tests/integration/enrollment.test.ts`.
+> The leak survived in production long after the first partial fix because
+> `classly-api` was still serving a pre-fix `dist/` — see the deploy note in `CLAUDE.md`.
+
+**Evidence (as originally found):**
 
 - [`server/src/services/courseService.ts:27-57`](../server/src/services/courseService.ts#L27) — `getAllCourses()` has no `studio_id` filter; it returns every course across every studio.
 - [`server/src/services/courseService.ts:86-110`](../server/src/services/courseService.ts#L86) — `getCourseById()` selects by primary key only. A user in Studio A who learns a course ID from Studio B can read it.

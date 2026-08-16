@@ -6,11 +6,13 @@ import { prisma } from "../../src/config/prisma";
 jest.mock("../../src/config/prisma", () => ({
   prisma: {
     classes: {
-      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+    },
+    users: {
+      findFirst: jest.fn(),
     },
     enrollments: {
       findFirst: jest.fn(),
-      findUnique: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -41,42 +43,80 @@ const mockDecimal = (n: number) => ({
 describe("EnrollmentService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default: the student exists inside the caller's studio. Tenant-isolation
+    // tests override this.
+    mockPrisma.users.findFirst.mockResolvedValue({ id: "student-1" });
   });
 
   describe("getCourseInfo", () => {
     it("returns course name and price", async () => {
-      mockPrisma.classes.findUnique.mockResolvedValue({
+      mockPrisma.classes.findFirst.mockResolvedValue({
         name: "Yoga",
         price_ils: mockDecimal(120),
       });
 
-      const info = await EnrollmentService.getCourseInfo("class-1");
+      const info = await EnrollmentService.getCourseInfo("class-1", "studio-1");
       expect(info.name).toBe("Yoga");
       expect(Number(info.price)).toBe(120);
-      expect(mockPrisma.classes.findUnique).toHaveBeenCalledWith({
-        where: { id: "class-1" },
+      expect(mockPrisma.classes.findFirst).toHaveBeenCalledWith({
+        where: { id: "class-1", studio_id: "studio-1" },
         select: { name: true, price_ils: true },
       });
     });
 
     it("throws 404 if course not found", async () => {
-      mockPrisma.classes.findUnique.mockResolvedValue(null);
+      mockPrisma.classes.findFirst.mockResolvedValue(null);
       await expect(
-        EnrollmentService.getCourseInfo("nonexistent")
+        EnrollmentService.getCourseInfo("nonexistent", "studio-1")
       ).rejects.toThrow("Course not found");
+    });
+
+    it("throws 404 when the caller has no studio context", async () => {
+      await expect(
+        EnrollmentService.getCourseInfo("class-1")
+      ).rejects.toThrow("Course not found");
+      expect(mockPrisma.classes.findFirst).not.toHaveBeenCalled();
     });
   });
 
   describe("enrollStudent", () => {
     it("throws if course is not found", async () => {
-      mockPrisma.classes.findUnique.mockResolvedValue(null);
+      mockPrisma.classes.findFirst.mockResolvedValue(null);
       await expect(
         EnrollmentService.enrollStudent("studio-1", "student-1", "class-1")
       ).rejects.toThrow("Course not found");
     });
 
+    it("scopes the course lookup to the caller's studio", async () => {
+      mockPrisma.classes.findFirst.mockResolvedValue(null);
+      await expect(
+        EnrollmentService.enrollStudent("studio-1", "student-1", "class-1")
+      ).rejects.toThrow("Course not found");
+
+      expect(mockPrisma.classes.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "class-1", studio_id: "studio-1" },
+        })
+      );
+    });
+
+    it("throws if the student belongs to another studio", async () => {
+      mockPrisma.classes.findFirst.mockResolvedValue({
+        max_capacity: 10,
+        current_enrollment: 5,
+        price_ils: mockDecimal(50),
+        name: "Yoga class",
+      });
+      mockPrisma.users.findFirst.mockResolvedValue(null);
+
+      await expect(
+        EnrollmentService.enrollStudent("studio-1", "outsider", "class-1")
+      ).rejects.toThrow("Student not found");
+      expect(mockPrisma.enrollments.create).not.toHaveBeenCalled();
+    });
+
     it("throws if course is full", async () => {
-      mockPrisma.classes.findUnique.mockResolvedValue({
+      mockPrisma.classes.findFirst.mockResolvedValue({
         max_capacity: 10,
         current_enrollment: 10,
         price_ils: mockDecimal(50),
@@ -88,7 +128,7 @@ describe("EnrollmentService", () => {
     });
 
     it("throws if student is already enrolled", async () => {
-      mockPrisma.classes.findUnique.mockResolvedValue({
+      mockPrisma.classes.findFirst.mockResolvedValue({
         max_capacity: 10,
         current_enrollment: 5,
         price_ils: mockDecimal(50),
@@ -102,7 +142,7 @@ describe("EnrollmentService", () => {
     });
 
     it("creates enrollment and returns details for valid input", async () => {
-      mockPrisma.classes.findUnique.mockResolvedValue({
+      mockPrisma.classes.findFirst.mockResolvedValue({
         max_capacity: 10,
         current_enrollment: 5,
         price_ils: mockDecimal(50),
@@ -130,7 +170,7 @@ describe("EnrollmentService", () => {
     });
 
     it("creates FREE enrollment as ACTIVE and PAID automatically if price is 0", async () => {
-      mockPrisma.classes.findUnique.mockResolvedValue({
+      mockPrisma.classes.findFirst.mockResolvedValue({
         max_capacity: 10,
         current_enrollment: 5,
         price_ils: mockDecimal(0),
@@ -163,12 +203,15 @@ describe("EnrollmentService", () => {
     it("uses tx client when tx parameter is provided", async () => {
       const mockTx = {
         classes: {
-          findUnique: jest.fn().mockResolvedValue({
+          findFirst: jest.fn().mockResolvedValue({
             max_capacity: 10,
             current_enrollment: 3,
             price_ils: mockDecimal(50),
             name: "Pilates",
           }),
+        },
+        users: {
+          findFirst: jest.fn().mockResolvedValue({ id: "student-1" }),
         },
         enrollments: {
           findFirst: jest.fn().mockResolvedValue(null),
@@ -198,16 +241,56 @@ describe("EnrollmentService", () => {
     });
   });
 
+  describe("getStudentEnrollments", () => {
+    it("scopes the query to the caller's studio", async () => {
+      mockPrisma.enrollments.findMany.mockResolvedValue([]);
+
+      await EnrollmentService.getStudentEnrollments("student-1", "studio-1");
+
+      expect(mockPrisma.enrollments.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            student_id: "student-1",
+            studio_id: "studio-1",
+          }),
+        })
+      );
+    });
+
+    it("returns nothing when the caller has no studio context", async () => {
+      const result = await EnrollmentService.getStudentEnrollments("student-1");
+
+      expect(result).toEqual([]);
+      expect(mockPrisma.enrollments.findMany).not.toHaveBeenCalled();
+    });
+  });
+
   describe("cancelEnrollment", () => {
     it("throws if enrollment is not found", async () => {
-      mockPrisma.enrollments.findUnique.mockResolvedValue(null);
+      mockPrisma.enrollments.findFirst.mockResolvedValue(null);
       await expect(
-        EnrollmentService.cancelEnrollment("invalid-id")
+        EnrollmentService.cancelEnrollment("invalid-id", "studio-1")
       ).rejects.toThrow("Enrollment not found");
     });
 
+    it("throws for an enrollment owned by another studio", async () => {
+      // The scoped lookup finds nothing, so the update never runs.
+      mockPrisma.enrollments.findFirst.mockResolvedValue(null);
+
+      await expect(
+        EnrollmentService.cancelEnrollment("enroll-1", "other-studio")
+      ).rejects.toThrow("Enrollment not found");
+
+      expect(mockPrisma.enrollments.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "enroll-1", studio_id: "other-studio" },
+        })
+      );
+      expect(mockPrisma.enrollments.update).not.toHaveBeenCalled();
+    });
+
     it("updates enrollment status to CANCELLED", async () => {
-      mockPrisma.enrollments.findUnique.mockResolvedValue({
+      mockPrisma.enrollments.findFirst.mockResolvedValue({
         class_id: "class-1",
         status: "ACTIVE",
       });
@@ -216,7 +299,7 @@ describe("EnrollmentService", () => {
         status: "CANCELLED",
       });
 
-      await EnrollmentService.cancelEnrollment("enroll-1");
+      await EnrollmentService.cancelEnrollment("enroll-1", "studio-1");
 
       expect(mockPrisma.enrollments.update).toHaveBeenCalledWith({
         where: { id: "enroll-1" },

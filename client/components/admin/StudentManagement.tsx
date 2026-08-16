@@ -39,6 +39,8 @@ const ITEMS_PER_PAGE = 10;
 export const StudentManagement: React.FC = () => {
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  // A failed fetch must never look like "this studio has no students".
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [classList, setClassList] = useState<string[]>([]);
 
   // Pagination and search state
@@ -105,11 +107,14 @@ export const StudentManagement: React.FC = () => {
   // Main fetch function
   const fetchStudents = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const response = await StudentService.getAll({ limit: 1000 });
       setAllStudents(response.students);
     } catch (error) {
       console.error("Error fetching students:", error);
+      setAllStudents([]);
+      setLoadError("טעינת רשימת התלמידים נכשלה. נסי לרענן את הדף.");
     } finally {
       setLoading(false);
     }
@@ -315,6 +320,22 @@ export const StudentManagement: React.FC = () => {
         </div>
       </div>
 
+      {/* Load failure — distinct from a genuinely empty studio */}
+      {loadError && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400"
+        >
+          <span>{loadError}</span>
+          <button
+            onClick={fetchStudents}
+            className="font-semibold underline underline-offset-2 hover:no-underline"
+          >
+            נסי שוב
+          </button>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4 justify-between items-center dark:bg-slate-900 dark:border-slate-800">
         <div className="relative w-full md:w-96">
@@ -505,7 +526,11 @@ export const StudentManagement: React.FC = () => {
           <div className="text-center py-12 text-slate-500 dark:text-slate-400">
             <Search className="h-10 w-10 text-slate-300 dark:text-slate-600 mb-2 mx-auto" />
             <p className="font-medium">
-              {searchTerm ? "לא נמצאו תוצאות לחיפוש זה" : "לא נמצאו תלמידים"}
+              {loadError
+                ? "לא ניתן להציג את רשימת התלמידים"
+                : searchTerm
+                  ? "לא נמצאו תוצאות לחיפוש זה"
+                  : "לא נמצאו תלמידים"}
             </p>
           </div>
         )}
@@ -696,9 +721,11 @@ export const StudentManagement: React.FC = () => {
                     <div className="flex flex-col items-center justify-center">
                       <Search className="h-10 w-10 text-slate-300 mb-2" />
                       <p className="font-medium">
-                        {searchTerm
-                          ? "לא נמצאו תוצאות לחיפוש זה"
-                          : "לא נמצאו תלמידים"}
+                        {loadError
+                          ? "לא ניתן להציג את רשימת התלמידים"
+                          : searchTerm
+                            ? "לא נמצאו תוצאות לחיפוש זה"
+                            : "לא נמצאו תלמידים"}
                       </p>
                     </div>
                   </td>

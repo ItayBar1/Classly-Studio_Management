@@ -163,7 +163,8 @@ Conventional commits: `feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`.
 
 ## Known Pitfalls
 
-- **`CourseService.getAllCourses`, `getCourseById`, `updateCourse` do not scope by `studio_id`** — cross-tenant data leak. Do not copy this pattern; it is a known CRITICAL defect tracked in `docs/ARCHITECTURE_REVIEW.md`.
+- **Course, student, and enrollment lookups are now scoped by `studio_id`** (fixed 2026-08-16; previously a CRITICAL cross-tenant leak tracked in `docs/ARCHITECTURE_REVIEW.md`). Every service method that takes an `:id` also takes a `studioId` and resolves through `findFirst({ where: { id, studio_id } })`, treating a miss as 404. A missing `studioId` yields `[]` for list reads and 404 for single reads — never an unscoped query. Keep that contract when adding methods.
+- **A stale container silently re-opens fixed defects.** The tenant-scoping fix lived in the source for weeks while `classly-api` ran a pre-fix `dist/`. Production is served from this machine through `cf-tunnel`, so backend changes need `docker compose up -d --build backend` (and `frontend` for client changes) — merging alone deploys nothing.
 - **Prisma is mocked in all tests.** Green tests ≠ correct schema. Integration tests use Supertest against the real Express app but with mocked Prisma — schema drift is not caught.
 - **Invitation JWTs are stateless and reusable** until expiry. Do not use them as single-use tokens without adding DB-backed deduplication.
 - **A `SUPER_ADMIN` invite carries no studio** (`InvitationController.createInvite` passes the creator's `studio_id`, which is `NULL` for a super admin), so the invited `ADMIN` registers with `studio_id = NULL` and must create their studio through the onboarding form. `StudioService.getStudioForUser` re-links such a user through `studios.admin_id` once their studio exists.

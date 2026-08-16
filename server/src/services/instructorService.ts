@@ -34,19 +34,23 @@ export class InstructorService {
   /**
    * Get single instructor details
    */
-  static async getInstructorById(id: string) {
+  static async getInstructorById(id: string, studioId?: string) {
     const serviceLogger = logger.child({
       service: "InstructorService",
       method: "getInstructorById",
     });
-    serviceLogger.info({ id }, "Fetching instructor by id");
+    serviceLogger.info({ id, studioId }, "Fetching instructor by id");
 
-    const data = await prisma.users.findFirst({
-      where: {
-        id,
-        role: "INSTRUCTOR",
-      },
-    });
+    // Tenant isolation: an instructor in another studio must look absent.
+    const data = studioId
+      ? await prisma.users.findFirst({
+          where: {
+            id,
+            role: "INSTRUCTOR",
+            studio_id: studioId,
+          },
+        })
+      : null;
 
     if (!data) {
       serviceLogger.error({ id }, "Instructor not found");

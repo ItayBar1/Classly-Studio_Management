@@ -74,16 +74,19 @@ export const StudentService = {
     return { data: studentsWithClass, count };
   },
 
-  async getById(id: string) {
+  async getById(id: string, studioId?: string) {
     const serviceLogger = logger.child({
       service: "StudentService",
       method: "getById",
     });
-    serviceLogger.info({ id }, "Fetching student by id");
+    serviceLogger.info({ id, studioId }, "Fetching student by id");
 
-    const data = await prisma.users.findUnique({
-      where: { id },
-    });
+    // Tenant isolation: a student in another studio must look absent.
+    const data = studioId
+      ? await prisma.users.findFirst({
+          where: { id, studio_id: studioId },
+        })
+      : null;
 
     if (!data) {
       serviceLogger.error({ id }, "Student not found");
@@ -188,18 +191,21 @@ export const StudentService = {
   /**
    * Soft delete a student (set status to INACTIVE)
    */
-  async deleteStudent(studentId: string) {
+  async deleteStudent(studentId: string, studioId?: string) {
     const serviceLogger = logger.child({
       service: "StudentService",
       method: "deleteStudent",
     });
-    serviceLogger.info({ studentId }, "Soft deleting student");
+    serviceLogger.info({ studentId, studioId }, "Soft deleting student");
 
-    // 1. Ensure the user exists and is a student
-    const user = await prisma.users.findUnique({
-      where: { id: studentId },
-      select: { role: true },
-    });
+    // 1. Ensure the user exists, is a student, and belongs to this studio.
+    //    Scoping the lookup keeps an admin from removing another tenant's student.
+    const user = studioId
+      ? await prisma.users.findFirst({
+          where: { id: studentId, studio_id: studioId },
+          select: { role: true },
+        })
+      : null;
 
     if (!user) {
       serviceLogger.error({ studentId }, "Student not found during delete");

@@ -40,7 +40,10 @@ export class CourseController {
     requestLog.info({ userId: req.user!.id }, "Controller entry");
     try {
       const studentId = req.user!.id;
-      const courses = await CourseService.getAvailableForStudent(studentId);
+      const courses = await CourseService.getAvailableForStudent(
+        studentId,
+        req.studioId
+      );
       requestLog.info(
         { count: courses?.length },
         "Fetched available courses for student"
@@ -57,7 +60,10 @@ export class CourseController {
     const requestLog = req.logger!;
     requestLog.info({ params: req.params }, "Controller entry");
     try {
-      const course = await CourseService.getCourseById(req.params.id);
+      const course = await CourseService.getCourseById(
+        req.params.id,
+        req.studioId
+      );
       if (!course) {
         return res.status(404).json({ error: "Course not found" });
       }
@@ -121,7 +127,11 @@ export class CourseController {
     try {
       const { id } = req.params;
       const updates = req.body;
-      const updatedCourse = await CourseService.updateCourse(id, updates);
+      const updatedCourse = await CourseService.updateCourse(
+        id,
+        updates,
+        req.studioId
+      );
       requestLog.info({ courseId: id }, "Updated course successfully");
       res.json(updatedCourse);
     } catch (error: any) {
@@ -136,7 +146,7 @@ export class CourseController {
     requestLog.info({ params: req.params }, "Controller entry");
     try {
       const { id } = req.params;
-      await CourseService.softDeleteCourse(id);
+      await CourseService.softDeleteCourse(id, req.studioId);
       requestLog.info({ courseId: id }, "Deactivated course successfully");
       res.json({ message: "Course deactivated successfully" });
     } catch (error: any) {

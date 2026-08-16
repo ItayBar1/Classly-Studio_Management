@@ -31,7 +31,8 @@ jest.mock("../../src/middleware/authMiddleware", () => ({
 
 jest.mock("../../src/config/prisma", () => ({
   prisma: {
-    classes: { findUnique: jest.fn() },
+    classes: { findFirst: jest.fn() },
+    users: { findFirst: jest.fn() },
     enrollments: {
       findFirst: jest.fn(),
       create: jest.fn(),
@@ -85,11 +86,13 @@ const mockDecimal = (n: number) => ({
 describe("POST /api/enrollments/register (self-register)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default: the student belongs to the studio on the request.
+    mockPrisma.users.findFirst.mockResolvedValue({ id: "student-1" });
   });
 
   it("returns 201 with clientSecret for paid course", async () => {
     // getCourseInfo lookup
-    mockPrisma.classes.findUnique.mockResolvedValue({
+    mockPrisma.classes.findFirst.mockResolvedValue({
       name: "Yoga",
       price_ils: mockDecimal(100),
     });
@@ -106,12 +109,15 @@ describe("POST /api/enrollments/register (self-register)", () => {
       // The fn receives a tx client — we simulate it by returning the enrollment
       return fn({
         classes: {
-          findUnique: jest.fn().mockResolvedValue({
+          findFirst: jest.fn().mockResolvedValue({
             max_capacity: 20,
             current_enrollment: 5,
             price_ils: mockDecimal(100),
             name: "Yoga",
           }),
+        },
+        users: {
+          findFirst: jest.fn().mockResolvedValue({ id: "student-1" }),
         },
         enrollments: {
           findFirst: jest.fn().mockResolvedValue(null),
@@ -134,7 +140,7 @@ describe("POST /api/enrollments/register (self-register)", () => {
 
   it("returns 201 without clientSecret for free course", async () => {
     // getCourseInfo lookup
-    mockPrisma.classes.findUnique.mockResolvedValue({
+    mockPrisma.classes.findFirst.mockResolvedValue({
       name: "Free Intro",
       price_ils: mockDecimal(0),
       max_capacity: 20,
@@ -157,7 +163,7 @@ describe("POST /api/enrollments/register (self-register)", () => {
   });
 
   it("returns 404 when course is not found", async () => {
-    mockPrisma.classes.findUnique.mockResolvedValue(null);
+    mockPrisma.classes.findFirst.mockResolvedValue(null);
 
     const res = await request(app)
       .post("/api/enrollments/register")
@@ -166,8 +172,22 @@ describe("POST /api/enrollments/register (self-register)", () => {
     expect(res.status).toBe(404);
   });
 
+  it("scopes the course lookup to the caller's studio", async () => {
+    mockPrisma.classes.findFirst.mockResolvedValue(null);
+
+    await request(app)
+      .post("/api/enrollments/register")
+      .send({ classId: "other-studio-class" });
+
+    expect(mockPrisma.classes.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "other-studio-class", studio_id: "studio-1" },
+      })
+    );
+  });
+
   it("returns 409 for duplicate enrollment", async () => {
-    mockPrisma.classes.findUnique.mockResolvedValue({
+    mockPrisma.classes.findFirst.mockResolvedValue({
       name: "Yoga",
       price_ils: mockDecimal(0),
       max_capacity: 20,
@@ -184,7 +204,7 @@ describe("POST /api/enrollments/register (self-register)", () => {
 
   it("returns 409 when course is full", async () => {
     // Use a free course so enrollStudent runs directly (not inside $transaction)
-    mockPrisma.classes.findUnique.mockResolvedValue({
+    mockPrisma.classes.findFirst.mockResolvedValue({
       name: "Yoga",
       price_ils: mockDecimal(0),
       max_capacity: 10,
@@ -200,7 +220,7 @@ describe("POST /api/enrollments/register (self-register)", () => {
   });
 
   it("does not call $transaction when Stripe fails", async () => {
-    mockPrisma.classes.findUnique.mockResolvedValue({
+    mockPrisma.classes.findFirst.mockResolvedValue({
       name: "Yoga",
       price_ils: mockDecimal(100),
     });

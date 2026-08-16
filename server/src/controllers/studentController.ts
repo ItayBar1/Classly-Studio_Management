@@ -32,7 +32,10 @@ export const StudentController = {
     const requestLog = req.logger!;
     requestLog.info({ params: req.params }, "Controller entry");
     try {
-      const student = await StudentService.getById(req.params.id);
+      const student = await StudentService.getById(
+        req.params.id,
+        req.studioId
+      );
       requestLog.info(
         { studentId: req.params.id },
         "Fetched student successfully"
@@ -75,7 +78,10 @@ export const StudentController = {
         return;
       }
 
-      const deletedStudent = await StudentService.deleteStudent(id);
+      const deletedStudent = await StudentService.deleteStudent(
+        id,
+        req.studioId
+      );
 
       requestLog.info({ studentId: id }, "Student deleted successfully");
       res.status(200).json({

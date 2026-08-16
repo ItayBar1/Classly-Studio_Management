@@ -74,15 +74,23 @@ export class CourseService {
   /**
    * Get available courses for student (active & not fully booked)
    */
-  static async getAvailableForStudent(studentId: string) {
+  static async getAvailableForStudent(studentId: string, studioId?: string) {
     const serviceLogger = logger.child({
       service: "CourseService",
       method: "getAvailableForStudent",
     });
-    serviceLogger.info({ studentId }, "Fetching available courses for student");
+    serviceLogger.info(
+      { studentId, studioId },
+      "Fetching available courses for student"
+    );
+
+    // Tenant isolation: a student may only browse their own studio's classes.
+    if (!studioId) {
+      return [];
+    }
 
     const data = await prisma.classes.findMany({
-      where: { is_active: true },
+      where: { is_active: true, studio_id: studioId },
       include: {
         instructor: {
           select: { full_name: true },
@@ -98,15 +106,20 @@ export class CourseService {
     return availableCourses;
   }
 
-  static async getCourseById(id: string) {
+  static async getCourseById(id: string, studioId?: string) {
     const serviceLogger = logger.child({
       service: "CourseService",
       method: "getCourseById",
     });
-    serviceLogger.info({ id }, "Fetching course by id");
+    serviceLogger.info({ id, studioId }, "Fetching course by id");
 
-    const data = await prisma.classes.findUnique({
-      where: { id },
+    // Tenant isolation: a class outside the caller's studio must look absent.
+    if (!studioId) {
+      throw new AppError("Course not found", 404);
+    }
+
+    const data = await prisma.classes.findFirst({
+      where: { id, studio_id: studioId },
       include: {
         instructor: {
           select: { full_name: true, profile_image_url: true },
@@ -208,14 +221,22 @@ export class CourseService {
     return data;
   }
 
-  static async updateCourse(id: string, updates: Record<string, unknown>) {
+  static async updateCourse(
+    id: string,
+    updates: Record<string, unknown>,
+    studioId?: string
+  ) {
     const serviceLogger = logger.child({
       service: "CourseService",
       method: "updateCourse",
     });
-    serviceLogger.info({ id, updates }, "Updating course");
+    serviceLogger.info({ id, studioId, updates }, "Updating course");
 
-    const existing = await prisma.classes.findUnique({ where: { id } });
+    // Tenant isolation: scope the ownership lookup so an admin can never
+    // reach a class belonging to another studio. A miss is a 404.
+    const existing = studioId
+      ? await prisma.classes.findFirst({ where: { id, studio_id: studioId } })
+      : null;
     if (!existing) {
       throw new AppError("Course not found", 404);
     }
@@ -287,12 +308,23 @@ export class CourseService {
     return data;
   }
 
-  static async softDeleteCourse(id: string) {
+  static async softDeleteCourse(id: string, studioId?: string) {
     const serviceLogger = logger.child({
       service: "CourseService",
       method: "softDeleteCourse",
     });
-    serviceLogger.info({ id }, "Soft deleting course");
+    serviceLogger.info({ id, studioId }, "Soft deleting course");
+
+    // Tenant isolation: confirm the class is ours before deactivating it.
+    const existing = studioId
+      ? await prisma.classes.findFirst({
+          where: { id, studio_id: studioId },
+          select: { id: true },
+        })
+      : null;
+    if (!existing) {
+      throw new AppError("Course not found", 404);
+    }
 
     await prisma.classes.update({
       where: { id },

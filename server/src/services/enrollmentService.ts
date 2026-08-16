@@ -7,11 +7,14 @@ export class EnrollmentService {
   /**
    * Lightweight course info lookup for pre-flight validation.
    */
-  static async getCourseInfo(classId: string) {
-    const course = await prisma.classes.findUnique({
-      where: { id: classId },
-      select: { name: true, price_ils: true },
-    });
+  static async getCourseInfo(classId: string, studioId?: string) {
+    // Tenant isolation: never price a class from another studio.
+    const course = studioId
+      ? await prisma.classes.findFirst({
+          where: { id: classId, studio_id: studioId },
+          select: { name: true, price_ils: true },
+        })
+      : null;
     if (!course) throw new AppError("Course not found", 404);
     return { name: course.name, price: course.price_ils };
   }
@@ -39,9 +42,10 @@ export class EnrollmentService {
 
     const db = tx ?? prisma;
 
-    // 1. Fetch course details (capacity and pricing)
-    const course = await db.classes.findUnique({
-      where: { id: classId },
+    // 1. Fetch course details (capacity and pricing), scoped to the studio so
+    //    an admin cannot enroll anyone into another tenant's class.
+    const course = await db.classes.findFirst({
+      where: { id: classId, studio_id: studioId },
       select: {
         max_capacity: true,
         current_enrollment: true,
@@ -54,6 +58,17 @@ export class EnrollmentService {
     if (!course) {
       serviceLogger.error({ classId }, "Course not found during enrollment");
       throw new AppError("Course not found", 404);
+    }
+
+    // 1b. The student must belong to the same studio as the class.
+    const student = await db.users.findFirst({
+      where: { id: studentId, studio_id: studioId, role: "STUDENT" },
+      select: { id: true },
+    });
+
+    if (!student) {
+      serviceLogger.error({ studentId }, "Student not found during enrollment");
+      throw new AppError("Student not found", 404);
     }
 
     // 2. Validate capacity
@@ -112,16 +127,22 @@ export class EnrollmentService {
   /**
    * Get enrollments for a specific student
    */
-  static async getStudentEnrollments(studentId: string) {
+  static async getStudentEnrollments(studentId: string, studioId?: string) {
     const serviceLogger = logger.child({
       service: "EnrollmentService",
       method: "getStudentEnrollments",
     });
-    serviceLogger.info({ studentId }, "Fetching student enrollments");
+    serviceLogger.info({ studentId, studioId }, "Fetching student enrollments");
+
+    // Tenant isolation: never surface another studio's enrollments.
+    if (!studioId) {
+      return [];
+    }
 
     const data = await prisma.enrollments.findMany({
       where: {
         student_id: studentId,
+        studio_id: studioId,
         status: { not: "CANCELLED" },
       },
       include: {
@@ -142,16 +163,22 @@ export class EnrollmentService {
   /**
    * Get enrollments for a specific class (Student roster)
    */
-  static async getClassEnrollments(classId: string) {
+  static async getClassEnrollments(classId: string, studioId?: string) {
     const serviceLogger = logger.child({
       service: "EnrollmentService",
       method: "getClassEnrollments",
     });
-    serviceLogger.info({ classId }, "Fetching class enrollments");
+    serviceLogger.info({ classId, studioId }, "Fetching class enrollments");
+
+    // Tenant isolation: never surface another studio's roster.
+    if (!studioId) {
+      return [];
+    }
 
     const data = await prisma.enrollments.findMany({
       where: {
         class_id: classId,
+        studio_id: studioId,
         status: { not: "CANCELLED" },
       },
       select: {
@@ -177,17 +204,20 @@ export class EnrollmentService {
   /**
    * Cancel enrollment
    */
-  static async cancelEnrollment(enrollmentId: string) {
+  static async cancelEnrollment(enrollmentId: string, studioId?: string) {
     const serviceLogger = logger.child({
       service: "EnrollmentService",
       method: "cancelEnrollment",
     });
-    serviceLogger.info({ enrollmentId }, "Cancelling enrollment");
+    serviceLogger.info({ enrollmentId, studioId }, "Cancelling enrollment");
 
-    const enrollment = await prisma.enrollments.findUnique({
-      where: { id: enrollmentId },
-      select: { class_id: true, status: true },
-    });
+    // Tenant isolation: an enrollment outside the caller's studio is a 404.
+    const enrollment = studioId
+      ? await prisma.enrollments.findFirst({
+          where: { id: enrollmentId, studio_id: studioId },
+          select: { class_id: true, status: true },
+        })
+      : null;
 
     if (!enrollment) {
       serviceLogger.warn({ enrollmentId }, "Enrollment not found");

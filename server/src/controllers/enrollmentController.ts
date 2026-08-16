@@ -89,7 +89,10 @@ export class EnrollmentController {
 
     try {
       // 1. Pre-flight: validate course exists and get pricing (fails fast before Stripe)
-      const courseInfo = await EnrollmentService.getCourseInfo(classId);
+      const courseInfo = await EnrollmentService.getCourseInfo(
+        classId,
+        studioId
+      );
 
       // 2. Free course path — no Stripe, no payment record
       if (courseInfo.price.toNumber() === 0) {
@@ -170,8 +173,10 @@ export class EnrollmentController {
     requestLog.info({ userId: req.user!.id }, "Controller entry");
     try {
       const studentId = req.user!.id;
-      const enrollments =
-        await EnrollmentService.getStudentEnrollments(studentId);
+      const enrollments = await EnrollmentService.getStudentEnrollments(
+        studentId,
+        req.studioId
+      );
       requestLog.info(
         { count: enrollments?.length },
         "Fetched student enrollments"
@@ -211,7 +216,10 @@ export class EnrollmentController {
         }
       }
 
-      const enrollments = await EnrollmentService.getClassEnrollments(classId);
+      const enrollments = await EnrollmentService.getClassEnrollments(
+        classId,
+        req.studioId
+      );
       requestLog.info(
         { count: enrollments?.length },
         "Fetched class enrollments"
@@ -239,8 +247,8 @@ export class EnrollmentController {
 
       // SECURITY: If user is a STUDENT, enforce ownership and restrict to PENDING only
       if (req.user!.role === "STUDENT") {
-        const enrollment = await prisma.enrollments.findUnique({
-          where: { id },
+        const enrollment = await prisma.enrollments.findFirst({
+          where: { id, studio_id: req.studioId },
           select: { student_id: true, status: true },
         });
 
@@ -268,7 +276,7 @@ export class EnrollmentController {
         }
       }
 
-      await EnrollmentService.cancelEnrollment(id);
+      await EnrollmentService.cancelEnrollment(id, req.studioId);
       requestLog.info({ enrollmentId: id }, "Enrollment cancelled");
       res.json({ message: "Enrollment cancelled successfully" });
     } catch (error: any) {
@@ -286,8 +294,10 @@ export class EnrollmentController {
     requestLog.info({ params: req.params }, "Controller entry");
     try {
       const { studentId } = req.params;
-      const enrollments =
-        await EnrollmentService.getStudentEnrollments(studentId);
+      const enrollments = await EnrollmentService.getStudentEnrollments(
+        studentId,
+        req.studioId
+      );
       requestLog.info(
         { count: enrollments?.length },
         "Fetched student enrollments for admin"
