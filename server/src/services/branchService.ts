@@ -18,16 +18,18 @@ export class BranchService {
   }
 
   static async create(studioId: string, data: BranchDTO) {
-    const branch = await prisma.branches.create({
-      data: {
-        studio_id: studioId,
-        ...data,
-      },
-    });
+    // Branch + default room must be created atomically. Without a transaction a
+    // failure on the room insert leaves an orphan branch (no room) behind.
+    return prisma.$transaction(async (tx) => {
+      const branch = await tx.branches.create({
+        data: {
+          studio_id: studioId,
+          ...data,
+        },
+      });
 
-    // Auto-create default room
-    if (branch) {
-      await prisma.studio_rooms.create({
+      // Auto-create default room
+      await tx.studio_rooms.create({
         data: {
           studio_id: studioId,
           branch_id: branch.id,
@@ -36,9 +38,9 @@ export class BranchService {
           is_active: true,
         },
       });
-    }
 
-    return branch;
+      return branch;
+    });
   }
 
   static async update(
