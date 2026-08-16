@@ -33,19 +33,25 @@ export class StudioController {
       });
     } catch (error: any) {
       requestLog.error({ err: error }, "Error creating studio");
-      if (error.message === "User already has a studio") {
-        return res.status(409).json({ error: error.message });
-      }
+      // AppError('User already has a studio', 409) reaches the client through
+      // errorMiddleware with its own status code.
       next(error);
     }
   }
 
   static async getMyStudio(req: Request, res: Response, next: NextFunction) {
     try {
-      const studioId = req.user?.studio_id;
-      if (!studioId) return res.status(404).json({ message: "No studio found for this user" });
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
 
-      const studio = await StudioService.getStudioById(studioId);
+      // Resolves through users.studio_id and falls back to studio ownership,
+      // so a broken link does not look like "this admin has no studio".
+      const studio = await StudioService.getStudioForUser(
+        userId,
+        req.user?.studio_id
+      );
 
       if (!studio) {
         return res
@@ -69,7 +75,10 @@ export class StudioController {
       if (!studioId || studioId !== id) {
         return res
           .status(403)
-          .json({ error: "Forbidden: You do not have permission to update this studio" });
+          .json({
+            error:
+              "Forbidden: You do not have permission to update this studio",
+          });
       }
 
       const updatedStudio = await StudioService.updateStudio(id, updates);

@@ -8,6 +8,8 @@ import {
 } from "../../../services/api";
 import { Loader2, Building, MapPin, Clock } from "lucide-react";
 import { Studio, Branch, User, Room } from "../../../types/types";
+import { ErrorState } from "../../common/StateDisplay";
+import { extractApiError } from "../../../utils/apiError";
 
 import { StudioDetailsTab } from "./tabs/StudioDetailsTab";
 import { BranchManagementTab } from "./tabs/BranchManagementTab";
@@ -16,6 +18,7 @@ import { TeamManagementTab } from "./tabs/TeamManagementTab";
 export const Administration: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [studio, setStudio] = useState<Studio | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [instructors, setInstructors] = useState<User[]>([]);
@@ -29,6 +32,7 @@ export const Administration: React.FC = () => {
     name: "",
     description: "",
     contact_email: "",
+    contact_phone: "",
     website_url: "",
     schedule_start_hour: 7,
     schedule_end_hour: 23,
@@ -40,30 +44,54 @@ export const Administration: React.FC = () => {
   const [createError, setCreateError] = useState<string | null>(null);
 
   const fetchData = async () => {
+    setLoadError(null);
+
+    // The studio is loaded on its own: only a 404 means "this admin has no
+    // studio yet". Any other failure (a 500, a network error) must surface as
+    // an error — treating it as "no studio" showed the onboarding form to
+    // admins who already have a studio, branches and students.
     try {
       const studioData = await StudioService.getMyStudio();
       setStudio(studioData);
-
-      // Load branches
-      const branchesData = await BranchService.getAll();
-      setBranches(branchesData);
-
-      // Load Rooms
-      const roomsData = await RoomService.getAll();
-      setRooms(roomsData);
-
-      // Load Instructors
-      const instructorsData = await UserService.getInstructors();
-      setInstructors(instructorsData);
     } catch (err: any) {
-      if (err.response && err.response.status === 404) {
-        setStudio(null); // Show create form
-      } else {
-        console.error("Failed to load data", err);
+      setStudio(null);
+      if (err?.response?.status !== 404) {
+        console.error("Failed to load studio", err);
+        setLoadError(extractApiError(err, "שגיאה בטעינת נתוני הסטודיו"));
       }
-    } finally {
       setLoading(false);
+      return;
     }
+
+    // Secondary data. A failure in one of these must not hide the studio, so
+    // each result is applied independently.
+    const [branchesResult, roomsResult, instructorsResult] =
+      await Promise.allSettled([
+        BranchService.getAll(),
+        RoomService.getAll(),
+        UserService.getInstructors(),
+      ]);
+
+    if (branchesResult.status === "fulfilled")
+      setBranches(branchesResult.value);
+    else console.error("Failed to load branches", branchesResult.reason);
+
+    if (roomsResult.status === "fulfilled") setRooms(roomsResult.value);
+    else console.error("Failed to load rooms", roomsResult.reason);
+
+    if (instructorsResult.status === "fulfilled")
+      setInstructors(instructorsResult.value);
+    else console.error("Failed to load instructors", instructorsResult.reason);
+
+    if (
+      [branchesResult, roomsResult, instructorsResult].some(
+        (r) => r.status === "rejected"
+      )
+    ) {
+      setLoadError("חלק מהנתונים לא נטענו. רענן את הדף או נסה שוב.");
+    }
+
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -92,20 +120,35 @@ export const Administration: React.FC = () => {
       await StudioService.create(payload);
       await fetchData();
     } catch (err: any) {
-      setCreateError(
-        err.response?.data?.error || err.message || "שגיאה ביצירת הסטודיו"
-      );
+      setCreateError(extractApiError(err, "שגיאה ביצירת הסטודיו"));
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading && !studio && !createForm.name)
+  if (loading)
     return (
       <div className="flex justify-center p-8">
         <Loader2 className="animate-spin text-indigo-600" />
       </div>
     );
+
+  // View 0: The studio could not be loaded. Never fall through to onboarding
+  // here — offering to create a studio that may already exist is what made
+  // this screen contradict the rest of the app.
+  if (loadError && !studio) {
+    return (
+      <div className="py-8">
+        <ErrorState
+          message={loadError}
+          onRetry={() => {
+            setLoading(true);
+            fetchData();
+          }}
+        />
+      </div>
+    );
+  }
 
   // View 1: Create Studio Form (Onboarding)
   if (!studio) {
@@ -114,7 +157,10 @@ export const Administration: React.FC = () => {
         <div className="bg-white dark:bg-slate-900 p-8 rounded-xl shadow-lg border border-indigo-100 dark:border-slate-800">
           <div className="text-center mb-8">
             <div className="bg-indigo-100 dark:bg-indigo-900/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Building className="text-indigo-600 dark:text-indigo-400" size={32} />
+              <Building
+                className="text-indigo-600 dark:text-indigo-400"
+                size={32}
+              />
             </div>
             <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
               ברוכים הבאים ל-Classly!
@@ -173,7 +219,7 @@ export const Administration: React.FC = () => {
                   />
                 </div>
               </div>
-              
+
               <h3 className="font-semibold text-slate-700 dark:text-slate-300 mt-4 mb-3 flex items-center gap-2">
                 <Clock size={18} /> שעות פעילות הסטודיו
               </h3>
@@ -319,11 +365,18 @@ export const Administration: React.FC = () => {
         <title>ניהול | Classly</title>
       </Helmet>
 
+      {loadError && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 p-3 rounded-lg text-sm">
+          {loadError}
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-            <Building className="text-indigo-600 dark:text-indigo-400" /> {studio.name}
+            <Building className="text-indigo-600 dark:text-indigo-400" />{" "}
+            {studio.name}
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
             מספר סידורי:{" "}
