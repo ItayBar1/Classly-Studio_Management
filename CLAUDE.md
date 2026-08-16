@@ -172,6 +172,7 @@ Conventional commits: `feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`.
 - **`register` accepts `studio_serial`** without an invitation, silently creating a `STUDENT` in that studio.
 - **Auth state race condition in `App.tsx`:** `isAuthenticated`, `currentUser`, `userRole` update asynchronously. Default `userRole` is `'STUDENT'` so an admin may briefly see the wrong UI on load.
 - **No CI test gate.** Push to `main` deploys immediately to production via `.github/workflows/deploy.yml`. Treat `main` = production.
+- **Never run `cf-tunnel` outside production.** Cloudflare accepts several connectors per tunnel and load-balances public traffic across them, so a second `docker compose up` holding the production `CF_TUNNEL_TOKEN` starts serving `classly-studio-management.uk` from that machine's database. Symptom: the same login returns a different user on different requests, and half the traffic never reaches the production logs. `docker-compose.override.yml` parks the service behind an unactivated profile so a local checkout cannot do this; the deploy passes `--file docker-compose.yml` only, so production still starts it.
 - **`SUPER_ADMIN` has no provisioning flow** — must be seeded manually with SQL.
 - **`ClassCard` is duplicated** in `common/ClassCard.tsx`, `landing/ClassCard.tsx`, and `student/CourseCard.tsx` — keep changes in sync or consolidate.
 - **No frontend live reload in Docker.** Code changes to the client require `docker compose up -d --build frontend`.
