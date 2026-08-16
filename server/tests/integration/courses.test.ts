@@ -62,9 +62,9 @@ describe("Course routes", () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual(courses);
-    // Admin: no is_active filter in where clause
+    // Admin: no is_active filter, but always scoped to the caller's studio
     expect(mockPrisma.classes.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: {} })
+      expect.objectContaining({ where: { studio_id: "studio-1" } })
     );
   });
 
@@ -77,7 +77,9 @@ describe("Course routes", () => {
 
     expect(response.status).toBe(200);
     expect(mockPrisma.classes.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { is_active: true } })
+      expect.objectContaining({
+        where: { is_active: true, studio_id: "studio-1" },
+      })
     );
   });
 });

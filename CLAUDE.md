@@ -69,7 +69,16 @@ docker compose exec backend npx prisma studio          # Open Prisma Studio GUI 
 docker compose exec db psql -U classly -d classly       # Postgres REPL
 ```
 
-> **No migrations directory exists.** Schema changes require: (1) edit `server/prisma/schema.prisma`, (2) run `ALTER TABLE ...` manually in psql, (3) `npx prisma generate`, (4) update `studio_management_schema_setup.sql` for fresh boots.
+> **No migrations directory exists.** Schema changes require: (1) edit `server/prisma/schema.prisma`, (2) run `ALTER TABLE ...` manually in psql, (3) `npx prisma generate`, (4) update `studio_management_schema_setup.sql` for fresh boots, (5) add the same change to `server/prisma/sql/2026-08-16_repair_schema_drift.sql` so existing databases get it too.
+
+> **`studio_management_schema_setup.sql` never runs on an existing database.** It is mounted at `/docker-entrypoint-initdb.d/setup.sql`, which Postgres executes only when the data directory is empty. Every edit made to it after the first boot is invisible to running environments, and Prisma names every column explicitly in its SQL — so one missing column makes *every* query on that table fail with a 500. Repair an environment with:
+>
+> ```bash
+> docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+>   < server/prisma/sql/2026-08-16_repair_schema_drift.sql
+> ```
+>
+> The script is idempotent and prints what it repaired.
 
 ## Architecture
 
@@ -157,6 +166,8 @@ Conventional commits: `feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`.
 - **`CourseService.getAllCourses`, `getCourseById`, `updateCourse` do not scope by `studio_id`** — cross-tenant data leak. Do not copy this pattern; it is a known CRITICAL defect tracked in `docs/ARCHITECTURE_REVIEW.md`.
 - **Prisma is mocked in all tests.** Green tests ≠ correct schema. Integration tests use Supertest against the real Express app but with mocked Prisma — schema drift is not caught.
 - **Invitation JWTs are stateless and reusable** until expiry. Do not use them as single-use tokens without adding DB-backed deduplication.
+- **A `SUPER_ADMIN` invite carries no studio** (`InvitationController.createInvite` passes the creator's `studio_id`, which is `NULL` for a super admin), so the invited `ADMIN` registers with `studio_id = NULL` and must create their studio through the onboarding form. `StudioService.getStudioForUser` re-links such a user through `studios.admin_id` once their studio exists.
+- **Never treat a failed request as "no data" in the admin screens.** `Administration` used to fall back to the studio-creation form on any error, so a 500 looked like a brand-new studio while every other tab showed the real data.
 - **`register` accepts `studio_serial`** without an invitation, silently creating a `STUDENT` in that studio.
 - **Auth state race condition in `App.tsx`:** `isAuthenticated`, `currentUser`, `userRole` update asynchronously. Default `userRole` is `'STUDENT'` so an admin may briefly see the wrong UI on load.
 - **No CI test gate.** Push to `main` deploys immediately to production via `.github/workflows/deploy.yml`. Treat `main` = production.

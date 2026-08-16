@@ -140,3 +140,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use(errorHandler);
+
+// Both forms are in use: src/index.ts imports the named export, the
+// integration tests import the default one.
+export default app;
