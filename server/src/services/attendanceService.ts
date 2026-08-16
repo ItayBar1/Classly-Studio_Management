@@ -270,6 +270,9 @@ export class AttendanceService {
     });
     serviceLogger.info({ studioId, filters }, "Fetching studio sessions");
 
+    // Tenant isolation: without a studio context, never fetch across studios.
+    if (!studioId) return [];
+
     const { from, to } = this.resolveWindow(filters.from, filters.to);
 
     const where: any = { studio_id: studioId, is_active: true };
@@ -310,6 +313,9 @@ export class AttendanceService {
       { studioId, studentId, filters },
       "Fetching student attendance overview"
     );
+
+    // Tenant isolation: without a studio context, never fetch across studios.
+    if (!studioId) return [];
 
     const classWhere: any = {};
     if (filters.instructorId) classWhere.instructor_id = filters.instructorId;

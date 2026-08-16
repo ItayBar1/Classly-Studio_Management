@@ -126,9 +126,16 @@ export class AttendanceController {
     const requestLog = req.logger!;
     requestLog.info({ query: req.query, userId: req.user!.id }, "Controller entry");
     try {
-      const studioId = req.studioId!;
+      const studioId = req.studioId;
       const { studentId } = req.query as { studentId?: string };
       const filters = AttendanceController.parseFilters(req);
+
+      // A new admin who hasn't created a studio yet has no studio_id. Without
+      // this guard the queries below would fetch across ALL studios (Prisma
+      // ignores an `undefined` studio_id filter). No studio → no data.
+      if (!studioId) {
+        return res.json({ mode: "session", items: [] });
+      }
 
       if (studentId) {
         const items = await AttendanceService.getStudentAttendanceOverview(
