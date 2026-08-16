@@ -16,7 +16,8 @@ export class CourseController {
 
       const courses = await CourseService.getAllCourses(
         userRole ?? undefined,
-        filters
+        filters,
+        req.studioId
       );
       requestLog.info(
         { count: courses?.length },

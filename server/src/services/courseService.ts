@@ -25,14 +25,28 @@ export class CourseService {
   /**
    * Get all courses with optional filters
    */
-  static async getAllCourses(userRole?: string, filters: CourseFilters = {}) {
+  static async getAllCourses(
+    userRole?: string,
+    filters: CourseFilters = {},
+    studioId?: string
+  ) {
     const serviceLogger = logger.child({
       service: "CourseService",
       method: "getAllCourses",
     });
-    serviceLogger.info({ userRole, filters }, "Fetching all courses");
+    serviceLogger.info({ userRole, filters, studioId }, "Fetching all courses");
 
-    const where: { is_active?: boolean; category_id?: string } = {};
+    // Tenant isolation: never return classes across studios. Callers without a
+    // studio context (e.g. SUPER_ADMIN) have nothing tenant-scoped to list here.
+    if (!studioId) {
+      return [];
+    }
+
+    const where: {
+      studio_id: string;
+      is_active?: boolean;
+      category_id?: string;
+    } = { studio_id: studioId };
 
     // If student or filter requests active only, show active courses
     if (userRole === "STUDENT" || filters.status === "active") {
