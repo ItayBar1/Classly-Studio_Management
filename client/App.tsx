@@ -50,6 +50,11 @@ const Administration = lazy(() =>
     default: module.Administration,
   }))
 );
+const AdminAttendance = lazy(() =>
+  import("./components/admin/AdminAttendance").then((module) => ({
+    default: module.AdminAttendance,
+  }))
+);
 // Super Admin components (Named Exports)
 const PlatformAdministration = lazy(() =>
   import("./components/super-admin/PlatformAdministration").then((module) => ({
@@ -228,6 +233,7 @@ function App() {
         return <div>אין הרשאה</div>;
 
       case "attendance":
+        if (userRole === "ADMIN") return <AdminAttendance />;
         if (userRole === "INSTRUCTOR") return <InstructorAttendanceTab />;
         return <div>אין הרשאה</div>;
 

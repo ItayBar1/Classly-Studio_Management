@@ -6,6 +6,7 @@ import {
   CreditCard,
   LogOut,
   Search,
+  ClipboardList,
   X,
 } from "lucide-react";
 
@@ -49,6 +50,12 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
       id: "students",
       label: "תלמידים",
       icon: Users,
+      roles: ["ADMIN", "INSTRUCTOR"],
+    },
+    {
+      id: "attendance",
+      label: "נוכחות",
+      icon: ClipboardList,
       roles: ["ADMIN", "INSTRUCTOR"],
     },
     {

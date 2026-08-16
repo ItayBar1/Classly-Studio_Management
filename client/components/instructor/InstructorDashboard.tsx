@@ -10,7 +10,9 @@ import { InstructorStats } from '../../types/types';
 import { PageHeader } from '../common/PageHeader';
 import { StatCard } from '../common/StatCard';
 import { LoadingState } from '../common/StateDisplay';
-import { AttendanceModal } from './AttendanceModal';
+import { AttendanceModal } from '../common/AttendanceModal';
+import { ATTENDANCE_LEAD_MINUTES } from '../common/attendanceUtils';
+import { Lock } from 'lucide-react';
 import toast from "react-hot-toast";
 
 export const InstructorDashboard: React.FC = () => {
@@ -39,6 +41,24 @@ export const InstructorDashboard: React.FC = () => {
   }
 
   if (!stats) return null;
+
+  // Attendance can only be opened from 15 min before the class starts.
+  // nextDate is the occurrence's absolute start instant.
+  const nextOpensAt = stats.nextClass
+    ? new Date(stats.nextClass.nextDate).getTime() -
+      ATTENDANCE_LEAD_MINUTES * 60_000
+    : 0;
+  const nextLocked = !!stats.nextClass && Date.now() < nextOpensAt;
+
+  const handleNextClassClick = () => {
+    if (nextLocked) {
+      toast.error(
+        `ניתן לדווח נוכחות החל מ-${ATTENDANCE_LEAD_MINUTES} דקות לפני תחילת השיעור`
+      );
+      return;
+    }
+    setIsAttendanceModalOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -79,24 +99,41 @@ export const InstructorDashboard: React.FC = () => {
           השיעור הבא במערכת
         </h3>
         {stats.nextClass ? (
-          <div 
-            onClick={() => setIsAttendanceModalOpen(true)}
-            className="bg-slate-50 p-4 rounded-lg border border-slate-200 cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-all group"
+          <div
+            onClick={handleNextClassClick}
+            className={`bg-slate-50 p-4 rounded-lg border border-slate-200 transition-all group ${
+              nextLocked
+                ? "cursor-not-allowed opacity-70"
+                : "cursor-pointer hover:bg-indigo-50 hover:border-indigo-200"
+            }`}
           >
             <div className="flex justify-between items-center">
               <div>
                 <h4 className="font-bold text-lg text-slate-800 group-hover:text-indigo-700 transition-colors">{stats.nextClass.name}</h4>
                 <p className="text-slate-500">
-                  {['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][stats.nextClass.day_of_week]} • {stats.nextClass.start_time.slice(0,5)}
+                  {['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][stats.nextClass.day_of_week]} • {
+                    // start_time arrives as a full ISO datetime ("1970-01-01THH:MM:..");
+                    // extract just HH:MM (fall back to a plain "HH:MM[:SS]" string).
+                    stats.nextClass.start_time.includes('T')
+                      ? stats.nextClass.start_time.slice(11, 16)
+                      : stats.nextClass.start_time.slice(0, 5)
+                  }
                 </p>
               </div>
               <div className="text-right flex flex-col items-end gap-2">
                 <span className="inline-block px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
                   {stats.nextClass.current_enrollment} רשומים
                 </span>
-                <span className="text-xs font-medium text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                  לחץ לדיווח נוכחות
-                </span>
+                {nextLocked ? (
+                  <span className="flex items-center gap-1 text-xs font-medium text-slate-500">
+                    <Lock size={12} />
+                    נפתח {ATTENDANCE_LEAD_MINUTES} ד׳ לפני השיעור
+                  </span>
+                ) : (
+                  <span className="text-xs font-medium text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                    לחץ לדיווח נוכחות
+                  </span>
+                )}
               </div>
             </div>
           </div>
