@@ -3,9 +3,20 @@
 # It is NOT committed to the production server.
 #
 # Changes from docker-compose.yml:
+#   - cf-tunnel: never started locally (see below)
 #   - frontend: mounts nginx.dev.conf (HTTP-only, localhost) over the production config
 #   - frontend/backend/grafana: expose ports on localhost for dev convenience
 services:
+  # Cloudflare allows several connectors on one tunnel and load-balances public
+  # traffic across all of them. A local `docker compose up` with the production
+  # CF_TUNNEL_TOKEN in .env therefore starts serving classly-studio-management.uk
+  # from this machine's database — visitors get whichever instance Cloudflare
+  # picks, and the two disagree about who the logged-in user even is.
+  # An unactivated profile keeps the service defined but never started; the
+  # deploy workflow runs `--file docker-compose.yml` only, so production is
+  # unaffected and still starts the tunnel.
+  cf-tunnel:
+    profiles: ["production-only"]
   frontend:
     ports:
       - "127.0.0.1:3000:80"
