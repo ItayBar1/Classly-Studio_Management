@@ -24,8 +24,16 @@
 -- Any other column the setup script has gained since is repaired as well: the
 -- list below covers every column of every table.
 --
--- HOW TO RUN (from the repo root on the server):
---   docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+-- HOW TO RUN (from the repo root on the server). The production stack runs
+-- under the `classly-studio` compose project, so plain `docker compose exec`
+-- from a checkout reports "service db is not running" — address the container
+-- by name instead:
+--   docker exec -i classly-db psql -U itay -d classly_db -v ON_ERROR_STOP=1 \
+--     < server/prisma/sql/2026-08-16_repair_schema_drift.sql
+--
+-- The equivalent through compose:
+--   docker compose --project-name classly-studio exec -T db \
+--     psql -U itay -d classly_db -v ON_ERROR_STOP=1 \
 --     < server/prisma/sql/2026-08-16_repair_schema_drift.sql
 --
 -- Nothing here drops data: only ADD COLUMN IF NOT EXISTS, CREATE ... IF NOT
@@ -249,6 +257,11 @@ BEGIN
 END
 $repair$;
 
+COMMIT;
+
+-- The column repair is committed above on purpose: everything that follows
+-- runs in its own transaction, so a problem there can never roll it back.
+
 -- ---------------------------------------------------------------------------
 -- 2. Serial-number sequence used by StudioService.createStudio()
 -- ---------------------------------------------------------------------------
@@ -289,7 +302,17 @@ BEGIN
       ADD CONSTRAINT schedule_sessions_status_check
       CHECK (status IN ('SCHEDULED', 'CANCELLED', 'COMPLETED', 'RESCHEDULED', 'IN_PROGRESS'));
   END IF;
+EXCEPTION WHEN others THEN
+  -- Legacy rows holding a status outside the list would abort the ALTER.
+  -- Report it instead of failing the whole repair.
+  RAISE WARNING 'could not refresh schedule_sessions.status check: %', SQLERRM;
+END
+$checks$;
 
+DO $checks$
+DECLARE
+  c record;
+BEGIN
   -- enrollments.status must accept PENDING (enrollment awaiting payment)
   IF to_regclass('public.enrollments') IS NOT NULL THEN
     FOR c IN
@@ -306,6 +329,8 @@ BEGIN
       ADD CONSTRAINT enrollments_status_check
       CHECK (status IN ('ACTIVE', 'PAUSED', 'COMPLETED', 'CANCELLED', 'PENDING'));
   END IF;
+EXCEPTION WHEN others THEN
+  RAISE WARNING 'could not refresh enrollments.status check: %', SQLERRM;
 END
 $checks$;
 
@@ -328,8 +353,6 @@ CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON public.attendance(studen
 CREATE INDEX IF NOT EXISTS idx_attendance_class_id ON public.attendance(class_id);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON public.password_reset_tokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_hash ON public.password_reset_tokens(token_hash) WHERE NOT used;
-
-COMMIT;
 
 -- ---------------------------------------------------------------------------
 -- 5. Verification
