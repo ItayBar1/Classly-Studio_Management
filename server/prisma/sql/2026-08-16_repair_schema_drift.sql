@@ -336,23 +336,45 @@ $checks$;
 
 -- ---------------------------------------------------------------------------
 -- 4. Indexes (no-ops when they already exist)
+--
+-- Guarded the same way as the column loop: a database missing a whole table
+-- gets a warning, not an error that stops psql (`-v ON_ERROR_STOP=1`) before
+-- the remaining indexes and the verification queries have run.
 -- ---------------------------------------------------------------------------
-CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
-CREATE INDEX IF NOT EXISTS idx_users_studio_id ON public.users(studio_id);
-CREATE INDEX IF NOT EXISTS idx_users_role ON public.users(role);
-CREATE INDEX IF NOT EXISTS idx_studios_admin_id ON public.studios(admin_id);
-CREATE INDEX IF NOT EXISTS idx_studios_serial ON public.studios(serial_number);
-CREATE INDEX IF NOT EXISTS idx_branches_studio_id ON public.branches(studio_id);
-CREATE INDEX IF NOT EXISTS idx_categories_studio_id ON public.categories(studio_id);
-CREATE INDEX IF NOT EXISTS idx_classes_studio_id ON public.classes(studio_id);
-CREATE INDEX IF NOT EXISTS idx_classes_branch_id ON public.classes(branch_id);
-CREATE INDEX IF NOT EXISTS idx_classes_instructor_id ON public.classes(instructor_id);
-CREATE INDEX IF NOT EXISTS idx_enrollments_student_id ON public.enrollments(student_id);
-CREATE INDEX IF NOT EXISTS idx_enrollments_class_id ON public.enrollments(class_id);
-CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON public.attendance(student_id);
-CREATE INDEX IF NOT EXISTS idx_attendance_class_id ON public.attendance(class_id);
-CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON public.password_reset_tokens(user_id);
-CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_hash ON public.password_reset_tokens(token_hash) WHERE NOT used;
+DO $indexes$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT * FROM (VALUES
+    ('users', 'CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email)'),
+    ('users', 'CREATE INDEX IF NOT EXISTS idx_users_studio_id ON public.users(studio_id)'),
+    ('users', 'CREATE INDEX IF NOT EXISTS idx_users_role ON public.users(role)'),
+    ('studios', 'CREATE INDEX IF NOT EXISTS idx_studios_admin_id ON public.studios(admin_id)'),
+    ('studios', 'CREATE INDEX IF NOT EXISTS idx_studios_serial ON public.studios(serial_number)'),
+    ('branches', 'CREATE INDEX IF NOT EXISTS idx_branches_studio_id ON public.branches(studio_id)'),
+    ('categories', 'CREATE INDEX IF NOT EXISTS idx_categories_studio_id ON public.categories(studio_id)'),
+    ('classes', 'CREATE INDEX IF NOT EXISTS idx_classes_studio_id ON public.classes(studio_id)'),
+    ('classes', 'CREATE INDEX IF NOT EXISTS idx_classes_branch_id ON public.classes(branch_id)'),
+    ('classes', 'CREATE INDEX IF NOT EXISTS idx_classes_instructor_id ON public.classes(instructor_id)'),
+    ('enrollments', 'CREATE INDEX IF NOT EXISTS idx_enrollments_student_id ON public.enrollments(student_id)'),
+    ('enrollments', 'CREATE INDEX IF NOT EXISTS idx_enrollments_class_id ON public.enrollments(class_id)'),
+    ('attendance', 'CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON public.attendance(student_id)'),
+    ('attendance', 'CREATE INDEX IF NOT EXISTS idx_attendance_class_id ON public.attendance(class_id)'),
+    ('password_reset_tokens', 'CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON public.password_reset_tokens(user_id)'),
+    ('password_reset_tokens', 'CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_hash ON public.password_reset_tokens(token_hash) WHERE NOT used'),
+    ('pending_registrations', 'CREATE INDEX IF NOT EXISTS idx_pending_registrations_email ON public.pending_registrations(email) WHERE NOT used')
+    ) AS t(tbl, stmt)
+  LOOP
+    IF to_regclass('public.' || quote_ident(r.tbl)) IS NULL THEN
+      RAISE WARNING 'skipping index on missing table public.%', r.tbl;
+      CONTINUE;
+    END IF;
+
+    EXECUTE r.stmt;
+  END LOOP;
+END
+$indexes$;
 
 -- ---------------------------------------------------------------------------
 -- 5. Verification
