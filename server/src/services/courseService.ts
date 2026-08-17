@@ -74,15 +74,22 @@ export class CourseService {
   /**
    * Get available courses for student (active & not fully booked)
    */
-  static async getAvailableForStudent(studentId: string) {
+  static async getAvailableForStudent(studentId: string, studioId?: string) {
     const serviceLogger = logger.child({
       service: "CourseService",
       method: "getAvailableForStudent",
     });
-    serviceLogger.info({ studentId }, "Fetching available courses for student");
+    serviceLogger.info({ studentId, studioId }, "Fetching available courses for student");
+
+    // Tenant isolation: without a studio context there is nothing scoped to
+    // list. Without this guard the query below returns active classes across
+    // every studio in the system.
+    if (!studioId) {
+      return [];
+    }
 
     const data = await prisma.classes.findMany({
-      where: { is_active: true },
+      where: { is_active: true, studio_id: studioId },
       include: {
         instructor: {
           select: { full_name: true },
