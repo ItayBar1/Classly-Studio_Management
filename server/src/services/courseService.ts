@@ -74,15 +74,25 @@ export class CourseService {
   /**
    * Get available courses for student (active & not fully booked)
    */
-  static async getAvailableForStudent(studentId: string) {
+  static async getAvailableForStudent(studentId: string, studioId?: string) {
     const serviceLogger = logger.child({
       service: "CourseService",
       method: "getAvailableForStudent",
     });
-    serviceLogger.info({ studentId }, "Fetching available courses for student");
+    serviceLogger.info(
+      { studentId, studioId },
+      "Fetching available courses for student"
+    );
+
+    // Tenant isolation: without a studio context there is nothing scoped to
+    // list. Without this guard the query below returns active classes across
+    // every studio in the system.
+    if (!studioId) {
+      return [];
+    }
 
     const data = await prisma.classes.findMany({
-      where: { is_active: true },
+      where: { is_active: true, studio_id: studioId },
       include: {
         instructor: {
           select: { full_name: true },
@@ -136,8 +146,8 @@ export class CourseService {
       orderBy: { day_of_week: "asc" },
       include: {
         branch: { select: { name: true } },
-        category: { select: { name: true } }
-      }
+        category: { select: { name: true } },
+      },
     });
 
     return data;
@@ -159,29 +169,42 @@ export class CourseService {
         where: {
           studio_id: studioId,
           instructor_id: courseData.instructor_id as string,
-          is_active: true
-        }
+          is_active: true,
+        },
       });
-      const instructorConflict = checkScheduleConflict(courseData as any, instructorClasses);
+      const instructorConflict = checkScheduleConflict(
+        courseData as any,
+        instructorClasses
+      );
       if (instructorConflict.hasConflict) {
         throw new AppError("המורה כבר מלמד שיעור אחר בשעה זו", 400);
       }
       if (instructorConflict.hasWarning && !courseData.ignore_warnings) {
-        throw new AppError(instructorConflict.warnings?.join("\n") || "אזהרה: המדריך משובץ בסניף אחר.", 409);
+        throw new AppError(
+          instructorConflict.warnings?.join("\n") ||
+            "אזהרה: המדריך משובץ בסניף אחר.",
+          409
+        );
       }
     }
 
-    // 2. Room Conflict Check
-    if (courseData.location_room && branchId) {
+    // 2. Room Conflict Check — by room_id when the caller supplied one, since a
+    // room can be renamed while the FK stays correct.
+    if (branchId && (courseData.room_id || courseData.location_room)) {
       const roomClasses = await prisma.classes.findMany({
         where: {
           studio_id: studioId,
           branch_id: branchId,
-          location_room: courseData.location_room as string,
-          is_active: true
-        }
+          is_active: true,
+          ...(courseData.room_id
+            ? { room_id: courseData.room_id as string }
+            : { location_room: courseData.location_room as string }),
+        },
       });
-      const roomConflict = checkScheduleConflict(courseData as any, roomClasses);
+      const roomConflict = checkScheduleConflict(
+        courseData as any,
+        roomClasses
+      );
       if (roomConflict.hasConflict) {
         throw new AppError("החדר כבר תפוס בשעה זו", 400);
       }
@@ -227,8 +250,9 @@ export class CourseService {
       end_time: updates.end_time ?? existing.end_time,
       instructor_id: updates.instructor_id ?? existing.instructor_id,
       location_room: updates.location_room ?? existing.location_room,
+      room_id: updates.room_id ?? existing.room_id,
       branch_id: updates.branch_id ?? existing.branch_id,
-      studio_id: existing.studio_id
+      studio_id: existing.studio_id,
     };
 
     // 1. Instructor Conflict Check
@@ -237,29 +261,44 @@ export class CourseService {
         where: {
           studio_id: proposedSession.studio_id,
           instructor_id: proposedSession.instructor_id as string,
-          is_active: true
-        }
+          is_active: true,
+        },
       });
-      const instructorConflict = checkScheduleConflict(proposedSession as any, instructorClasses);
+      const instructorConflict = checkScheduleConflict(
+        proposedSession as any,
+        instructorClasses
+      );
       if (instructorConflict.hasConflict) {
         throw new AppError("המורה כבר מלמד שיעור אחר בשעה זו", 400);
       }
       if (instructorConflict.hasWarning && !updates.ignore_warnings) {
-        throw new AppError(instructorConflict.warnings?.join("\n") || "אזהרה: המדריך משובץ בסניף אחר.", 409);
+        throw new AppError(
+          instructorConflict.warnings?.join("\n") ||
+            "אזהרה: המדריך משובץ בסניף אחר.",
+          409
+        );
       }
     }
 
-    // 2. Room Conflict Check
-    if (proposedSession.location_room && proposedSession.branch_id) {
+    // 2. Room Conflict Check — prefer the FK over the free-text room name.
+    if (
+      proposedSession.branch_id &&
+      (proposedSession.room_id || proposedSession.location_room)
+    ) {
       const roomClasses = await prisma.classes.findMany({
         where: {
           studio_id: proposedSession.studio_id,
           branch_id: proposedSession.branch_id as string,
-          location_room: proposedSession.location_room as string,
-          is_active: true
-        }
+          is_active: true,
+          ...(proposedSession.room_id
+            ? { room_id: proposedSession.room_id as string }
+            : { location_room: proposedSession.location_room as string }),
+        },
       });
-      const roomConflict = checkScheduleConflict(proposedSession as any, roomClasses);
+      const roomConflict = checkScheduleConflict(
+        proposedSession as any,
+        roomClasses
+      );
       if (roomConflict.hasConflict) {
         throw new AppError("החדר כבר תפוס בשעה זו", 400);
       }
