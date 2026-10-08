@@ -9,7 +9,12 @@ import {
   ChevronLeft,
   Loader2,
 } from "lucide-react";
-import { CourseService, BranchService, RoomService, StudioService } from "../../services/api";
+import {
+  CourseService,
+  BranchService,
+  RoomService,
+  StudioService,
+} from "../../services/api";
 import { ClassSession, Branch, Room, Studio } from "../../types/types";
 import { AddClassModal } from "./AddClassModal";
 import { ClassCard } from "../common/ClassCard";
@@ -31,8 +36,9 @@ export const ClassSchedule: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<ClassSession | null>(null);
-  const [selectedViewClass, setSelectedViewClass] = useState<ClassSession | null>(null);
-  
+  const [selectedViewClass, setSelectedViewClass] =
+    useState<ClassSession | null>(null);
+
   const [filterTeacher, setFilterTeacher] = useState("all");
   const [filterLevel, setFilterLevel] = useState("all");
 
@@ -62,6 +68,7 @@ export const ClassSchedule: React.FC = () => {
       capacity: cls.max_capacity,
       level: cls.level,
       room: cls.location_room || "אולם ראשי",
+      room_id: cls.room_id ?? null,
       categoryName: cls.category?.name,
       bgColor: colorMapper.getBranchColor(cls.branch_id || "default"),
       sideColor: colorMapper.getRoomColor(cls.location_room || "אולם ראשי"),
@@ -74,12 +81,13 @@ export const ClassSchedule: React.FC = () => {
   const fetchClassesAndBranches = async () => {
     try {
       setLoading(true);
-      const [coursesData, branchesData, roomsData, studioData] = await Promise.all([
-        CourseService.getAll({ status: "active" }),
-        BranchService.getAll(),
-        RoomService.getAll(),
-        StudioService.getMyStudio()
-      ]);
+      const [coursesData, branchesData, roomsData, studioData] =
+        await Promise.all([
+          CourseService.getAll({ status: "active" }),
+          BranchService.getAll(),
+          RoomService.getAll(),
+          StudioService.getMyStudio(),
+        ]);
 
       if (studioData) {
         setStudio(studioData);
@@ -112,22 +120,55 @@ export const ClassSchedule: React.FC = () => {
   }, []);
 
   const filteredClasses = classes
-    .filter((cls) => cls.dayOfWeek === selectedDay && (!selectedBranchId || cls.branch_id === selectedBranchId))
-    .filter((cls) => filterTeacher === "all" || cls.instructor === filterTeacher)
+    .filter(
+      (cls) =>
+        cls.dayOfWeek === selectedDay &&
+        (!selectedBranchId || cls.branch_id === selectedBranchId)
+    )
+    .filter(
+      (cls) => filterTeacher === "all" || cls.instructor === filterTeacher
+    )
     .filter((cls) => filterLevel === "all" || cls.level === filterLevel)
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
-  const uniqueTeachers = Array.from(new Set(classes.map(c => c.instructor))).filter(Boolean);
-  const uniqueLevels = Array.from(new Set(classes.map(c => c.level))).filter(Boolean);
+  const uniqueTeachers = Array.from(
+    new Set(classes.map((c) => c.instructor))
+  ).filter(Boolean);
+  const uniqueLevels = Array.from(new Set(classes.map((c) => c.level))).filter(
+    Boolean
+  );
 
-  const branchRooms = allRooms.filter(room => room.branch_id === selectedBranchId);
+  const branchRooms = allRooms.filter(
+    (room) => room.branch_id === selectedBranchId
+  );
 
-  const columns = branchRooms.map(room => ({
-    id: room.id,
+  // room_id is authoritative; classes created before it was persisted carry only
+  // the free-text location_room, so fall back to matching that against the room
+  // name for them.
+  const belongsToRoom = (cls: any, room: Room) =>
+    cls.room_id ? cls.room_id === room.id : cls.room === room.name;
+
+  const columns = branchRooms.map((room) => ({
+    id: room.id as string,
     name: room.name,
     icon: <MapPin size={14} className="text-indigo-500" />,
-    classes: filteredClasses.filter(cls => cls.room === room.name)
+    classes: filteredClasses.filter((cls) => belongsToRoom(cls, room)),
   }));
+
+  // A class whose room matches nothing (renamed room, deleted room, or a branch
+  // with no rooms at all) must never disappear from the schedule without a trace.
+  const unassignedClasses = filteredClasses.filter(
+    (cls) => !branchRooms.some((room) => belongsToRoom(cls, room))
+  );
+
+  if (unassignedClasses.length > 0) {
+    columns.push({
+      id: "__unassigned__",
+      name: "ללא שיבוץ חדר",
+      icon: <MapPin size={14} className="text-amber-500" />,
+      classes: unassignedClasses,
+    });
+  }
 
   // Calendar configuration
   const START_HOUR = studio?.schedule_start_hour ?? 7;
@@ -168,7 +209,9 @@ export const ClassSchedule: React.FC = () => {
           setClasses((prev) => {
             const exists = prev.some((cls) => cls.id === formatted.id);
             if (exists) {
-              return prev.map((cls) => (cls.id === formatted.id ? formatted : cls));
+              return prev.map((cls) =>
+                cls.id === formatted.id ? formatted : cls
+              );
             }
             return [...prev, formatted];
           });
@@ -244,23 +287,37 @@ export const ClassSchedule: React.FC = () => {
             <Filter size={18} />
             <span className="font-medium text-sm hidden md:inline">סינון:</span>
           </div>
-          
+
           <select
             value={filterTeacher}
-            onChange={e => setFilterTeacher(e.target.value)}
+            onChange={(e) => setFilterTeacher(e.target.value)}
             className="flex-1 md:w-auto text-sm bg-white border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 shadow-sm"
           >
             <option value="all">כל המדריכים</option>
-            {uniqueTeachers.map(t => <option key={t} value={t}>{t}</option>)}
+            {uniqueTeachers.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
           </select>
 
           <select
             value={filterLevel}
-            onChange={e => setFilterLevel(e.target.value)}
+            onChange={(e) => setFilterLevel(e.target.value)}
             className="flex-1 md:w-auto text-sm bg-white border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 shadow-sm"
           >
             <option value="all">כל הרמות</option>
-            {uniqueLevels.map(l => <option key={l} value={l}>{l === 'BEGINNER' ? 'מתחילים' : l === 'INTERMEDIATE' ? 'בינוניים' : l === 'ADVANCED' ? 'מתקדמים' : l}</option>)}
+            {uniqueLevels.map((l) => (
+              <option key={l} value={l}>
+                {l === "BEGINNER"
+                  ? "מתחילים"
+                  : l === "INTERMEDIATE"
+                    ? "בינוניים"
+                    : l === "ADVANCED"
+                      ? "מתקדמים"
+                      : l}
+              </option>
+            ))}
           </select>
         </div>
       </div>

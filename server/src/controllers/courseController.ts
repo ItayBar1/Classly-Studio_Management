@@ -40,7 +40,10 @@ export class CourseController {
     requestLog.info({ userId: req.user!.id }, "Controller entry");
     try {
       const studentId = req.user!.id;
-      const courses = await CourseService.getAvailableForStudent(studentId);
+      const courses = await CourseService.getAvailableForStudent(
+        studentId,
+        req.studioId
+      );
       requestLog.info(
         { count: courses?.length },
         "Fetched available courses for student"

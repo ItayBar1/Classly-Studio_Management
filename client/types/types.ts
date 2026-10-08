@@ -64,7 +64,10 @@ export interface ClassSession {
   max_capacity: number;
   current_enrollment: number;
   level: ClassLevel;
+  /** Free-text room label. Legacy rows may hold a name no room actually has. */
   location_room?: string | null;
+  /** FK to studio_rooms — the authoritative room link. Null on legacy rows. */
+  room_id?: string | null;
   price_ils: number;
   is_active: boolean;
   category_id?: string | null;
